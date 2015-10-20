@@ -13,21 +13,21 @@ Notes
 -----
 
 * SWR is set as the default software renderer.  Use
-GALLIUM_DRIVER=llvmpipe to switch to Mesa's standard rasterizer.  This
+`GALLIUM_DRIVER=llvmpipe` to switch to Mesa's standard rasterizer.  This
 particular change is to make it easier for people evaluating OpenSWR,
 and will not be upstreamed.
 
-* LLVM-3.6 is required.
+* LLVM 3.6 is required.
 
 * To build SWR with autoconf, include the following in the config
-line: "--with-gallium-drivers=swr --enable-swr-native".
+line: `--with-gallium-drivers=swr --enable-swr-native`.
 
 * Build defaults to AVX2; for a version to run on AVX build with
-  "--with-swr-arch=AVX".
+  `--with-swr-arch=AVX`.
 
 * To build SWR with SCons, nothing needs to be done - it is built by
   default.
 
-* Code for the driver is in src/gallium/drivers/swr
+* Code for the driver is in `src/gallium/drivers/swr`
 
-* Code for the rasterizer is in src/gallium/drivers/swr/rasterizer
+* Code for the rasterizer is in `src/gallium/drivers/swr/rasterizer`
