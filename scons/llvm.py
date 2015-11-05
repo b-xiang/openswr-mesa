@@ -98,6 +98,7 @@ def generate(env):
             print 'scons: LLVM version %s found, but %s is required' % (llvm_version, required_llvm_version)
             return
 
+        env['llvm_includedir'] = os.path.join(llvm_dir, 'include')
         env.Prepend(CPPPATH = [os.path.join(llvm_dir, 'include')])
         env.AppendUnique(CPPDEFINES = [
             '__STDC_LIMIT_MACROS', 
@@ -185,6 +186,8 @@ def generate(env):
             except ValueError:
                 pass
             env.MergeFlags(cppflags)
+
+            env['llvm_includedir'] = env.backtick('llvm-config --includedir').rstrip()
 
             # Match llvm --fno-rtti flag
             cxxflags = env.backtick('llvm-config --cxxflags').split()

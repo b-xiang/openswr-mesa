@@ -1,5 +1,6 @@
 from sys import executable as python_cmd
 import distutils.version
+import os.path
 
 Import('*')
 
@@ -29,28 +30,60 @@ env.Prepend(CPPPATH = [
     'rasterizer/scripts',
     ])
 
-gen_knobs = env.CodeGenerate(
+env.CodeGenerate(
     target = 'rasterizer/scripts/gen_knobs.cpp',
     script = 'rasterizer/scripts/gen_knobs.py',
     source = [],
     command = python_cmd + ' $SCRIPT ' + Dir('rasterizer/scripts').abspath
 )
 
-gen_knobs = env.CodeGenerate(
+env.CodeGenerate(
     target = 'rasterizer/scripts/gen_knobs.h',
     script = 'rasterizer/scripts/gen_knobs.py',
     source = [],
     command = python_cmd + ' $SCRIPT ' + Dir('rasterizer/scripts').abspath
 )
 
-state_llvm = env.CodeGenerate(
+env.CodeGenerate(
     target = 'rasterizer/jitter/state_llvm.h',
     script = 'rasterizer/jitter/scripts/gen_llvm_types.py',
     source = 'rasterizer/core/state.h',
     command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET'
 )
 
-source = ['rasterizer/scripts/gen_knobs.cpp', 'rasterizer/scripts/gen_knobs.h']
+env.CodeGenerate(
+    target = 'rasterizer/jitter/builder_gen.h',
+    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
+    source = os.path.join(env['llvm_includedir'], 'llvm/IR/IRBuilder.h'),
+    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_h'
+)
+
+env.CodeGenerate(
+    target = 'rasterizer/jitter/builder_gen.cpp',
+    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
+    source = os.path.join(env['llvm_includedir'], 'llvm/IR/IRBuilder.h'),
+    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_cpp'
+)
+
+env.CodeGenerate(
+    target = 'rasterizer/jitter/builder_x86.h',
+    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
+    source = '',
+    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_h'
+)
+
+env.CodeGenerate(
+    target = 'rasterizer/jitter/builder_x86.cpp',
+    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
+    source = '',
+    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_cpp'
+)
+
+source = [
+       'rasterizer/scripts/gen_knobs.cpp', 'rasterizer/scripts/gen_knobs.h',
+       'rasterizer/jitter/builder_gen.cpp', 'rasterizer/jitter/builder_gen.h',
+       'rasterizer/jitter/builder_x86.cpp', 'rasterizer/jitter/builder_x86.h',
+       ]
 source += env.ParseSourceList('Makefile.sources', [
     'CXX_SOURCES',
     'COMMON_CXX_SOURCES',
