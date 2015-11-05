@@ -64,7 +64,8 @@ struct swr_vertex_element_state {
 
 struct swr_blend_state {
    struct pipe_blend_state pipe;
-   BLEND_COMPILE_STATE compileState[PIPE_MAX_COLOR_BUFS];
+   SWR_BLEND_STATE blendState;
+   RENDER_TARGET_BLEND_COMPILE_STATE compileState[PIPE_MAX_COLOR_BUFS];
 };
 
 /* Shadows of SWR API DrawState */

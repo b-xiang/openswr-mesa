@@ -59,42 +59,44 @@ swr_create_blend_state(struct pipe_context *pipe,
    for (int target = 0;
         target < std::min(SWR_NUM_RENDERTARGETS, PIPE_MAX_COLOR_BUFS);
         target++) {
-      state->compileState[target].independentAlphaBlendEnable =
-         pipe_blend->independent_blend_enable;
 
       struct pipe_rt_blend_state *rt_blend = &pipe_blend->rt[target];
-      SWR_RENDER_TARGET_BLEND_STATE &targetState =
-         state->compileState[target].blendState;
+      SWR_RENDER_TARGET_BLEND_STATE &blendState =
+         state->blendState.renderTarget[target];
+      RENDER_TARGET_BLEND_COMPILE_STATE &compileState =
+         state->compileState[target];
 
       if (target != 0 && !pipe_blend->independent_blend_enable) {
-         memcpy(&targetState, &state->compileState[0].blendState, sizeof(SWR_RENDER_TARGET_BLEND_STATE));
+         memcpy(&compileState,
+                &state->compileState[0],
+                sizeof(RENDER_TARGET_BLEND_COMPILE_STATE));
          continue;
       }
 
-      targetState.colorBlendEnable = rt_blend->blend_enable;
-      if (targetState.colorBlendEnable) {
-         targetState.sourceAlphaBlendFactor =
+      blendState.colorBlendEnable = rt_blend->blend_enable;
+      if (blendState.colorBlendEnable) {
+         compileState.sourceAlphaBlendFactor =
             swr_convert_blend_factor(rt_blend->alpha_src_factor);
-         targetState.destAlphaBlendFactor =
+         compileState.destAlphaBlendFactor =
             swr_convert_blend_factor(rt_blend->alpha_dst_factor);
-         targetState.sourceBlendFactor =
+         compileState.sourceBlendFactor =
             swr_convert_blend_factor(rt_blend->rgb_src_factor);
-         targetState.destBlendFactor =
+         compileState.destBlendFactor =
             swr_convert_blend_factor(rt_blend->rgb_dst_factor);
 
-         targetState.colorBlendFunc =
+         compileState.colorBlendFunc =
             swr_convert_blend_func(rt_blend->rgb_func);
-         targetState.alphaBlendFunc =
+         compileState.alphaBlendFunc =
             swr_convert_blend_func(rt_blend->alpha_func);
       }
 
-      targetState.writeDisableRed =
+      blendState.writeDisableRed =
          (rt_blend->colormask & PIPE_MASK_R) ? 0 : 1;
-      targetState.writeDisableGreen =
+      blendState.writeDisableGreen =
          (rt_blend->colormask & PIPE_MASK_G) ? 0 : 1;
-      targetState.writeDisableBlue =
+      blendState.writeDisableBlue =
          (rt_blend->colormask & PIPE_MASK_B) ? 0 : 1;
-      targetState.writeDisableAlpha =
+      blendState.writeDisableAlpha =
          (rt_blend->colormask & PIPE_MASK_A) ? 0 : 1;
    }
 
@@ -1131,9 +1133,7 @@ swr_update_derived(struct swr_context *ctx,
       struct pipe_framebuffer_state *fb = &ctx->framebuffer;
 
       SWR_BLEND_STATE blendState;
-      memset(&blendState, 0, sizeof(blendState));
-      blendState.independentAlphaBlendEnable =
-         ctx->blend->pipe.independent_blend_enable;
+      memcpy(&blendState, &ctx->blend->blendState, sizeof(blendState));
       blendState.constantColor[0] = ctx->blend_color.color[0];
       blendState.constantColor[1] = ctx->blend_color.color[1];
       blendState.constantColor[2] = ctx->blend_color.color[2];
@@ -1155,28 +1155,28 @@ swr_update_derived(struct swr_context *ctx,
             if (!fb->cbufs[target])
                continue;
 
-            BLEND_COMPILE_STATE *compileState =
-               &ctx->blend->compileState[target];
-
             struct swr_resource *colorBuffer =
                swr_resource(fb->cbufs[target]->texture);
-            compileState->format = colorBuffer->swr.format;
 
-            memcpy(&blendState.renderTarget[target],
-                  &compileState->blendState,
-                  sizeof(compileState->blendState));
+            BLEND_COMPILE_STATE compileState;
+            compileState.format = colorBuffer->swr.format;
+            compileState.independentAlphaBlendEnable =
+               ctx->blend->pipe.independent_blend_enable;
+            memcpy(&compileState.blendState,
+                   &ctx->blend->compileState[target],
+                   sizeof(compileState.blendState));
 
             PFN_BLEND_JIT_FUNC func = NULL;
-            auto search = ctx->blendJIT->find(*compileState);
+            auto search = ctx->blendJIT->find(compileState);
             if (search != ctx->blendJIT->end()) {
                func = search->second;
             } else {
                HANDLE hJitMgr = swr_screen(ctx->pipe.screen)->hJitMgr;
-               func = JitCompileBlend(hJitMgr, *compileState);
+               func = JitCompileBlend(hJitMgr, compileState);
                debug_printf("BLEND shader %p\n", func);
                assert(func && "Error: BlendShader = NULL");
 
-               ctx->blendJIT->insert(std::make_pair(*compileState, func));
+               ctx->blendJIT->insert(std::make_pair(compileState, func));
             }
             SwrSetBlendFunc(ctx->swrContext, target, func);
          }
