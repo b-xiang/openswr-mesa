@@ -94,10 +94,6 @@ swr_generate_fs_key(struct swr_jit_key &key,
          }
       }
    }
-
-   memcpy(&key.alphaTest,
-          &ctx->depth_stencil->alpha,
-          sizeof(struct pipe_alpha_state));
 }
 
 struct BuilderSWR : public Builder {
@@ -460,7 +456,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
 
    struct lp_build_mask_context mask;
 
-   if (swr_fs->info.base.uses_kill || key.alphaTest.enabled) {
+   if (swr_fs->info.base.uses_kill) {
       Value *mask_val = LOAD(pPS, {0, SWR_PS_CONTEXT_mask}, "coverage_mask");
       lp_build_mask_begin(
          &mask, gallivm, lp_type_float_vec(32, 32 * 8), wrap(mask_val));
@@ -528,56 +524,13 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
    }
 
    LLVMValueRef mask_result = 0;
-   if (swr_fs->info.base.uses_kill || key.alphaTest.enabled) {
+   if (swr_fs->info.base.uses_kill) {
       mask_result = lp_build_mask_end(&mask);
    }
 
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
-   if (key.alphaTest.enabled) {
-      unsigned linkage =
-         locate_linkage(TGSI_SEMANTIC_COLOR, 0, &ctx->fs->info.base) + 1;
-
-      Value *alpha = LOAD(
-         pPS, {0, SWR_PS_CONTEXT_shaded, linkage, 3 /* alpha */}, "alpha");
-      Value *ref = VIMMED1(key.alphaTest.ref_value);
-
-      CmpInst::Predicate cmp = CmpInst::Predicate::FCMP_FALSE;
-      switch (key.alphaTest.func) {
-      case PIPE_FUNC_NEVER:
-         cmp = CmpInst::Predicate::FCMP_FALSE;
-         break;
-      case PIPE_FUNC_LESS:
-         cmp = CmpInst::Predicate::FCMP_OLT;
-         break;
-      case PIPE_FUNC_EQUAL:
-         cmp = CmpInst::Predicate::FCMP_OEQ;
-         break;
-      case PIPE_FUNC_LEQUAL:
-         cmp = CmpInst::Predicate::FCMP_OLE;
-         break;
-      case PIPE_FUNC_GREATER:
-         cmp = CmpInst::Predicate::FCMP_OGT;
-         break;
-      case PIPE_FUNC_NOTEQUAL:
-         cmp = CmpInst::Predicate::FCMP_ONE;
-         break;
-      case PIPE_FUNC_GEQUAL:
-         cmp = CmpInst::Predicate::FCMP_OGE;
-         break;
-      case PIPE_FUNC_ALWAYS:
-         cmp = CmpInst::Predicate::FCMP_TRUE;
-         break;
-      }
-
-      Value *alpha_result =
-         IRB()->CreateFCmp(cmp, alpha, ref, "alphaTestFunc");
-
-      mask_result =
-         wrap(AND(unwrap(mask_result), S_EXT(alpha_result, mSimdInt32Ty)));
-   }
-
-   if (swr_fs->info.base.uses_kill || key.alphaTest.enabled) {
+   if (swr_fs->info.base.uses_kill) {
       STORE(unwrap(mask_result), pPS, {0, SWR_PS_CONTEXT_mask});
    }
 

@@ -126,7 +126,7 @@ swr_convert_index_type(const UINT index_size)
 }
 
 
-static INLINE UINT
+static INLINE SWR_ZFUNCTION
 swr_convert_depth_func(const UINT pipe_func)
 {
    switch (pipe_func) {

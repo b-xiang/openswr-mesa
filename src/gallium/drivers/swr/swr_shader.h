@@ -45,7 +45,6 @@ struct swr_jit_key {
    unsigned nr_samplers;
    unsigned nr_sampler_views;
    struct swr_sampler_static_state sampler[PIPE_MAX_SHADER_SAMPLER_VIEWS];
-   struct pipe_alpha_state alphaTest;
 };
 
 namespace std

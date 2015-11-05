@@ -73,8 +73,8 @@ swr_create_blend_state(struct pipe_context *pipe,
          continue;
       }
 
-      blendState.colorBlendEnable = rt_blend->blend_enable;
-      if (blendState.colorBlendEnable) {
+      compileState.blendEnable = rt_blend->blend_enable;
+      if (compileState.blendEnable) {
          compileState.sourceAlphaBlendFactor =
             swr_convert_blend_factor(rt_blend->alpha_src_factor);
          compileState.destAlphaBlendFactor =
@@ -948,8 +948,7 @@ swr_update_derived(struct swr_context *ctx,
 
    swr_jit_key key;
    if (ctx->dirty & (SWR_NEW_FS | SWR_NEW_SAMPLER | SWR_NEW_SAMPLER_VIEW
-                     | SWR_NEW_DEPTH_STENCIL_ALPHA | SWR_NEW_RASTERIZER
-                     | SWR_NEW_FRAMEBUFFER)) {
+                     | SWR_NEW_RASTERIZER | SWR_NEW_FRAMEBUFFER)) {
       memset(&key, 0, sizeof(key));
       swr_generate_fs_key(key, ctx, ctx->fs);
       auto search = ctx->fs->map.find(key);
@@ -962,8 +961,7 @@ swr_update_derived(struct swr_context *ctx,
       }
       SWR_PS_STATE psState = {0};
       psState.pfnPixelShader = func;
-      psState.killsPixel =
-         ctx->fs->info.base.uses_kill || key.alphaTest.enabled;
+      psState.killsPixel = ctx->fs->info.base.uses_kill;
       psState.writesODepth = ctx->fs->info.base.writes_z;
       psState.usesSourceDepth = ctx->fs->info.base.reads_z;
       psState.maxRTSlotUsed =
@@ -1129,7 +1127,9 @@ swr_update_derived(struct swr_context *ctx,
    }
 
    /* Blend State */
-   if (ctx->dirty & (SWR_NEW_BLEND | SWR_NEW_FRAMEBUFFER)) {
+   if (ctx->dirty & (SWR_NEW_BLEND |
+                     SWR_NEW_FRAMEBUFFER |
+                     SWR_NEW_DEPTH_STENCIL_ALPHA)) {
       struct pipe_framebuffer_state *fb = &ctx->framebuffer;
 
       SWR_BLEND_STATE blendState;
@@ -1138,6 +1138,8 @@ swr_update_derived(struct swr_context *ctx,
       blendState.constantColor[1] = ctx->blend_color.color[1];
       blendState.constantColor[2] = ctx->blend_color.color[2];
       blendState.constantColor[3] = ctx->blend_color.color[3];
+      blendState.alphaTestReference =
+         *((uint32_t*)&ctx->depth_stencil->alpha.ref_value);
 
       /* If there are no color buffers bound, disable writes on RT0
        * and skip loop */
@@ -1165,6 +1167,11 @@ swr_update_derived(struct swr_context *ctx,
             memcpy(&compileState.blendState,
                    &ctx->blend->compileState[target],
                    sizeof(compileState.blendState));
+
+            compileState.alphaTestEnable = ctx->depth_stencil->alpha.enabled;
+            compileState.alphaTestFunction =
+               swr_convert_depth_func(ctx->depth_stencil->alpha.func);
+            compileState.alphaTestFormat = ALPHA_TEST_FLOAT32; // xxx
 
             PFN_BLEND_JIT_FUNC func = NULL;
             auto search = ctx->blendJIT->find(compileState);
