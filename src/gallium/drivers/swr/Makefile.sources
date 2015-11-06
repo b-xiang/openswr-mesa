@@ -75,6 +75,7 @@ CORE_CXX_SOURCES := \
     rasterizer/core/frontend.h \
     rasterizer/core/knobs.h \
     rasterizer/core/knobs_init.h \
+    rasterizer/core/multisample.cpp \
     rasterizer/core/multisample.h \
     rasterizer/core/pa_avx.cpp \
     rasterizer/core/pa.h \
