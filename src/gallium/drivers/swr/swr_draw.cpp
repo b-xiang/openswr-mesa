@@ -188,8 +188,10 @@ swr_flush(struct pipe_context *pipe,
     * preparation for present (swr_flush_frontbuffer)
     */
    struct pipe_surface *cb = ctx->framebuffer.cbufs[0];
-   if (cb && swr_resource(cb->texture)->display_target)
+   if (cb && swr_resource(cb->texture)->display_target) {
       swr_store_render_target(ctx, SWR_ATTACHMENT_COLOR0, SWR_TILE_RESOLVED);
+      swr_resource(cb->texture)->bound_to_context = (void*)pipe;
+   }
 
    // SwrStoreTiles is asynchronous, always submit the "flush" fence.
    // flush_frontbuffer needs it.

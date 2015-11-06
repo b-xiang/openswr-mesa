@@ -584,6 +584,8 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
    /* Ensure fence set at flush is finished, before reading frame buffer */
    swr_fence_finish(p_screen, screen->flush_fence, 0);
 
+   SwrEndFrame(swr_context((pipe_context *)res->bound_to_context));
+
    void *map = winsys->displaytarget_map(
       winsys, res->display_target, PIPE_TRANSFER_WRITE);
    memcpy(
