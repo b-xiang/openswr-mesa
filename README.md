@@ -17,7 +17,7 @@ Notes
 particular change is to make it easier for people evaluating OpenSWR,
 and will not be upstreamed.
 
-* LLVM 3.6 is required.
+* LLVM 3.6 or 3.7 (might work with llvm svn, not tested) is required.
 
 * To build SWR with autoconf, include the following in the config
 line: `--with-gallium-drivers=swr --enable-swr-native`.
