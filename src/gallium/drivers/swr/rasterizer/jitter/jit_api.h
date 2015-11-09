@@ -46,14 +46,6 @@ extern "C"
 struct ShaderInfo;
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Create JIT context.
-HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch);
-
-//////////////////////////////////////////////////////////////////////////
-/// @brief Destroy JIT context.
-void JITCALL JitDestroyContext(HANDLE hJitContext);
-
-//////////////////////////////////////////////////////////////////////////
 /// Jit Compile Info Input
 //////////////////////////////////////////////////////////////////////////
 struct JIT_COMPILE_INPUT
@@ -64,6 +56,14 @@ struct JIT_COMPILE_INPUT
 
     bool enableJitSampler;
 };
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Create JIT context.
+HANDLE JITCALL JitCreateContext(uint32_t targetSimdWidth, const char* arch);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Destroy JIT context.
+void JITCALL JitDestroyContext(HANDLE hJitContext);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief JIT compile shader.
@@ -102,4 +102,5 @@ PFN_SO_FUNC JITCALL JitCompileStreamout(HANDLE hJitContext, const STREAMOUT_COMP
 /// @param state   - blend state to build function from
 PFN_BLEND_JIT_FUNC JITCALL JitCompileBlend(HANDLE hJitContext, const BLEND_COMPILE_STATE& state);
 
-};
+
+}; // extern "C"

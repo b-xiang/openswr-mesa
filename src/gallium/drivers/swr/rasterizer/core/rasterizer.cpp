@@ -84,85 +84,84 @@ const __m256d gMaskToVecpd[] =
     MASKTOVEC(1, 1, 1, 1),
 };
 
+struct POS
+{
+    int32_t x, y;
+};
+
+struct EDGE
+{
+    double a, b;                // a, b edge coefficients in fix8
+    double stepQuadX;           // step to adjacent horizontal quad in fix16
+    double stepQuadY;           // step to adjacent vertical quad in fix16
+    double stepRasterTileX;     // step to adjacent horizontal raster tile in fix16
+    double stepRasterTileY;     // step to adjacent vertical raster tile in fix16
+
+    __m256d vQuadOffsets;       // offsets for 4 samples of a quad
+    __m256d vRasterTileOffsets; // offsets for the 4 corners of a raster tile
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief rasterize a raster tile partially covered by the triangle
 /// @param vEdge0-2 - edge equations evaluated at sample pos at each of the 4 corners of a raster tile
 /// @param vA, vB - A & B coefs for each edge of the triangle (Ax + Bx + C)
 /// @param vStepQuad0-2 - edge equations evaluated at the UL corners of the 2x2 pixel quad.
 ///        Used to step between quads when sweeping over the raster tile.
-INLINE uint64_t rasterizePartialTile(DRAW_CONTEXT *pDC, __m256d vEdge0, __m256d vEdge1, __m256d vEdge2,
-    __m128i &vA, __m128i &vB, __m256d &vStepQuad0, __m256d &vStepQuad1, __m256d &vStepQuad2)
+template<uint32_t NumEdges>
+INLINE uint64_t rasterizePartialTile(DRAW_CONTEXT *pDC, double startEdges[NumEdges], EDGE *pRastEdges)
 {
     uint64_t coverageMask = 0;
 
-    // Step to the pixel sample locations of the 1st quad
-    double edge0;
-    double edge1;
-    double edge2;
-    _mm_store_sd(&edge0, _mm256_castpd256_pd128(vEdge0));
-    _mm_store_sd(&edge1, _mm256_castpd256_pd128(vEdge1));
-    _mm_store_sd(&edge2, _mm256_castpd256_pd128(vEdge2));
+    __m256d vEdges[NumEdges];
+    __m256d vStepX[NumEdges];
+    __m256d vStepY[NumEdges];
 
-    vEdge0 = _mm256_broadcast_sd(&edge0);
-    vEdge1 = _mm256_broadcast_sd(&edge1);
-    vEdge2 = _mm256_broadcast_sd(&edge2);
+    for (uint32_t e = 0; e < NumEdges; ++e)
+    {
+        // Step to the pixel sample locations of the 1st quad
+        vEdges[e] = _mm256_add_pd(_mm256_set1_pd(startEdges[e]), pRastEdges[e].vQuadOffsets);
 
-    vEdge0 = _mm256_add_pd(vEdge0, vStepQuad0);
-    vEdge1 = _mm256_add_pd(vEdge1, vStepQuad1);
-    vEdge2 = _mm256_add_pd(vEdge2, vStepQuad2);
-
-    // compute step to next quad (mul by 2 in x and y direction)
-    __m256d vAEdge0 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vA, _MM_SHUFFLE(0, 0, 0, 0)));
-    __m256d vAEdge1 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vA, _MM_SHUFFLE(1, 1, 1, 1)));
-    __m256d vAEdge2 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vA, _MM_SHUFFLE(2, 2, 2, 2)));
-    __m256d vBEdge0 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vB, _MM_SHUFFLE(0, 0, 0, 0)));
-    __m256d vBEdge1 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vB, _MM_SHUFFLE(1, 1, 1, 1)));
-    __m256d vBEdge2 = _mm256_cvtepi32_pd(_mm_shuffle_epi32(vB, _MM_SHUFFLE(2, 2, 2, 2)));
-
-    __m256d vStep0X = _mm256_mul_pd(vAEdge0, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
-    __m256d vStep0Y = _mm256_mul_pd(vBEdge0, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
-
-    __m256d vStep1X = _mm256_mul_pd(vAEdge1, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
-    __m256d vStep1Y = _mm256_mul_pd(vBEdge1, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
-
-    __m256d vStep2X = _mm256_mul_pd(vAEdge2, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
-    __m256d vStep2Y = _mm256_mul_pd(vBEdge2, _mm256_set1_pd(2 * FIXED_POINT_SCALE));
+        // compute step to next quad (mul by 2 in x and y direction)
+        vStepX[e] = _mm256_set1_pd(pRastEdges[e].stepQuadX);
+        vStepY[e] = _mm256_set1_pd(pRastEdges[e].stepQuadY);
+    }
 
     // fast unrolled version for 8x8 tile
 #if KNOB_TILE_X_DIM == 8 && KNOB_TILE_Y_DIM == 8
-    int mask0, mask1, mask2;
+    int edgeMask[NumEdges];
     uint64_t mask;
 
-        // evaluate which pixels in the quad are covered
-#define EVAL \
-            mask0 = _mm256_movemask_pd(vEdge0);\
-            mask1 = _mm256_movemask_pd(vEdge1);\
-            mask2 = _mm256_movemask_pd(vEdge2);
+    auto eval_lambda = [&](int e){edgeMask[e] = _mm256_movemask_pd(vEdges[e]);};
+    auto update_lambda = [&](int e){mask &= edgeMask[e];};
+    auto incx_lambda = [&](int e){vEdges[e] = _mm256_add_pd(vEdges[e], vStepX[e]);};
+    auto incy_lambda = [&](int e){vEdges[e] = _mm256_add_pd(vEdges[e], vStepY[e]);};
+    auto decx_lambda = [&](int e){vEdges[e] = _mm256_sub_pd(vEdges[e], vStepX[e]);};
 
-        // update coverage mask
+// evaluate which pixels in the quad are covered
+#define EVAL \
+            UnrollerL<0, NumEdges, 1>::step(eval_lambda);
+
+    // update coverage mask
 #define UPDATE_MASK(bit) \
-            mask = mask0 & mask1 & mask2;\
+            mask = edgeMask[0]; \
+            UnrollerL<1, NumEdges, 1>::step(update_lambda); \
             coverageMask |= (mask << bit);
 
-        // step in the +x direction to the next quad 
+    // step in the +x direction to the next quad 
 #define INCX \
-            vEdge0 = _mm256_add_pd(vEdge0, vStep0X);\
-            vEdge1 = _mm256_add_pd(vEdge1, vStep1X);\
-            vEdge2 = _mm256_add_pd(vEdge2, vStep2X);
-        // step in the +y direction to the next quad 
+            UnrollerL<0, NumEdges, 1>::step(incx_lambda);
+
+    // step in the +y direction to the next quad 
 #define INCY \
-        vEdge0 = _mm256_add_pd(vEdge0, vStep0Y);\
-        vEdge1 = _mm256_add_pd(vEdge1, vStep1Y);\
-        vEdge2 = _mm256_add_pd(vEdge2, vStep2Y);
-        // step in the -x direction to the next quad 
+            UnrollerL<0, NumEdges, 1>::step(incy_lambda);
+
+    // step in the -x direction to the next quad 
 #define DECX \
-            vEdge0 = _mm256_sub_pd(vEdge0, vStep0X);\
-            vEdge1 = _mm256_sub_pd(vEdge1, vStep1X);\
-            vEdge2 = _mm256_sub_pd(vEdge2, vStep2X);
+            UnrollerL<0, NumEdges, 1>::step(decx_lambda);
 
     // sweep 2x2 quad back and forth through the raster tile, 
     // computing coverage masks for the entire tile
-    
+
     // raster tile
     // 0  1  2  3  4  5  6  7 
     // x  x
@@ -229,30 +228,40 @@ INLINE uint64_t rasterizePartialTile(DRAW_CONTEXT *pDC, __m256d vEdge0, __m256d 
     uint32_t bit = 0;
     for (uint32_t y = 0; y < KNOB_TILE_Y_DIM/2; ++y)
     {
-        __m256d vStartOfRowEdge0 = vEdge0;
-        __m256d vStartOfRowEdge1 = vEdge1;
-        __m256d vStartOfRowEdge2 = vEdge2;
+        __m256d vStartOfRowEdge[NumEdges];
+        for (uint32_t e = 0; e < NumEdges; ++e)
+        {
+            vStartOfRowEdge[e] = vEdges[e];
+        }
 
         for (uint32_t x = 0; x < KNOB_TILE_X_DIM/2; ++x)
         {
-            int mask0 = _mm256_movemask_pd(vEdge0);
-            int mask1 = _mm256_movemask_pd(vEdge1);
-            int mask2 = _mm256_movemask_pd(vEdge2);
+            int edgeMask[NumEdges];
+            for (uint32_t e = 0; e < NumEdges; ++e)
+            {
+                edgeMask[e] = _mm256_movemask_pd(vEdges[e]);
+            }
 
-            uint64_t mask = mask0 & mask1 & mask2;
+            uint64_t mask = edgeMask[0];
+            for (uint32_t e = 1; e < NumEdges; ++e)
+            {
+                mask &= edgeMask[e];
+            }
             coverageMask |= (mask << bit);
 
             // step to the next pixel in the x
-            vEdge0 = _mm256_add_pd(vEdge0, vStep0X);
-            vEdge1 = _mm256_add_pd(vEdge1, vStep1X);
-            vEdge2 = _mm256_add_pd(vEdge2, vStep2X);
+            for (uint32_t e = 0; e < NumEdges; ++e)
+            {
+                vEdges[e] = _mm256_add_pd(vEdges[e], vStepX[e]);
+            }
             bit+=4;
         }
 
         // step to the next row
-        vEdge0 = _mm256_add_pd(vStartOfRowEdge0, vStep0Y);
-        vEdge1 = _mm256_add_pd(vStartOfRowEdge1, vStep1Y);
-        vEdge2 = _mm256_add_pd(vStartOfRowEdge2, vStep2Y);
+        for (uint32_t e = 0; e < NumEdges; ++e)
+        {
+            vEdges[e] = _mm256_add_pd(vStartOfRowEdge[e], vStepY[e]);
+        }
     }
 #endif
     return coverageMask;
@@ -376,10 +385,46 @@ static const uint32_t vertsPerTri = 3, componentsPerAttrib = 4;
 // try to avoid _chkstk insertions; make this thread local
 static THREAD OSALIGN(float, 16) perspAttribsTLS[vertsPerTri * KNOB_NUM_ATTRIBUTES * componentsPerAttrib];
 
-template<SWR_MULTISAMPLE_COUNT sampleCount>
+INLINE
+void ComputeEdgeData(int32_t a, int32_t b, EDGE& edge)
+{
+    edge.a = a;
+    edge.b = b;
+
+    // compute constant steps to adjacent quads
+    edge.stepQuadX = (double)((int64_t)a * (int64_t)(2 * FIXED_POINT_SCALE));
+    edge.stepQuadY = (double)((int64_t)b * (int64_t)(2 * FIXED_POINT_SCALE));
+
+    // compute constant steps to adjacent raster tiles
+    edge.stepRasterTileX = (double)((int64_t)a * (int64_t)(KNOB_TILE_X_DIM * FIXED_POINT_SCALE));
+    edge.stepRasterTileY = (double)((int64_t)b * (int64_t)(KNOB_TILE_Y_DIM * FIXED_POINT_SCALE));
+
+    // compute quad offsets
+    const __m256d vQuadOffsetsXIntFix8 = _mm256_set_pd(FIXED_POINT_SCALE, 0, FIXED_POINT_SCALE, 0);
+    const __m256d vQuadOffsetsYIntFix8 = _mm256_set_pd(FIXED_POINT_SCALE, FIXED_POINT_SCALE, 0, 0);
+
+    __m256d vQuadStepXFix16 = _mm256_mul_pd(_mm256_set1_pd(edge.a), vQuadOffsetsXIntFix8);
+    __m256d vQuadStepYFix16 = _mm256_mul_pd(_mm256_set1_pd(edge.b), vQuadOffsetsYIntFix8);
+    edge.vQuadOffsets = _mm256_add_pd(vQuadStepXFix16, vQuadStepYFix16);
+
+    // compute raster tile offsets
+    const __m256d vTileOffsetsXIntFix8 = _mm256_set_pd((KNOB_TILE_X_DIM - 1)*FIXED_POINT_SCALE, 0, (KNOB_TILE_X_DIM - 1)*FIXED_POINT_SCALE, 0);
+    const __m256d vTileOffsetsYIntFix8 = _mm256_set_pd((KNOB_TILE_Y_DIM - 1)*FIXED_POINT_SCALE, (KNOB_TILE_Y_DIM - 1)*FIXED_POINT_SCALE, 0, 0);
+
+    __m256d vTileStepXFix16 = _mm256_mul_pd(_mm256_set1_pd(edge.a), vTileOffsetsXIntFix8);
+    __m256d vTileStepYFix16 = _mm256_mul_pd(_mm256_set1_pd(edge.b), vTileOffsetsYIntFix8);
+    edge.vRasterTileOffsets = _mm256_add_pd(vTileStepXFix16, vTileStepYFix16);
+}
+
+INLINE
+void ComputeEdgeData(const POS& p0, const POS& p1, EDGE& edge)
+{
+    ComputeEdgeData(p0.y - p1.y, p1.x - p0.x, edge);
+}
+
+template<bool RasterizeScissorEdges, SWR_MULTISAMPLE_COUNT sampleCount>
 void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile, void* pDesc)
 {
-
     const TRIANGLE_WORK_DESC &workDesc = *((TRIANGLE_WORK_DESC*)pDesc);
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
@@ -499,51 +544,33 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     // add depth bias
     triDesc.Z[2] += ComputeDepthBias(&rastState, &triDesc, workDesc.pTriBuffer + 8);
 
-    // broadcast A and B coefs for each edge to all slots
-    __m128i vAEdge0h = _mm_shuffle_epi32(vAi, _MM_SHUFFLE(0,0,0,0));
-    __m128i vAEdge1h = _mm_shuffle_epi32(vAi, _MM_SHUFFLE(1,1,1,1));
-    __m128i vAEdge2h = _mm_shuffle_epi32(vAi, _MM_SHUFFLE(2,2,2,2));
-    __m128i vBEdge0h = _mm_shuffle_epi32(vBi, _MM_SHUFFLE(0,0,0,0));
-    __m128i vBEdge1h = _mm_shuffle_epi32(vBi, _MM_SHUFFLE(1,1,1,1));
-    __m128i vBEdge2h = _mm_shuffle_epi32(vBi, _MM_SHUFFLE(2,2,2,2));
+    // Compute edge data
+    OSALIGNSIMD(int32_t) aAi[4], aBi[4];
+    _mm_store_si128((__m128i*)aAi, vAi);
+    _mm_store_si128((__m128i*)aBi, vBi);
 
-    __m256d vAEdge0Fix8 = _mm256_cvtepi32_pd(vAEdge0h);
-    __m256d vAEdge1Fix8 = _mm256_cvtepi32_pd(vAEdge1h);
-    __m256d vAEdge2Fix8 = _mm256_cvtepi32_pd(vAEdge2h);
-    __m256d vBEdge0Fix8 = _mm256_cvtepi32_pd(vBEdge0h);
-    __m256d vBEdge1Fix8 = _mm256_cvtepi32_pd(vBEdge1h);
-    __m256d vBEdge2Fix8 = _mm256_cvtepi32_pd(vBEdge2h);
+    const uint32_t numEdges = 3 + (RasterizeScissorEdges ? 4 : 0);
+    EDGE rastEdges[7];
 
-    // Precompute pixel quad step offsets
-    // 0,0  ------  1,0
-    //     |      |
-    //     |      |
-    // 1,0  ------  1,1
-    const __m256d vQuadOffsetsXIntFix8 = _mm256_set_pd(FIXED_POINT_SCALE, 0, FIXED_POINT_SCALE, 0);
-    const __m256d vQuadOffsetsYIntFix8 = _mm256_set_pd(FIXED_POINT_SCALE, FIXED_POINT_SCALE, 0, 0);
+    // compute triangle edges
+    ComputeEdgeData(aAi[0], aBi[0], rastEdges[0]);
+    ComputeEdgeData(aAi[1], aBi[1], rastEdges[1]);
+    ComputeEdgeData(aAi[2], aBi[2], rastEdges[2]);
 
-    // Evaluate edge equations at 4 upper left corners of a 2x2 pixel quad
-    // used to step between quads while sweeping over a raster tile
-    __m256d vQuadStepX0Fix16 = _mm256_mul_pd(vAEdge0Fix8, vQuadOffsetsXIntFix8);
-    __m256d vQuadStepX1Fix16 = _mm256_mul_pd(vAEdge1Fix8, vQuadOffsetsXIntFix8);
-    __m256d vQuadStepX2Fix16 = _mm256_mul_pd(vAEdge2Fix8, vQuadOffsetsXIntFix8);
+    // compute scissor edges if enabled
+    if (RasterizeScissorEdges)
+    {
+        POS topLeft{state.scissorInFixedPoint.left, state.scissorInFixedPoint.top};
+        POS bottomLeft{state.scissorInFixedPoint.left, state.scissorInFixedPoint.bottom};
+        POS topRight{state.scissorInFixedPoint.right, state.scissorInFixedPoint.top};
+        POS bottomRight{state.scissorInFixedPoint.right, state.scissorInFixedPoint.bottom};
 
-    __m256d vQuadStepY0Fix16 = _mm256_mul_pd(vBEdge0Fix8, vQuadOffsetsYIntFix8);
-    __m256d vQuadStepY1Fix16 = _mm256_mul_pd(vBEdge1Fix8, vQuadOffsetsYIntFix8);
-    __m256d vQuadStepY2Fix16 = _mm256_mul_pd(vBEdge2Fix8, vQuadOffsetsYIntFix8);
-
-    // vStepQuad = A*vQuadOffsetsXInt + B*vQuadOffsetsYInt
-    __m256d vStepQuad0Fix16 = _mm256_add_pd(vQuadStepX0Fix16, vQuadStepY0Fix16);
-    __m256d vStepQuad1Fix16 = _mm256_add_pd(vQuadStepX1Fix16, vQuadStepY1Fix16);
-    __m256d vStepQuad2Fix16 = _mm256_add_pd(vQuadStepX2Fix16, vQuadStepY2Fix16);
-
-    // Precompute tile step offsets
-    //                 0,0  ------  KNOB_TILE_X_DIM-1,0
-    //                     |      |
-    //                     |      |
-    // KNOB_TILE_Y_DIM-1,0  ------  KNOB_TILE_X_DIM-1,KNOB_TILE_Y_DIM-1
-    const __m256d vTileOffsetsXIntFix8 = _mm256_set_pd((KNOB_TILE_X_DIM-1)*FIXED_POINT_SCALE, 0, (KNOB_TILE_X_DIM-1)*FIXED_POINT_SCALE, 0);
-    const __m256d vTileOffsetsYIntFix8 = _mm256_set_pd((KNOB_TILE_Y_DIM-1)*FIXED_POINT_SCALE, (KNOB_TILE_Y_DIM-1)*FIXED_POINT_SCALE, 0, 0);
+        // construct 4 scissor edges in ccw direction
+        ComputeEdgeData(topLeft, bottomLeft, rastEdges[3]);
+        ComputeEdgeData(bottomLeft, bottomRight, rastEdges[4]);
+        ComputeEdgeData(bottomRight, topRight, rastEdges[5]);
+        ComputeEdgeData(topRight, topLeft, rastEdges[6]);
+    }
 
     // Calc bounding box of triangle
     OSALIGN(BBOX, 16) bbox;
@@ -628,7 +655,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     __m128i vDeltaX = _mm_sub_epi32(vTopLeftX, vXi);
     __m128i vDeltaY = _mm_sub_epi32(vTopLeftY, vYi);
 
-    __m256d vEdgeFix16[3];
+    __m256d vEdgeFix16[7];
 
     // evaluate A(dx) and B(dY) for all points
     __m256d vAipd = _mm256_cvtepi32_pd(vAi);
@@ -649,29 +676,21 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     vEdgeFix16[1] = _mm256_set1_pd(pEdge[1]);
     vEdgeFix16[2] = _mm256_set1_pd(pEdge[2]);
 
-    // compute step to the next tile
-    __m256d vNextXTileFix8 = _mm256_set1_pd(KNOB_TILE_X_DIM * FIXED_POINT_SCALE);
-    __m256d vNextYTileFix8 = _mm256_set1_pd(KNOB_TILE_Y_DIM * FIXED_POINT_SCALE);
-    __m256d vTileStepX0Fix16 = _mm256_mul_pd(vAEdge0Fix8, vNextXTileFix8);
-    __m256d vTileStepY0Fix16 = _mm256_mul_pd(vBEdge0Fix8, vNextYTileFix8);
-    __m256d vTileStepX1Fix16 = _mm256_mul_pd(vAEdge1Fix8, vNextXTileFix8);
-    __m256d vTileStepY1Fix16 = _mm256_mul_pd(vBEdge1Fix8, vNextYTileFix8);
-    __m256d vTileStepX2Fix16 = _mm256_mul_pd(vAEdge2Fix8, vNextXTileFix8);
-    __m256d vTileStepY2Fix16 = _mm256_mul_pd(vBEdge2Fix8, vNextYTileFix8);
+    // evaluate edge equations for scissor edges
+    if (RasterizeScissorEdges)
+    {
+        const BBOX &scissor = state.scissorInFixedPoint;
+        vEdgeFix16[3] = _mm256_set1_pd((rastEdges[3].a * (x - scissor.left)) + (rastEdges[3].b * (y - scissor.top)));
+        vEdgeFix16[4] = _mm256_set1_pd((rastEdges[4].a * (x - scissor.left)) + (rastEdges[4].b * (y - scissor.bottom)));
+        vEdgeFix16[5] = _mm256_set1_pd((rastEdges[5].a * (x - scissor.right)) + (rastEdges[5].b * (y - scissor.bottom)));
+        vEdgeFix16[6] = _mm256_set1_pd((rastEdges[6].a * (x - scissor.right)) + (rastEdges[6].b * (y - scissor.top)));
+    }
 
     // Evaluate edge equations at sample positions of each of the 4 corners of a raster tile
     // used to for testing if entire raster tile is inside a triangle
-    __m256d vResultAxFix16 = _mm256_mul_pd(vAEdge0Fix8, vTileOffsetsXIntFix8);
-    __m256d vResultByFix16 = _mm256_mul_pd(vBEdge0Fix8, vTileOffsetsYIntFix8);
-    vEdgeFix16[0] = _mm256_add_pd(vEdgeFix16[0], _mm256_add_pd(vResultAxFix16, vResultByFix16));
-
-    vResultAxFix16 = _mm256_mul_pd(vAEdge1Fix8, vTileOffsetsXIntFix8);
-    vResultByFix16 = _mm256_mul_pd(vBEdge1Fix8, vTileOffsetsYIntFix8);
-    vEdgeFix16[1] = _mm256_add_pd(vEdgeFix16[1], _mm256_add_pd(vResultAxFix16, vResultByFix16));
-
-    vResultAxFix16 = _mm256_mul_pd(vAEdge2Fix8, vTileOffsetsXIntFix8);
-    vResultByFix16 = _mm256_mul_pd(vBEdge2Fix8, vTileOffsetsYIntFix8);
-    vEdgeFix16[2] = _mm256_add_pd(vEdgeFix16[2], _mm256_add_pd(vResultAxFix16, vResultByFix16));
+    vEdgeFix16[0] = _mm256_add_pd(vEdgeFix16[0], rastEdges[0].vRasterTileOffsets);
+    vEdgeFix16[1] = _mm256_add_pd(vEdgeFix16[1], rastEdges[1].vRasterTileOffsets);
+    vEdgeFix16[2] = _mm256_add_pd(vEdgeFix16[2], rastEdges[2].vRasterTileOffsets);
 
     // at this point vEdge has been evaluated at the UL pixel corners of raster tile bbox
     // step sample positions to the raster tile bbox of multisample points
@@ -680,7 +699,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     //                             |      |
     // min(xSamples),max(ySamples)  ------  max(xSamples),max(ySamples)
     __m256d vEdge0TileBbox, vEdge1TileBbox, vEdge2TileBbox;
-    if(sampleCount > SWR_MULTISAMPLE_1X)
+    if (sampleCount > SWR_MULTISAMPLE_1X)
     {
         __m128i vTileSampleBBoxXh = MultisampleTraits<sampleCount>::TileSampleOffsetsX();
         __m128i vTileSampleBBoxYh = MultisampleTraits<sampleCount>::TileSampleOffsetsY();
@@ -690,19 +709,19 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
         // step edge equation tests from Tile
         // used to for testing if entire raster tile is inside a triangle
-        vResultAxFix16 = _mm256_mul_pd(vAEdge0Fix8, vTileSampleBBoxXFix8);
-        vResultByFix16 = _mm256_mul_pd(vBEdge0Fix8, vTileSampleBBoxYFix8);
+        __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].a), vTileSampleBBoxXFix8);
+        __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].b), vTileSampleBBoxYFix8);
         vEdge0TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
 
-        vResultAxFix16 = _mm256_mul_pd(vAEdge1Fix8, vTileSampleBBoxXFix8);
-        vResultByFix16 = _mm256_mul_pd(vBEdge1Fix8, vTileSampleBBoxYFix8);
+        vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].a), vTileSampleBBoxXFix8);
+        vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].b), vTileSampleBBoxYFix8);
         vEdge1TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
 
-        vResultAxFix16 = _mm256_mul_pd(vAEdge2Fix8, vTileSampleBBoxXFix8);
-        vResultByFix16 = _mm256_mul_pd(vBEdge2Fix8, vTileSampleBBoxYFix8);
+        vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].a), vTileSampleBBoxXFix8);
+        vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].b), vTileSampleBBoxYFix8);
         vEdge2TileBbox = _mm256_add_pd(vResultAxFix16, vResultByFix16);
     }
-    
+
     RDTSC_STOP(BEStepSetup, 0, pDC->drawId);
 
     uint32_t tY = tileY;
@@ -729,9 +748,11 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     uint32_t maxSamples = MultisampleTraits<sampleCount>::numSamples;
     for (uint32_t tileY = tY; tileY <= maxY; ++tileY)
     {
-        __m256d vStartOfRowEdge0 = vEdgeFix16[0];
-        __m256d vStartOfRowEdge1 = vEdgeFix16[1];
-        __m256d vStartOfRowEdge2 = vEdgeFix16[2];
+        __m256d vStartOfRowEdge[numEdges];
+        for (uint32_t e = 0; e < numEdges; ++e)
+        {
+            vStartOfRowEdge[e] = vEdgeFix16[e];
+        }
 
         for (uint32_t tileX = tX; tileX <= maxX; ++tileX)
         {
@@ -739,9 +760,8 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
             // is the corner of the edge outside of the raster tile? (vEdge < 0)
             int mask0, mask1, mask2;
-            if(sampleCount == SWR_MULTISAMPLE_1X)
+            if (sampleCount == SWR_MULTISAMPLE_1X)
             {
-                // is the corner of the edge outside of the raster tile? (vEdge < 0)
                 mask0 = _mm256_movemask_pd(vEdgeFix16[0]);
                 mask1 = _mm256_movemask_pd(vEdgeFix16[1]);
                 mask2 = _mm256_movemask_pd(vEdgeFix16[2]);
@@ -795,26 +815,43 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                             // for each edge and broadcasts it before offsetting to individual pixel quads
 
                             // step edge equation tests from UL tile corner to pixel sample position
-                            vResultAxFix16 = _mm256_mul_pd(vAEdge0Fix8, vSampleOffsetX);
-                            vResultByFix16 = _mm256_mul_pd(vBEdge0Fix8, vSampleOffsetY);
+                            __m256d vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].a), vSampleOffsetX);
+                            __m256d vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[0].b), vSampleOffsetY);
                             vEdge0AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
                             vEdge0AtSample = _mm256_add_pd(vEdgeFix16[0], vEdge0AtSample);
 
-                            vResultAxFix16 = _mm256_mul_pd(vAEdge1Fix8, vSampleOffsetX);
-                            vResultByFix16 = _mm256_mul_pd(vBEdge1Fix8, vSampleOffsetY);
+                            vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].a), vSampleOffsetX);
+                            vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[1].b), vSampleOffsetY);
                             vEdge1AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
                             vEdge1AtSample = _mm256_add_pd(vEdgeFix16[1], vEdge1AtSample);
 
-                            vResultAxFix16 = _mm256_mul_pd(vAEdge2Fix8, vSampleOffsetX);
-                            vResultByFix16 = _mm256_mul_pd(vBEdge2Fix8, vSampleOffsetY);
+                            vResultAxFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].a), vSampleOffsetX);
+                            vResultByFix16 = _mm256_mul_pd(_mm256_set1_pd(rastEdges[2].b), vSampleOffsetY);
                             vEdge2AtSample = _mm256_add_pd(vResultAxFix16, vResultByFix16);
                             vEdge2AtSample = _mm256_add_pd(vEdgeFix16[2], vEdge2AtSample);
                         }
 
+                        double startQuadEdges[numEdges];
+                        const __m256i vLane0Mask = _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1);
+                        _mm256_maskstore_pd(&startQuadEdges[0], vLane0Mask, vEdge0AtSample);
+                        _mm256_maskstore_pd(&startQuadEdges[1], vLane0Mask, vEdge1AtSample);
+                        _mm256_maskstore_pd(&startQuadEdges[2], vLane0Mask, vEdge2AtSample);
+
+                        for (uint32_t e = 3; e < numEdges; ++e)
+                        {
+                            _mm256_maskstore_pd(&startQuadEdges[e], vLane0Mask, vEdgeFix16[e]);
+                        }
+
                         // not trivial accept or reject, must rasterize full tile
                         RDTSC_START(BERasterizePartial);
-                        triDesc.coverageMask[sampleNum] = rasterizePartialTile(pDC, vEdge0AtSample, vEdge1AtSample, vEdge2AtSample,
-                            vAi, vBi, vStepQuad0Fix16, vStepQuad1Fix16, vStepQuad2Fix16);
+                        if (RasterizeScissorEdges)
+                        {
+                            triDesc.coverageMask[sampleNum] = rasterizePartialTile<7>(pDC, startQuadEdges, rastEdges);
+                        }
+                        else
+                        {
+                            triDesc.coverageMask[sampleNum] = rasterizePartialTile<3>(pDC, startQuadEdges, rastEdges);
+                        }
                         RDTSC_STOP(BERasterizePartial, 0, 0);
 
                         anyCoveredSamples |= triDesc.coverageMask[sampleNum]; 
@@ -822,6 +859,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                 }
                 else
                 {
+                    // if we're calculating coverage per sample, need to store it off. otherwise no covered samples, don't need to do anything
                     if(sampleCount > SWR_MULTISAMPLE_1X)
                     {
                         triDesc.coverageMask[sampleNum] = 0;
@@ -845,18 +883,18 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             }
 
             // step to the next tile in X
-            vEdgeFix16[0] = _mm256_add_pd(vEdgeFix16[0], vTileStepX0Fix16);
-            vEdgeFix16[1] = _mm256_add_pd(vEdgeFix16[1], vTileStepX1Fix16);
-            vEdgeFix16[2] = _mm256_add_pd(vEdgeFix16[2], vTileStepX2Fix16);
-
+            for (uint32_t e = 0; e < numEdges; ++e)
+            {
+                vEdgeFix16[e] = _mm256_add_pd(vEdgeFix16[e], _mm256_set1_pd(rastEdges[e].stepRasterTileX));
+            }
             StepRasterTileX(state.psState.maxRTSlotUsed, renderBuffers, colorRasterTileStep, depthRasterTileStep, stencilRasterTileStep);
         }
 
         // step to the next tile in Y
-        vEdgeFix16[0] = _mm256_add_pd(vStartOfRowEdge0, vTileStepY0Fix16);
-        vEdgeFix16[1] = _mm256_add_pd(vStartOfRowEdge1, vTileStepY1Fix16);
-        vEdgeFix16[2] = _mm256_add_pd(vStartOfRowEdge2, vTileStepY2Fix16);
-
+        for (uint32_t e = 0; e < numEdges; ++e)
+        {
+            vEdgeFix16[e] = _mm256_add_pd(vStartOfRowEdge[e], _mm256_set1_pd(rastEdges[e].stepRasterTileY));
+        }
         StepRasterTileY(state.psState.maxRTSlotUsed, renderBuffers, currentRenderBufferRow, colorRasterTileRowStep, depthRasterTileRowStep, stencilRasterTileRowStep);
     }
 
@@ -1008,13 +1046,18 @@ void StepRasterTileY(uint32_t MaxRT, RenderOutputBuffers &buffers, RenderOutputB
 }
 
 // initialize rasterizer function table
-PFN_WORK_FUNC gRasterizerTable[SWR_MULTISAMPLE_TYPE_MAX] =
+PFN_WORK_FUNC gRasterizerTable[2][SWR_MULTISAMPLE_TYPE_MAX] =
 {
-    RasterizeTriangle<SWR_MULTISAMPLE_1X>,
-    RasterizeTriangle<SWR_MULTISAMPLE_2X>,
-    RasterizeTriangle<SWR_MULTISAMPLE_4X>,
-    RasterizeTriangle<SWR_MULTISAMPLE_8X>,
-    RasterizeTriangle<SWR_MULTISAMPLE_16X>
+    RasterizeTriangle<false, SWR_MULTISAMPLE_1X>,
+    RasterizeTriangle<false, SWR_MULTISAMPLE_2X>,
+    RasterizeTriangle<false, SWR_MULTISAMPLE_4X>,
+    RasterizeTriangle<false, SWR_MULTISAMPLE_8X>,
+    RasterizeTriangle<false, SWR_MULTISAMPLE_16X>,
+    RasterizeTriangle<true, SWR_MULTISAMPLE_1X>,
+    RasterizeTriangle<true, SWR_MULTISAMPLE_2X>,
+    RasterizeTriangle<true, SWR_MULTISAMPLE_4X>,
+    RasterizeTriangle<true, SWR_MULTISAMPLE_8X>,
+    RasterizeTriangle<true, SWR_MULTISAMPLE_16X>
 };
 
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
@@ -1031,6 +1074,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
     RDTSC_START(BERasterizeLine);
 
     const API_STATE &state = GetApiState(pDC);
+    const SWR_RASTSTATE &rastState = state.rastState;
 
     // macrotile dimensioning
     uint32_t macroX, macroY;
@@ -1136,7 +1180,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
           bboxA.bottom - 1 < macroBoxTop ||
           bboxA.bottom - 1 < state.scissorInFixedPoint.top)) {
         // rasterize triangle
-        RasterizeTriangle<SWR_MULTISAMPLE_1X>(pDC, workerId, macroTile, (void*)&newWorkDesc);
+        gRasterizerTable[rastState.scissorEnable][rastState.sampleCount](pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
 
     // triangle 1
@@ -1209,7 +1253,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
           bboxA.bottom - 1 < macroBoxTop ||
           bboxA.bottom - 1 < state.scissorInFixedPoint.top)) {
         // rasterize triangle
-        RasterizeTriangle<SWR_MULTISAMPLE_1X>(pDC, workerId, macroTile, (void*)&newWorkDesc);
+        gRasterizerTable[rastState.scissorEnable][rastState.sampleCount](pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
 
     RDTSC_STOP(BERasterizeLine, 1, 0);

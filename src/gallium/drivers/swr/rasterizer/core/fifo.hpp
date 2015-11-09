@@ -27,40 +27,36 @@
 ******************************************************************************/
 #pragma once
 
+
 #include "common/os.h"
+#include "arena.h"
+
 #include <vector>
 #include <cassert>
 
 template<class T>
 struct QUEUE
 {
-    OSALIGNLINE(volatile uint32_t) mLock;
-    OSALIGNLINE(volatile uint32_t) mNumEntries;
+    OSALIGNLINE(volatile uint32_t) mLock{ 0 };
+    OSALIGNLINE(volatile uint32_t) mNumEntries{ 0 };
     std::vector<T*> mBlocks;
-    T* mCurBlock;
-    uint32_t mHead;
-    uint32_t mTail;    uint32_t mCurBlockIdx;
+    T* mCurBlock{ nullptr };
+    uint32_t mHead{ 0 };
+    uint32_t mTail{ 0 };
+    uint32_t mCurBlockIdx{ 0 };
 
     // power of 2
     static const uint32_t mBlockSizeShift = 6;
     static const uint32_t mBlockSize = 1 << mBlockSizeShift;
 
-    void initialize()
-    {
-        mLock = 0;
-        mHead = 0;
-        mTail = 0;
-        mNumEntries = 0;
-        mCurBlock = (T*)malloc(mBlockSize*sizeof(T));
-        mBlocks.push_back(mCurBlock);
-        mCurBlockIdx = 0;
-    }
-
-    void clear()
+    void clear(Arena& arena)
     {
         mHead = 0;
         mTail = 0;
-        mCurBlock = mBlocks[0];
+        mBlocks.clear();
+        T* pNewBlock = (T*)arena.Alloc(sizeof(T)*mBlockSize);
+        mBlocks.push_back(pNewBlock);
+        mCurBlock = pNewBlock;
         mCurBlockIdx = 0;
 
         mNumEntries = 0;
@@ -106,7 +102,7 @@ struct QUEUE
         mNumEntries --;
     }
 
-    bool enqueue_try_nosync(const T* entry)
+    bool enqueue_try_nosync(Arena& arena, const T* entry)
     {
         memcpy(&mCurBlock[mTail], entry, sizeof(T));
 
@@ -119,7 +115,7 @@ struct QUEUE
             }
             else
             {
-                T* newBlock = (T*)malloc(sizeof(T)*mBlockSize);
+                T* newBlock = (T*)arena.Alloc(sizeof(T)*mBlockSize);
                 SWR_ASSERT(newBlock);
 
                 mBlocks.push_back(newBlock);
@@ -135,10 +131,6 @@ struct QUEUE
 
     void destroy()
     {
-        for (uint32_t i = 0; i < mBlocks.size(); ++i)
-        {
-            free(mBlocks[i]);
-        }
     }
 
 };

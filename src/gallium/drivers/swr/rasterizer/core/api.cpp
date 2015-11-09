@@ -30,10 +30,6 @@
 #include <cmath>
 #include <cstdio>
 
-#if defined(__gnu_linux__) || defined(__linux__)
-#include <numa.h>
-#endif
-
 #include "core/api.h"
 #include "core/backend.h"
 #include "core/context.h"
@@ -75,7 +71,7 @@ HANDLE SwrCreateContext(
     {
         pContext->dcRing[dc].arena.Init();
         pContext->dcRing[dc].inUse = false;
-        pContext->dcRing[dc].pTileMgr = new MacroTileMgr();
+        pContext->dcRing[dc].pTileMgr = new MacroTileMgr(pContext->dcRing[dc].arena);
         pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
 
         pContext->dsRing[dc].arena.Init();
@@ -142,6 +138,8 @@ void SwrDestroyContext(HANDLE hContext)
     // free the fifos
     for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
     {
+        pContext->dcRing[i].arena.Reset();
+        pContext->dsRing[i].arena.Reset();
         delete(pContext->dcRing[i].pTileMgr);
         delete(pContext->dcRing[i].pDispatch);
     }
@@ -163,9 +161,7 @@ void SwrDestroyContext(HANDLE hContext)
 
 void WakeAllThreads(SWR_CONTEXT *pContext)
 {
-    std::unique_lock<std::mutex> lock(pContext->WaitLock);
     pContext->FifosNotEmpty.notify_all();
-    lock.unlock();
 }
 
 bool StillDrawing(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC)
@@ -234,8 +230,8 @@ void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId)
     {
         while (drawId > pContext->LastRetiredId)
         {
-            WakeAllThreads(pContext);
             UpdateLastRetiredId(pContext);
+            _mm_pause();
         }
     }
 }
@@ -248,7 +244,10 @@ void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
 void QueueDraw(SWR_CONTEXT *pContext)
 {
     _ReadWriteBarrier();
-    pContext->DrawEnqueued ++;
+    {
+        std::unique_lock<std::mutex> lock(pContext->WaitLock);
+        pContext->DrawEnqueued ++;
+    }
 
     if (KNOB_SINGLE_THREADED)
     {
@@ -279,7 +278,10 @@ void QueueDraw(SWR_CONTEXT *pContext)
 void QueueDispatch(SWR_CONTEXT *pContext)
 {
     _ReadWriteBarrier();
-    pContext->DrawEnqueued++;
+    {
+        std::unique_lock<std::mutex> lock(pContext->WaitLock);
+        pContext->DrawEnqueued++;
+    }
 
     if (KNOB_SINGLE_THREADED)
     {
@@ -321,9 +323,6 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         // Need to wait until this draw context is available to use.
         while (StillDrawing(pContext, pCurDrawContext))
         {
-            // Make sure workers are working.
-            WakeAllThreads(pContext);
-
             _mm_pause();
         }
 
@@ -417,6 +416,8 @@ static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
 void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2)
 {
     RDTSC_START(APISync);
+
+    SWR_ASSERT(pfnFunc != nullptr);
 
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
@@ -778,9 +779,13 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         switch(pState->state.psState.shadingRate)
         {
         case SWR_SHADING_RATE_PIXEL:
-            if(bMultisampleEnable)
+            if(bMultisampleEnable && pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN)
             {
-                pState->pfnBackend = gPixelRateBackendTable[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
+                pState->pfnBackend = gPixelRateBackendTableStandard[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
+            }
+            else if(bMultisampleEnable && pState->state.rastState.samplePattern == SWR_MSAA_CENTER_PATTERN)
+            {
+                pState->pfnBackend = gPixelRateBackendTableCenter[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
             }
             else
             {
@@ -788,7 +793,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
-            ///@todo Do we need to obey sample rate
+            assert(pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
             if (!bMultisampleEnable)
             {
                 // If PS is set at per sample rate and multisampling is disabled, set to per pixel and single sample backend
@@ -876,21 +881,6 @@ void InitDraw(
 
     pDC->inUse = true;    // We are using this one now.
 
-    /// @todo: remove when we send down preset sample patterns (standard or center)
-    // If multisampling is enabled, precompute float sample offsets from fixed
-    uint32_t numSamples = pDC->pState->state.rastState.sampleCount;
-    if(numSamples > SWR_MULTISAMPLE_1X)
-    {
-        static const float fixed8Scale = 1.0f/FIXED_POINT_SCALE;
-        float* pSamplePos = pDC->pState->state.samplePos;
-        SWR_MULTISAMPLE_POS(&iSamplePos)[SWR_MAX_NUM_MULTISAMPLES] = pDC->pState->state.rastState.iSamplePos;
-
-        for(uint32_t i = 0; i < numSamples; i++)
-        {
-            *(pSamplePos++) = ((float)(iSamplePos[i].x) * fixed8Scale);
-            *(pSamplePos++) = ((float)(iSamplePos[i].y) * fixed8Scale);
-        }
-    }
     // just test the masked off samples once per draw and use the results in the backend.
     SWR_RASTSTATE &rastState = pDC->pState->state.rastState;
     uint32_t sampleMask = rastState.sampleMask;
@@ -1316,7 +1306,7 @@ void SwrDispatch(
 void SwrStoreTiles(
     HANDLE hContext,
     SWR_RENDERTARGET_ATTACHMENT attachment,
-    SWR_TILE_STATE postStoreTileState) // TODO: Implement postStoreTileState
+    SWR_TILE_STATE postStoreTileState)
 {
     RDTSC_START(APIStoreTiles);
 
@@ -1335,10 +1325,6 @@ void SwrStoreTiles(
     QueueDraw(pContext);
 
     RDTSC_STOP(APIStoreTiles, 0, 0);
-    if (attachment == SWR_ATTACHMENT_COLOR0)
-    {
-        RDTSC_ENDFRAME();
-    }
 }
 
 void SwrClearRenderTarget(
@@ -1458,4 +1444,13 @@ void SwrEnableStats(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     pDC->pState->state.enableStats = enable;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Mark end of frame - used for performance profiling
+/// @param hContext - Handle passed back from SwrCreateContext
+void SWR_API SwrEndFrame(
+    HANDLE hContext)
+{
+    RDTSC_ENDFRAME();
 }

@@ -1472,6 +1472,7 @@ void StoreHotTile(
     if(nullptr == pfnStoreTiles)
     {
         SWR_ASSERT(false, "Invalid pixel format / tile mode for store tiles");
+        return;
     }
 
     // Store a macro tile
@@ -1626,6 +1627,7 @@ template <SWR_TILE_MODE TileModeT, size_t NumTileModes, size_t ArraySizeT>
 void InitStoreTilesTableStencil(
     PFN_STORE_TILES(&table)[NumTileModes][ArraySizeT])
 {
+    table[TileModeT][R32_UINT]                  = StoreMacroTile<TilingTraits<TileModeT, 32>, R8_UINT, R32_UINT>::Store;
     table[TileModeT][R8_UINT]                   = StoreMacroTile<TilingTraits<TileModeT, 8>, R8_UINT, R8_UINT>::Store;
 }
 
@@ -1633,6 +1635,9 @@ void InitStoreTilesTableStencil(
 /// @brief Sets up tables for StoreTile
 void InitSimStoreTilesTable()
 {
+    memset(sStoreTilesTableColor, 0, sizeof(sStoreTilesTableColor));
+    memset(sStoreTilesTableDepth, 0, sizeof(sStoreTilesTableDepth));
+
     InitStoreTilesTableColor<SWR_TILE_NONE>(sStoreTilesTableColor);
     InitStoreTilesTableDepth<SWR_TILE_NONE>(sStoreTilesTableDepth);
     InitStoreTilesTableStencil<SWR_TILE_NONE>(sStoreTilesTableStencil);

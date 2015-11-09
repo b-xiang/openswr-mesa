@@ -304,6 +304,72 @@ struct BlendJit : public Builder
         }
     }
 
+    void AlphaTest(const BLEND_COMPILE_STATE& state, Value* pBlendState, Value* pAlpha, Value* ppMask)
+    {
+        // load uint32_t reference
+        Value* pRef = VBROADCAST(LOAD(pBlendState, { 0, SWR_BLEND_STATE_alphaTestReference }));
+
+        Value* pTest = nullptr;
+        if (state.alphaTestFormat == ALPHA_TEST_UNORM8)
+        {
+            // convert float alpha to unorm8
+            Value* pAlphaU8 = FMUL(pAlpha, VIMMED1(256.0f));
+            pAlphaU8 = FP_TO_UI(pAlphaU8, mSimdInt32Ty);
+
+            // compare
+            switch (state.alphaTestFunction)
+            {
+            case ZFUNC_ALWAYS:  pTest = VIMMED1(true); break;
+            case ZFUNC_NEVER:   pTest = VIMMED1(false); break;
+            case ZFUNC_LT:      pTest = ICMP_ULT(pAlphaU8, pRef); break;
+            case ZFUNC_EQ:      pTest = ICMP_EQ(pAlphaU8, pRef); break;
+            case ZFUNC_LE:      pTest = ICMP_ULE(pAlphaU8, pRef); break;
+            case ZFUNC_GT:      pTest = ICMP_UGT(pAlphaU8, pRef); break;
+            case ZFUNC_NE:      pTest = ICMP_NE(pAlphaU8, pRef); break;
+            case ZFUNC_GE:      pTest = ICMP_UGE(pAlphaU8, pRef); break;
+            default:
+                SWR_ASSERT(false, "Invalid alpha test function");
+                break;
+            }
+        }
+        else
+        {
+            // cast ref to float
+            pRef = BITCAST(pRef, mSimdFP32Ty);
+
+            // compare
+            switch (state.alphaTestFunction)
+            {
+            case ZFUNC_ALWAYS:  pTest = VIMMED1(true); break;
+            case ZFUNC_NEVER:   pTest = VIMMED1(false); break;
+            case ZFUNC_LT:      pTest = FCMP_OLT(pAlpha, pRef); break;
+            case ZFUNC_EQ:      pTest = FCMP_OEQ(pAlpha, pRef); break;
+            case ZFUNC_LE:      pTest = FCMP_OLE(pAlpha, pRef); break;
+            case ZFUNC_GT:      pTest = FCMP_OGT(pAlpha, pRef); break;
+            case ZFUNC_NE:      pTest = FCMP_ONE(pAlpha, pRef); break;
+            case ZFUNC_GE:      pTest = FCMP_OGE(pAlpha, pRef); break;
+            default:
+                SWR_ASSERT(false, "Invalid alpha test function");
+                break;
+            }
+        }
+
+        // load current mask
+        Value* pMask = LOAD(ppMask);
+
+        // convert to int1 mask
+        pMask = MASK(pMask);
+
+        // and with alpha test result
+        pMask = AND(pMask, pTest);
+
+        // convert back to vector mask
+        pMask = VMASK(pMask);
+
+        // store new mask
+        STORE(pMask, ppMask);
+    }
+
     Function* Create(const BLEND_COMPILE_STATE& state)
     {
         static std::size_t jitNum = 0;
@@ -320,6 +386,7 @@ struct BlendJit : public Builder
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& src1
             PointerType::get(mSimdFP32Ty, 0),               // uint8_t* pDst
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& result
+            PointerType::get(mSimdInt32Ty, 0),              // simdscalari* pMask
         };
 
         FunctionType* fTy = FunctionType::get(IRB()->getVoidTy(), args, false);
@@ -341,6 +408,8 @@ struct BlendJit : public Builder
         pDst->setName("pDst");
         Value* pResult = argitr++;
         pResult->setName("result");
+        Value* ppMask = argitr++;
+        ppMask->setName("pMask");
 
         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
         Value* dst[4];
@@ -363,55 +432,65 @@ struct BlendJit : public Builder
             src1[i] = LOAD(pSrc1, { i });
         }
 
-        // clamp sources
-        Clamp(state.format, src);
-        Clamp(state.format, src1);
-        Clamp(state.format, dst);
-        Clamp(state.format, constantColor);
-
-        // apply defaults to hottile contents to take into account missing components
-        ApplyDefaults(state.format, dst);
-
-        // Force defaults for unused 'X' components
-        ApplyUnusedDefaults(state.format, dst);
-
-        // Quantize low precision components
-        Quantize(state.format, dst);
-
-        // special case clamping for R11G11B10_float which has no sign bit
-        if (state.format == R11G11B10_FLOAT)
+        // alpha test
+        if (state.alphaTestEnable)
         {
-            dst[0] = VMAXPS(dst[0], VIMMED1(0.0f));
-            dst[1] = VMAXPS(dst[1], VIMMED1(0.0f));
-            dst[2] = VMAXPS(dst[2], VIMMED1(0.0f));
-            dst[3] = VMAXPS(dst[3], VIMMED1(0.0f));
+            AlphaTest(state, pBlendState, src[3], ppMask);
         }
 
-        Value* srcFactor[4];
-        Value* dstFactor[4];
-        if (state.independentAlphaBlendEnable)
+        // color blend
+        if (state.blendState.blendEnable)
         {
-            GenerateBlendFactor<true, false>((SWR_BLEND_FACTOR)state.blendState.sourceBlendFactor, constantColor, src, src1, dst, srcFactor);
-            GenerateBlendFactor<false, true>((SWR_BLEND_FACTOR)state.blendState.sourceAlphaBlendFactor, constantColor, src, src1, dst, srcFactor);
+            // clamp sources
+            Clamp(state.format, src);
+            Clamp(state.format, src1);
+            Clamp(state.format, dst);
+            Clamp(state.format, constantColor);
 
-            GenerateBlendFactor<true, false>((SWR_BLEND_FACTOR)state.blendState.destBlendFactor, constantColor, src, src1, dst, dstFactor);
-            GenerateBlendFactor<false, true>((SWR_BLEND_FACTOR)state.blendState.destAlphaBlendFactor, constantColor, src, src1, dst, dstFactor);
+            // apply defaults to hottile contents to take into account missing components
+            ApplyDefaults(state.format, dst);
 
-            BlendFunc<true, false>((SWR_BLEND_OP)state.blendState.colorBlendFunc, src, srcFactor, dst, dstFactor, result);
-            BlendFunc<false, true>((SWR_BLEND_OP)state.blendState.alphaBlendFunc, src, srcFactor, dst, dstFactor, result);
-        }
-        else
-        {
-            GenerateBlendFactor<true, true>((SWR_BLEND_FACTOR)state.blendState.sourceBlendFactor, constantColor, src, src1, dst, srcFactor);
-            GenerateBlendFactor<true, true>((SWR_BLEND_FACTOR)state.blendState.destBlendFactor, constantColor, src, src1, dst, dstFactor);
+            // Force defaults for unused 'X' components
+            ApplyUnusedDefaults(state.format, dst);
 
-            BlendFunc<true, true>((SWR_BLEND_OP)state.blendState.colorBlendFunc, src, srcFactor, dst, dstFactor, result);
-        }
+            // Quantize low precision components
+            Quantize(state.format, dst);
 
-        // store results out
-        for (uint32_t i = 0; i < 4; ++i)
-        {
-            STORE(result[i], pResult, { i });
+            // special case clamping for R11G11B10_float which has no sign bit
+            if (state.format == R11G11B10_FLOAT)
+            {
+                dst[0] = VMAXPS(dst[0], VIMMED1(0.0f));
+                dst[1] = VMAXPS(dst[1], VIMMED1(0.0f));
+                dst[2] = VMAXPS(dst[2], VIMMED1(0.0f));
+                dst[3] = VMAXPS(dst[3], VIMMED1(0.0f));
+            }
+
+            Value* srcFactor[4];
+            Value* dstFactor[4];
+            if (state.independentAlphaBlendEnable)
+            {
+                GenerateBlendFactor<true, false>(state.blendState.sourceBlendFactor, constantColor, src, src1, dst, srcFactor);
+                GenerateBlendFactor<false, true>(state.blendState.sourceAlphaBlendFactor, constantColor, src, src1, dst, srcFactor);
+
+                GenerateBlendFactor<true, false>(state.blendState.destBlendFactor, constantColor, src, src1, dst, dstFactor);
+                GenerateBlendFactor<false, true>(state.blendState.destAlphaBlendFactor, constantColor, src, src1, dst, dstFactor);
+
+                BlendFunc<true, false>(state.blendState.colorBlendFunc, src, srcFactor, dst, dstFactor, result);
+                BlendFunc<false, true>(state.blendState.alphaBlendFunc, src, srcFactor, dst, dstFactor, result);
+            }
+            else
+            {
+                GenerateBlendFactor<true, true>(state.blendState.sourceBlendFactor, constantColor, src, src1, dst, srcFactor);
+                GenerateBlendFactor<true, true>(state.blendState.destBlendFactor, constantColor, src, src1, dst, dstFactor);
+
+                BlendFunc<true, true>(state.blendState.colorBlendFunc, src, srcFactor, dst, dstFactor, result);
+            }
+
+            // store results out
+            for (uint32_t i = 0; i < 4; ++i)
+            {
+                STORE(result[i], pResult, { i });
+            }
         }
 
         RET_VOID();

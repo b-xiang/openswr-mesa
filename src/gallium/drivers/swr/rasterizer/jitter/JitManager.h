@@ -36,6 +36,10 @@
 #pragma warning(disable : 4146 4244 4267 4800 4996)
 #endif
 
+// llvm 3.7+ reuses "DEBUG" as an enum value
+#pragma push_macro("DEBUG")
+#undef DEBUG
+
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
@@ -55,7 +59,14 @@
 #define LLVM_F_NONE sys::fs::F_None
 
 #include "llvm/Analysis/Passes.h"
+
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
 #include "llvm/PassManager.h"
+#else
+#include "llvm/IR/LegacyPassManager.h"
+using namespace llvm::legacy;
+#endif
+
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -64,6 +75,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/Host.h"
 
+
+#pragma pop_macro("DEBUG")
 
 using namespace llvm;
 //////////////////////////////////////////////////////////////////////////
@@ -78,15 +91,6 @@ class JitInstructionSet : public InstructionSet
 public:
     JitInstructionSet(const char* requestedIsa) : isaRequest(requestedIsa)
     {
-        if (isaRequest == "")
-        {
-            // Check for an environment variable
-            const char* pIsaEnv = getenv("RASTY_KNOB_ARCH_STR");
-            if (pIsaEnv)
-            {
-                isaRequest = pIsaEnv;
-            }
-        }
         std::transform(isaRequest.begin(), isaRequest.end(), isaRequest.begin(), ::tolower);
 
         if(isaRequest == "avx")

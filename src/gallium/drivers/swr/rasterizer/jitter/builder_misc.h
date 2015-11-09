@@ -59,7 +59,9 @@ Value *VUNDEF_F();
 Value *VUNDEF_I();
 Value *VUNDEF(Type* ty, uint32_t size);
 Value *VUNDEF_IPTR();
-Value *VINSERT(Value *vec, Value *val, int index);
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+Value *VINSERT(Value *vec, Value *val, uint64_t index);
+#endif
 Value *VBROADCAST(Value *src);
 Value *VRCP(Value *va);
 Value *VPLANEPS(Value* vA, Value* vB, Value* vC, Value* &vX, Value* &vY);
@@ -139,3 +141,8 @@ void STACKRESTORE(Value* pSaved);
 
 Value* POPCNT(Value* a);
 
+Value* INT3() { return INTERRUPT(C((uint8_t)3)); }
+
+
+Value *VEXTRACTI128(Value* a, Constant* imm8);
+Value *VINSERTI128(Value* a, Value* b, Constant* imm8);

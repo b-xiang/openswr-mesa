@@ -480,4 +480,9 @@ void SWR_API SwrEnableStats(
     HANDLE hContext,
     bool enable);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Mark end of frame - used for performance profiling
+/// @param hContext - Handle passed back from SwrCreateContext
+void SWR_API SwrEndFrame(
+    HANDLE hContext);
 #endif//__SWR_API_H__

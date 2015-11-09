@@ -20,27 +20,19 @@
 * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 * IN THE SOFTWARE.
 *
-* @file backend.h
-*
-* @brief Backend handles rasterization, pixel shading and output merger
-*        operations.
+* @file multisample.cpp
 *
 ******************************************************************************/
-#pragma once
 
-#include "common/os.h"
-#include "core/context.h" 
+#include "multisample.h"
 
-void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId);
-void ProcessSyncBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData);
-void ProcessQueryStatsBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData);
-void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData);
-void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
-void ProcessInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
-void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers);
-void InitClearTilesTable();
-
-extern PFN_BACKEND_FUNC gSingleSampleBackendTable[];
-extern PFN_BACKEND_FUNC gSampleRateBackendTable[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
-extern PFN_BACKEND_FUNC gPixelRateBackendTableStandard[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
-extern PFN_BACKEND_FUNC gPixelRateBackendTableCenter[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_2X>::samplePosX[2] {0xC0, 0x40};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_2X>::samplePosY[2] {0xC0, 0x40};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_4X>::samplePosX[4] {0x60, 0xE0, 0x20, 0xA0};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_4X>::samplePosY[4] {0x20, 0x60, 0xA0, 0xE0};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_8X>::samplePosX[8] {0x90, 0x70, 0xD0, 0x50, 0x30, 0x10, 0xB0, 0xF0};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_8X>::samplePosY[8] {0x50, 0xB0, 0x90, 0x30, 0xD0, 0x70, 0xF0, 0x10};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_16X>::samplePosX[16] 
+{0x90, 0x70, 0x50, 0xC0, 0x30, 0xA0, 0xD0, 0xB0, 0x60, 0x80, 0x40, 0x20, 0x00, 0xF0, 0xE0, 0x10};
+const uint32_t MultisampleTraits<SWR_MULTISAMPLE_16X>::samplePosY[16]
+{0x90, 0x50, 0xA0, 0x70, 0x60, 0xD0, 0xB0, 0x30, 0xE0, 0x10, 0x20, 0xC0, 0x80, 0x40, 0xF0, 0x00};

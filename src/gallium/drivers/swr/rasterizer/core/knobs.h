@@ -75,8 +75,8 @@
 #define KNOB_NUM_VIEWPORTS_SCISSORS         16
 
 // Guardband range used by the clipper
-#define KNOB_GUARDBAND_WIDTH                4096.0f
-#define KNOB_GUARDBAND_HEIGHT               2048.0f
+#define KNOB_GUARDBAND_WIDTH                32768.0f
+#define KNOB_GUARDBAND_HEIGHT               32768.0f
 
 ///////////////////////////////
 // Macro tile configuration

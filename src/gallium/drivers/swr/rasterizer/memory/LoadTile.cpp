@@ -237,7 +237,11 @@ void LoadHotTile(
         }
     }
 
-    SWR_ASSERT(pfnLoadTiles != NULL);
+    if (pfnLoadTiles == nullptr)
+    {
+        SWR_ASSERT(false, "Unsupported format for load tile");
+        return;
+    }
 
     // Load a macro tile.
 #ifdef KNOB_ENABLE_RDTSC

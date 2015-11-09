@@ -155,7 +155,8 @@ INLINE void rdtscStop(uint32_t bucketId, uint32_t count, uint64_t drawId)
 
 INLINE void rdtscEvent(uint32_t bucketId, uint32_t count1, uint32_t count2)
 {
-
+    uint32_t id = gBucketMap[bucketId];
+    gBucketMgr.AddEvent(id, count1);
 }
 
 INLINE void rdtscEndFrame()

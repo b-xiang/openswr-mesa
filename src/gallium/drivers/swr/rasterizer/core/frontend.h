@@ -301,7 +301,8 @@ bool CanUseSimplePoints(DRAW_CONTEXT *pDC)
 {
     const API_STATE& state = GetApiState(pDC);
 
-    return (state.rastState.pointSize == 1.0f &&
+    return (state.rastState.sampleCount == SWR_MULTISAMPLE_1X &&
+            state.rastState.pointSize == 1.0f &&
             !state.rastState.pointParam &&
             !state.rastState.pointSpriteEnable);
 }

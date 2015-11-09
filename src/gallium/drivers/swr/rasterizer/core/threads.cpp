@@ -32,7 +32,6 @@
 #include <string>
 
 #if defined(__linux__) || defined(__gnu_linux__)
-#include <numa.h>
 #include <pthread.h>
 #include <sched.h>
 #include <unistd.h>
@@ -704,20 +703,23 @@ DWORD workerThread(LPVOID pData)
     //    work items. If they are equal, then there is no more work to do for this draw, and
     //    the worker can safely increment its oldestDraw counter and move on to the next draw.
     std::unique_lock<std::mutex> lock(pContext->WaitLock, std::defer_lock);
+
+    auto threadHasWork = [&]() { return pContext->WorkerBE[workerId] != pContext->DrawEnqueued; };
+
     while (pContext->threadPool.inThreadShutdown == false)
     {
         uint32_t loop = 0;
-        while (loop++ < KNOB_WORKER_SPIN_LOOP_COUNT && pContext->WorkerBE[workerId] == pContext->DrawEnqueued)
+        while (loop++ < KNOB_WORKER_SPIN_LOOP_COUNT && !threadHasWork())
         {
             _mm_pause();
         }
 
-        if (pContext->WorkerBE[workerId] == pContext->DrawEnqueued)
+        if (!threadHasWork())
         {
             lock.lock();
 
             // check for thread idle condition again under lock
-            if (pContext->WorkerBE[workerId] != pContext->DrawEnqueued)
+            if (threadHasWork())
             {
                 lock.unlock();
                 continue;

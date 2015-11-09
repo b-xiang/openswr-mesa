@@ -81,9 +81,9 @@ void StencilOp(SWR_STENCILOP op, simdscalar mask, simdscalar stencilRefps, simds
 
 
 INLINE
-simdscalar ZTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
-                 bool frontFacing, simdscalar interpZ, BYTE* pDepthBase, simdscalar mask, BYTE *pStencilBase,
-                 bool testOnly)
+simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
+                 bool frontFacing, simdscalar interpZ, BYTE* pDepthBase, simdscalar coverageMask, BYTE *pStencilBase,
+                 simdscalar* pStencilMask)
 {
     static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
     static_assert(KNOB_STENCIL_HOT_TILE_FORMAT == R8_UINT, "Unsupported stencil hot tile format");
@@ -117,41 +117,28 @@ simdscalar ZTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* p
     }
 
     simdscalar stencilMask = _simd_set1_ps(-1.0f);
-    simdscalar stencilbuf;
-
-    uint8_t stencilRefValue;
-    uint32_t stencilTestFunc;
-    uint32_t stencilFailOp;
-    uint32_t stencilPassDepthPassOp;
-    uint32_t stencilPassDepthFailOp;
-    uint8_t stencilTestMask;
-    uint8_t stencilWriteMask;
-    if (frontFacing || !pDSState->doubleSidedStencilTestEnable)
-    {
-        stencilRefValue = pDSState->stencilRefValue;
-        stencilTestFunc = pDSState->stencilTestFunc;
-        stencilFailOp = pDSState->stencilFailOp;
-        stencilPassDepthPassOp = pDSState->stencilPassDepthPassOp;
-        stencilPassDepthFailOp = pDSState->stencilPassDepthFailOp;
-        stencilTestMask = pDSState->stencilTestMask;
-        stencilWriteMask = pDSState->stencilWriteMask;
-    }
-    else
-    {
-        stencilRefValue = pDSState->backfaceStencilRefValue;
-        stencilTestFunc = pDSState->backfaceStencilTestFunc;
-        stencilFailOp = pDSState->backfaceStencilFailOp;
-        stencilPassDepthPassOp = pDSState->backfaceStencilPassDepthPassOp;
-        stencilPassDepthFailOp = pDSState->backfaceStencilPassDepthFailOp;
-        stencilTestMask = pDSState->backfaceStencilTestMask;
-        stencilWriteMask = pDSState->backfaceStencilWriteMask;
-    }
 
     if (pDSState->stencilTestEnable)
     {
+
+        uint8_t stencilRefValue;
+        uint32_t stencilTestFunc;
+        uint8_t stencilTestMask;
+        if (frontFacing || !pDSState->doubleSidedStencilTestEnable)
+        {
+            stencilRefValue = pDSState->stencilRefValue;
+            stencilTestFunc = pDSState->stencilTestFunc;
+            stencilTestMask = pDSState->stencilTestMask;
+        }
+        else
+        {
+            stencilRefValue = pDSState->backfaceStencilRefValue;
+            stencilTestFunc = pDSState->backfaceStencilTestFunc;
+            stencilTestMask = pDSState->backfaceStencilTestMask;
+        }
+
         simdvector sbuf;
         LoadSOA<R8_UINT>(pStencilBase, sbuf);
-        stencilbuf = sbuf.v[0];
 
         // apply stencil read mask
         simdscalar stencilWithMask = _simd_castsi_ps(_simd_and_si(_simd_castps_si(sbuf.v[0]), _simd_set1_epi32(stencilTestMask)));
@@ -175,25 +162,62 @@ simdscalar ZTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* p
     }
 
     simdscalar depthWriteMask = _simd_and_ps(depthResult, stencilMask);
-    depthWriteMask = _simd_and_ps(depthWriteMask, mask);
+    depthWriteMask = _simd_and_ps(depthWriteMask, coverageMask);
 
-    if (testOnly) {
-        return depthWriteMask;
-    }
+    *pStencilMask = stencilMask;
+    return depthWriteMask;
+}
 
+INLINE
+void DepthStencilWrite(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* pDSState,
+        bool frontFacing, simdscalar interpZ, BYTE* pDepthBase, const simdscalar& depthMask, const simdscalar& coverageMask, 
+        BYTE *pStencilBase, const simdscalar& stencilMask)
+{
     if (pDSState->depthWriteEnable)
     {
-        _simd_maskstore_ps((float*)pDepthBase, _simd_castps_si(depthWriteMask), interpZ);
+        // clamp Z to viewport [minZ..maxZ]
+        simdscalar vMinZ = _simd_broadcast_ss(&pViewport->minZ);
+        simdscalar vMaxZ = _simd_broadcast_ss(&pViewport->maxZ);
+        interpZ = _simd_min_ps(vMaxZ, _simd_max_ps(vMinZ, interpZ));
+
+        simdscalar vMask = _simd_and_ps(depthMask, coverageMask);
+        _simd_maskstore_ps((float*)pDepthBase, _simd_castps_si(vMask), interpZ);
     }
 
     if (pDSState->stencilWriteEnable)
     {
+        simdvector sbuf;
+        LoadSOA<R8_UINT>(pStencilBase, sbuf);
+        simdscalar stencilbuf = sbuf.v[0];
+
+        uint8_t stencilRefValue;
+        uint32_t stencilFailOp;
+        uint32_t stencilPassDepthPassOp;
+        uint32_t stencilPassDepthFailOp;
+        uint8_t stencilWriteMask;
+        if (frontFacing || !pDSState->doubleSidedStencilTestEnable)
+        {
+            stencilRefValue = pDSState->stencilRefValue;
+            stencilFailOp = pDSState->stencilFailOp;
+            stencilPassDepthPassOp = pDSState->stencilPassDepthPassOp;
+            stencilPassDepthFailOp = pDSState->stencilPassDepthFailOp;
+            stencilWriteMask = pDSState->stencilWriteMask;
+        }
+        else
+        {
+            stencilRefValue = pDSState->backfaceStencilRefValue;
+            stencilFailOp = pDSState->backfaceStencilFailOp;
+            stencilPassDepthPassOp = pDSState->backfaceStencilPassDepthPassOp;
+            stencilPassDepthFailOp = pDSState->backfaceStencilPassDepthFailOp;
+            stencilWriteMask = pDSState->backfaceStencilWriteMask;
+        }
+
         simdscalar stencilps = stencilbuf;
         simdscalar stencilRefps = _simd_castsi_ps(_simd_set1_epi32(stencilRefValue));
 
-        simdscalar stencilFailMask = _simd_andnot_ps(stencilMask, mask);
-        simdscalar stencilPassDepthPassMask = _simd_and_ps(stencilMask, depthResult);
-        simdscalar stencilPassDepthFailMask = _simd_and_ps(stencilMask, _simd_andnot_ps(depthResult, _simd_set1_ps(-1)));
+        simdscalar stencilFailMask = _simd_andnot_ps(stencilMask, coverageMask);
+        simdscalar stencilPassDepthPassMask = _simd_and_ps(stencilMask, depthMask);
+        simdscalar stencilPassDepthFailMask = _simd_and_ps(stencilMask, _simd_andnot_ps(depthMask, _simd_set1_ps(-1)));
 
         simdscalar origStencil = stencilps;
 
@@ -207,9 +231,8 @@ simdscalar ZTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENCIL_STATE* p
         stencilps = _simd_or_ps(_simd_andnot_ps(_simd_castsi_ps(vWriteMask), origStencil), stencilps);
 
         simdvector stencilResult;
-        stencilResult.v[0] = _simd_blendv_ps(origStencil, stencilps, mask);
+        stencilResult.v[0] = _simd_blendv_ps(origStencil, stencilps, coverageMask);
         StoreSOA<R8_UINT>(stencilResult, pStencilBase);
     }
 
-    return depthWriteMask;
 }

@@ -98,7 +98,16 @@ void BucketManager::PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64
     strcat(hier, desc.name.c_str());
 
     // print out
-    fprintf(f, "%6.2f %6.2f %-10" PRIu64 " %-10" PRIu64 " %-10u %-10lu %-10u %s\n", percentTotal, percentParent, bucket.elapsed, CPE, bucket.count, (unsigned long)0, (UINT32)(0), hier);
+    fprintf(f, "%6.2f %6.2f %-10" PRIu64 " %-10" PRIu64 " %-10u %-10lu %-10u %s\n", 
+        percentTotal, 
+        percentParent, 
+        bucket.elapsed, 
+        CPE, 
+        bucket.count, 
+        (unsigned long)0, 
+        (uint32_t)0, 
+        hier
+    );
 
     // dump all children of this bucket
     for (const BUCKET& child : bucket.children)

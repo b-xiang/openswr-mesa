@@ -69,6 +69,9 @@ struct STREAMOUT_COMPILE_STATE
 {
     // number of verts per primitive
     uint32_t numVertsPerPrim;
+    uint32_t offsetAttribs; ///< attrib offset to subtract from all STREAMOUT_DECL::attribSlot values.
+
+    uint64_t streamMask;
 
     // stream decls
     STREAMOUT_STREAM stream;

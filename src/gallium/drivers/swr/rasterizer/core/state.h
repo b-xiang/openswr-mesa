@@ -356,6 +356,8 @@ struct SWR_CS_CONTEXT
     uint32_t dispatchDims[3];
 
     uint8_t* pTGSM;  // Thread Group Shared Memory pointer.
+
+    uint8_t* pSpillFillBuffer;  // Spill/fill buffer for barrier support
 };
 
 // enums
@@ -447,6 +449,7 @@ struct SWR_SURFACE_STATE
     uint32_t height;
     uint32_t depth;
     uint32_t numSamples;
+    uint32_t samplePattern;
     uint32_t pitch;
     uint32_t qpitch;
     uint32_t minLod;            // for sampled surfaces, the most detailed LOD that can be accessed by sampler
@@ -690,28 +693,24 @@ struct SWR_TS_STATE
 // output merger state
 struct SWR_RENDER_TARGET_BLEND_STATE
 {
-    uint32_t colorBlendEnable : 1;
-    uint32_t sourceAlphaBlendFactor : 5;
-    uint32_t destAlphaBlendFactor : 5;
-    uint32_t sourceBlendFactor : 5;
-    uint32_t destBlendFactor : 5;
-    uint32_t colorBlendFunc : 3;
-    uint32_t alphaBlendFunc : 3;
-
-    uint32_t writeDisableRed : 1;
-    uint32_t writeDisableGreen : 1;
-    uint32_t writeDisableBlue : 1;
-    uint32_t writeDisableAlpha : 1;
+    uint8_t writeDisableRed : 1;
+    uint8_t writeDisableGreen : 1;
+    uint8_t writeDisableBlue : 1;
+    uint8_t writeDisableAlpha : 1;
 };
-static_assert(sizeof(SWR_RENDER_TARGET_BLEND_STATE) == 4, "Invalid SWR_RENDER_TARGET_BLEND_STATE size");
+static_assert(sizeof(SWR_RENDER_TARGET_BLEND_STATE) == 1, "Invalid SWR_RENDER_TARGET_BLEND_STATE size");
 
 struct SWR_BLEND_STATE
 {
-    float constantColor[4]; // constant blend factor color in RGBA float
-    bool independentAlphaBlendEnable;
+    // constant blend factor color in RGBA float
+    float constantColor[4];
+
+    // alpha test reference value in unorm8 or float32
+    uint32_t alphaTestReference; 
+
     SWR_RENDER_TARGET_BLEND_STATE renderTarget[SWR_NUM_RENDERTARGETS];
 };
-static_assert(sizeof(SWR_BLEND_STATE) == 52, "Invalid SWR_BLEND_STATE size");
+static_assert(sizeof(SWR_BLEND_STATE) == 28, "Invalid SWR_BLEND_STATE size");
 
 //////////////////////////////////////////////////////////////////////////
 /// FUNCTION POINTERS FOR SHADERS
@@ -724,7 +723,7 @@ typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, SWR_GS_CONTEXT* pGsConte
 typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsContext);
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
 typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
-typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, BYTE*, simdvector&);
+typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, BYTE*, simdvector&, simdscalari*);
 
 //////////////////////////////////////////////////////////////////////////
 /// FRONTEND_STATE
@@ -797,6 +796,13 @@ enum SWR_MULTISAMPLE_COUNT
     SWR_MULTISAMPLE_TYPE_MAX
 };
 
+enum SWR_MSAA_SAMPLE_PATTERN
+{
+    SWR_MSAA_CENTER_PATTERN = 0,
+    SWR_MSAA_STANDARD_PATTERN = 2,
+    SWR_MSAA_SAMPLE_PATTERN_MAX
+};
+
 enum SWR_PIXEL_LOCATION
 {
     SWR_PIXEL_LOCATION_CENTER,
@@ -846,6 +852,7 @@ struct SWR_RASTSTATE
     uint8_t  isSampleMasked[SWR_MAX_NUM_MULTISAMPLES];   
     bool pixelOffset;           // offset pixel positions by .5 in both the horizontal and vertical direction
     SWR_MULTISAMPLE_POS iSamplePos[SWR_MAX_NUM_MULTISAMPLES];   
+	SWR_MSAA_SAMPLE_PATTERN samplePattern;   // @llvm_enum
 
     // user clip/cull distance enables
     uint8_t cullDistanceMask;

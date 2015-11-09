@@ -175,6 +175,28 @@ public:
         bt.level--;
     }
 
+    INLINE void AddEvent(uint32_t id, uint32_t count)
+    {
+        if (!mCapturing) return;
+
+        SWR_ASSERT(tlsThreadId < mThreads.size());
+
+        BUCKET_THREAD& bt = mThreads[tlsThreadId];
+
+        // don't record events for threadviz
+        if (!mThreadViz)
+        {
+            if (bt.pCurrent->children.size() < mBuckets.size())
+            {
+                bt.pCurrent->children.resize(mBuckets.size());
+            }
+            BUCKET &child = bt.pCurrent->children[id];
+            child.pParent = bt.pCurrent;
+            child.id = id;
+            child.count += count;
+        }
+    }
+
 private:
     void PrintBucket(FILE* f, UINT level, UINT64 threadCycles, UINT64 parentCycles, const BUCKET& bucket);
     void PrintThread(FILE* f, const BUCKET_THREAD& thread);

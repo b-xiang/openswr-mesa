@@ -54,7 +54,7 @@ void DispatchQueue::operator delete(void *p)
     _aligned_free(p);
 }
 
-MacroTileMgr::MacroTileMgr()
+MacroTileMgr::MacroTileMgr(Arena& arena) : mArena(arena)
 {
 }
 
@@ -79,12 +79,12 @@ void MacroTileMgr::enqueue(uint32_t x, uint32_t y, BE_WORK *pWork)
 
     if (tile.mWorkItemsFE == 1)
     {
-        tile.clear();
+        tile.clear(mArena);
         mDirtyTiles.push_back(id);
     }
 
     mWorkItemsProduced++;
-    tile.enqueue_try_nosync(pWork);
+    tile.enqueue_try_nosync(mArena, pWork);
 }
 
 void MacroTileMgr::markTileComplete(uint32_t id)

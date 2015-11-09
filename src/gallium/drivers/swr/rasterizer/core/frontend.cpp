@@ -49,6 +49,15 @@ static INLINE uint32_t GenMask(uint32_t numBits)
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Offsets added to post-viewport vertex positions based on
+/// raster state.
+static const simdscalar g_pixelOffsets[SWR_PIXEL_LOCATION_UL + 1] =
+{
+    _simd_set1_ps(0.0f), // SWR_PIXEL_LOCATION_CENTER
+    _simd_set1_ps(0.5f), // SWR_PIXEL_LOCATION_UL
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief FE handler for SwrSync.
 /// @param pContext - pointer to SWR context.
 /// @param pDC - pointer to draw context.
@@ -444,7 +453,7 @@ static void StreamOut(
         // Write all entries into primitive data buffer for SOS.
         while (_BitScanForward(&slot, soMask))
         {
-            __m128 attrib[MAX_ATTRIBUTES];    // prim attribs (always 4 wide)
+            __m128 attrib[MAX_NUM_VERTS_PER_PRIM];    // prim attribs (always 4 wide)
             uint32_t paSlot = slot + VERTEX_ATTRIB_START_SLOT;
             pa.AssembleSingle(paSlot, primIndex, attrib);
 
@@ -706,6 +715,7 @@ static INLINE simdscalari GenerateMask(uint32_t numWorkItems)
 /// tessellator and DS.
 struct TessellationThreadLocalData
 {
+    SWR_HS_CONTEXT hsContext;
     ScalarPatch patchData[KNOB_SIMD_WIDTH];
     void* pTxCtx;
     size_t tsCtxSize;
@@ -785,7 +795,7 @@ static void TessellationStages(
         }
     }
 
-    SWR_HS_CONTEXT hsContext;
+    SWR_HS_CONTEXT& hsContext = gt_pTessellationThreadData->hsContext;
     hsContext.pCPout = gt_pTessellationThreadData->patchData;
     hsContext.PrimitiveID = primID;
 
@@ -836,14 +846,19 @@ static void TessellationStages(
         // Allocate DS Output memory
         uint32_t requiredDSVectorInvocations = AlignUp(tsData.NumDomainPoints, KNOB_SIMD_WIDTH) / KNOB_SIMD_WIDTH;
         size_t requiredDSOutputVectors = requiredDSVectorInvocations * tsState.numDsOutputAttribs;
+        size_t requiredAllocSize = sizeof(simdvector) * requiredDSOutputVectors;
         if (requiredDSOutputVectors > gt_pTessellationThreadData->numDSOutputVectors)
         {
             _aligned_free(gt_pTessellationThreadData->pDSOutput);
-            gt_pTessellationThreadData->pDSOutput = (simdscalar*)_aligned_malloc(sizeof(simdvector) * requiredDSOutputVectors, 64);
+            gt_pTessellationThreadData->pDSOutput = (simdscalar*)_aligned_malloc(requiredAllocSize, 64);
             gt_pTessellationThreadData->numDSOutputVectors = requiredDSOutputVectors;
         }
         SWR_ASSERT(gt_pTessellationThreadData->pDSOutput);
         SWR_ASSERT(gt_pTessellationThreadData->numDSOutputVectors >= requiredDSOutputVectors);
+
+#if defined(_DEBUG)
+        memset(gt_pTessellationThreadData->pDSOutput, 0x90, requiredAllocSize);
+#endif
 
         // Run Domain Shader
         SWR_DS_CONTEXT dsContext;
@@ -873,35 +888,35 @@ static void TessellationStages(
 
         while (tessPa.HasWork())
         {
-            simdvector prim[3]; // Only deal with triangles, lines, or points
-            // PaAssemble returns false if there is not enough verts to assemble.
-            RDTSC_START(FEPAAssemble);
-            bool assemble = tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
-            RDTSC_STOP(FEPAAssemble, 1, 0);
-
-            if (assemble)
+            if (HasGeometryShaderT)
             {
-                if (HasGeometryShaderT)
+                GeometryShaderStage<HasStreamOutT, HasRastT>(
+                    pDC, workerId, tessPa, pGsOut, pCutBuffer, pSoPrimData,
+                    _simd_set1_epi32(dsContext.PrimitiveID));
+            }
+            else
+            {
+                if (HasStreamOutT)
                 {
-                    GeometryShaderStage<HasStreamOutT, HasRastT>(
-                        pDC, workerId, tessPa, pGsOut, pCutBuffer, pSoPrimData,
-                        _simd_set1_epi32(dsContext.PrimitiveID));
+                    StreamOut(pDC, tessPa, workerId, pSoPrimData);
                 }
-                else
-                {
-                    if (HasStreamOutT)
-                    {
-                        StreamOut(pDC, tessPa, workerId, pSoPrimData);
-                    }
 
-                    if (HasRastT)
-                    {
-                        SWR_ASSERT(pfnClipFunc);
-                        pfnClipFunc(pDC, tessPa, workerId, prim,
-                            GenMask(tessPa.NumPrims()), primID);
-                    }
+                if (HasRastT)
+                {
+                    simdvector prim[3]; // Only deal with triangles, lines, or points
+                    RDTSC_START(FEPAAssemble);
+#if SWR_ENABLE_ASSERTS
+                    bool assemble =
+#endif
+                        tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
+                    RDTSC_STOP(FEPAAssemble, 1, 0);
+                    SWR_ASSERT(assemble);
+
+                    SWR_ASSERT(pfnClipFunc);
+                    pfnClipFunc(pDC, tessPa, workerId, prim,
+                        GenMask(tessPa.NumPrims()), _simd_set1_epi32(dsContext.PrimitiveID));
                 }
-            } // if (assemble)
+            }
 
             tessPa.NextPrim();
 
@@ -1249,6 +1264,14 @@ INLINE void ProcessAttributes(
 {
     DWORD slot = 0;
     uint32_t mapIdx = 0;
+    LONG constantInterpMask = pDC->pState->state.backendState.constantInterpolationMask;
+
+    uint32_t provokingVertex = 0;
+    if (pa.binTopology == TOP_TRIANGLE_FAN)
+    {
+        provokingVertex = 1;
+    }
+
     while (_BitScanForward(&slot, linkageMask))
     {
         linkageMask &= ~(1 << slot); // done with this bit.
@@ -1259,10 +1282,21 @@ INLINE void ProcessAttributes(
         __m128 attrib[3];    // triangle attribs (always 4 wide)
         pa.AssembleSingle(inputSlot, triIndex, attrib);
 
-        for (uint32_t i = 0; i < NumVerts; ++i)
+        if (_bittest(&constantInterpMask, slot))
         {
-            _mm_store_ps(pBuffer, attrib[i]);
-            pBuffer += 4;
+            for (uint32_t i = 0; i < NumVerts; ++i)
+            {
+                _mm_store_ps(pBuffer, attrib[provokingVertex]);
+                pBuffer += 4;
+            }
+        }
+        else
+        {
+            for (uint32_t i = 0; i < NumVerts; ++i)
+            {
+                _mm_store_ps(pBuffer, attrib[i]);
+                pBuffer += 4;
+            }
         }
 
         // pad out the attrib buffer to 3 verts to ensure the triangle
@@ -1374,6 +1408,17 @@ void BinTriangles(
         // viewport transform to screen coords
         viewportTransform<3>(tri, state.vpMatrix[0]);
     }
+
+    // adjust for pixel center location
+    simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
+    tri[0].x = _simd_add_ps(tri[0].x, offset);
+    tri[0].y = _simd_add_ps(tri[0].y, offset);
+
+    tri[1].x = _simd_add_ps(tri[1].x, offset);
+    tri[1].y = _simd_add_ps(tri[1].y, offset);
+
+    tri[2].x = _simd_add_ps(tri[2].x, offset);
+    tri[2].y = _simd_add_ps(tri[2].y, offset);
 
     // bloat points to tri
     if (pa.binTopology == TOP_POINT_LIST)
@@ -1573,7 +1618,16 @@ void BinTriangles(
         desc.triFlags.primID = pPrimID[triIndex];
         desc.triFlags.renderTargetArrayIndex = aRTAI[triIndex];
 
-        work.pfnWork = gRasterizerTable[rastState.sampleCount];
+        if(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN)
+        {
+            work.pfnWork = gRasterizerTable[rastState.scissorEnable][rastState.sampleCount];
+        }
+        else
+        {
+            // for center sample pattern, all samples are at pixel center; calculate coverage
+            // once at center and broadcast the results in the backend
+            work.pfnWork = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
+        }
 
         // store active attribs
         float *pAttribs = (float*)pDC->arena.AllocAligned(numScalarAttribs*3*sizeof(float), 16);
@@ -1641,6 +1695,7 @@ void BinPoints(
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_GS_STATE& gsState = state.gsState;
+    const SWR_RASTSTATE& rastState = state.rastState;
 
     // perspective divide
     simdscalar vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), primVerts.w);
@@ -1651,12 +1706,17 @@ void BinPoints(
     // viewport transform to screen coords
     viewportTransform<1>(&primVerts, state.vpMatrix[0]);
 
+    // adjust for pixel center location
+    simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
+    primVerts.x = _simd_add_ps(primVerts.x, offset);
+    primVerts.y = _simd_add_ps(primVerts.y, offset);
+
     // convert to fixed point
     simdscalari vXi, vYi;
     vXi = fpToFixedPointVertical(primVerts.x);
     vYi = fpToFixedPointVertical(primVerts.y);
 
-    // adjust for triangle rasterization rules - ie top-left rule
+    // adjust for top-left rule
     vXi = _simd_sub_epi32(vXi, _simd_set1_epi32(1));
     vYi = _simd_sub_epi32(vYi, _simd_set1_epi32(1));
 
@@ -1810,6 +1870,14 @@ void BinLines(
         // viewport transform to screen coords
         viewportTransform<2>(prim, state.vpMatrix[0]);
     }
+
+    // adjust for pixel center location
+    simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
+    prim[0].x = _simd_add_ps(prim[0].x, offset);
+    prim[0].y = _simd_add_ps(prim[0].y, offset);
+
+    prim[1].x = _simd_add_ps(prim[1].x, offset);
+    prim[1].y = _simd_add_ps(prim[1].y, offset);
 
     // convert to fixed point
     simdscalari vXi[2], vYi[2];

@@ -33,6 +33,23 @@
 #include "core/context.h"
 #include "core/state.h"
 
+struct RENDER_TARGET_BLEND_COMPILE_STATE
+{
+    bool blendEnable;
+    SWR_BLEND_FACTOR sourceAlphaBlendFactor;
+    SWR_BLEND_FACTOR destAlphaBlendFactor;
+    SWR_BLEND_FACTOR sourceBlendFactor;
+    SWR_BLEND_FACTOR destBlendFactor;
+    SWR_BLEND_OP colorBlendFunc;
+    SWR_BLEND_OP alphaBlendFunc;
+};
+
+enum ALPHA_TEST_FORMAT
+{
+    ALPHA_TEST_UNORM8,
+    ALPHA_TEST_FLOAT32
+};
+
 //////////////////////////////////////////////////////////////////////////
 /// State required for blend jit
 //////////////////////////////////////////////////////////////////////////
@@ -40,7 +57,11 @@ struct BLEND_COMPILE_STATE
 {
     SWR_FORMAT format;          // format of render target being blended
     bool independentAlphaBlendEnable;
-    SWR_RENDER_TARGET_BLEND_STATE blendState;
+    RENDER_TARGET_BLEND_COMPILE_STATE blendState;
+
+    bool alphaTestEnable;
+    SWR_ZFUNCTION alphaTestFunction;
+    ALPHA_TEST_FORMAT alphaTestFormat;
 
     bool operator==(const BLEND_COMPILE_STATE& other) const
     {

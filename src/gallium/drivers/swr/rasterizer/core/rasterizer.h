@@ -30,5 +30,5 @@
 #include "context.h"
 
 void rastPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);
-extern PFN_WORK_FUNC gRasterizerTable[SWR_MULTISAMPLE_TYPE_MAX];
+extern PFN_WORK_FUNC gRasterizerTable[2][SWR_MULTISAMPLE_TYPE_MAX];
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData);

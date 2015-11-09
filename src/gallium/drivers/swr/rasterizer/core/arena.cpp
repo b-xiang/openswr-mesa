@@ -67,9 +67,6 @@ VOID* Arena::AllocAligned(uint32_t size, uint32_t align)
     uint32_t defaultBlockSize = ArenaBlockSize;
     if (m_pUsedBlocks == nullptr)
     {
-        // First allocation after reset. Let's make the first block be the total
-        // memory allocated during last set of allocations prior to reset.
-        defaultBlockSize = std::max(m_memUsed, defaultBlockSize);
         m_memUsed = 0;
     }
 

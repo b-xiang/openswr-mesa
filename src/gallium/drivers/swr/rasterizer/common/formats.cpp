@@ -1,3 +1,4 @@
+
 /****************************************************************************
 * Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
 *
@@ -69,6 +70,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32A32_SINT (0x1)
     {
@@ -87,6 +89,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32A32_UINT (0x2)
     {
@@ -105,6 +108,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x3 (Padding)
     {
@@ -113,7 +117,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4 (Padding)
     {
         "UNKNOWN",
@@ -121,7 +125,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5 (Padding)
     {
         "UNKNOWN",
@@ -129,7 +133,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R32G32B32X32_FLOAT (0x6)
     {
         "R32G32B32X32_FLOAT",
@@ -147,6 +151,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32A32_SSCALED (0x7)
     {
@@ -165,6 +170,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32A32_USCALED (0x8)
     {
@@ -183,6 +189,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x9 (Padding)
     {
@@ -191,7 +198,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa (Padding)
     {
         "UNKNOWN",
@@ -199,7 +206,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb (Padding)
     {
         "UNKNOWN",
@@ -207,7 +214,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xc (Padding)
     {
         "UNKNOWN",
@@ -215,7 +222,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xd (Padding)
     {
         "UNKNOWN",
@@ -223,7 +230,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xe (Padding)
     {
         "UNKNOWN",
@@ -231,7 +238,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xf (Padding)
     {
         "UNKNOWN",
@@ -239,7 +246,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x10 (Padding)
     {
         "UNKNOWN",
@@ -247,7 +254,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x11 (Padding)
     {
         "UNKNOWN",
@@ -255,7 +262,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12 (Padding)
     {
         "UNKNOWN",
@@ -263,7 +270,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13 (Padding)
     {
         "UNKNOWN",
@@ -271,7 +278,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x14 (Padding)
     {
         "UNKNOWN",
@@ -279,7 +286,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15 (Padding)
     {
         "UNKNOWN",
@@ -287,7 +294,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16 (Padding)
     {
         "UNKNOWN",
@@ -295,7 +302,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17 (Padding)
     {
         "UNKNOWN",
@@ -303,7 +310,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x18 (Padding)
     {
         "UNKNOWN",
@@ -311,7 +318,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x19 (Padding)
     {
         "UNKNOWN",
@@ -319,7 +326,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1a (Padding)
     {
         "UNKNOWN",
@@ -327,7 +334,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1b (Padding)
     {
         "UNKNOWN",
@@ -335,7 +342,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c (Padding)
     {
         "UNKNOWN",
@@ -343,7 +350,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1d (Padding)
     {
         "UNKNOWN",
@@ -351,7 +358,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1e (Padding)
     {
         "UNKNOWN",
@@ -359,7 +366,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1f (Padding)
     {
         "UNKNOWN",
@@ -367,7 +374,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x20 (Padding)
     {
         "UNKNOWN",
@@ -375,7 +382,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x21 (Padding)
     {
         "UNKNOWN",
@@ -383,7 +390,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x22 (Padding)
     {
         "UNKNOWN",
@@ -391,7 +398,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x23 (Padding)
     {
         "UNKNOWN",
@@ -399,7 +406,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x24 (Padding)
     {
         "UNKNOWN",
@@ -407,7 +414,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x25 (Padding)
     {
         "UNKNOWN",
@@ -415,7 +422,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x26 (Padding)
     {
         "UNKNOWN",
@@ -423,7 +430,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x27 (Padding)
     {
         "UNKNOWN",
@@ -431,7 +438,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x28 (Padding)
     {
         "UNKNOWN",
@@ -439,7 +446,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x29 (Padding)
     {
         "UNKNOWN",
@@ -447,7 +454,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2a (Padding)
     {
         "UNKNOWN",
@@ -455,7 +462,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2b (Padding)
     {
         "UNKNOWN",
@@ -463,7 +470,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2c (Padding)
     {
         "UNKNOWN",
@@ -471,7 +478,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2d (Padding)
     {
         "UNKNOWN",
@@ -479,7 +486,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2e (Padding)
     {
         "UNKNOWN",
@@ -487,7 +494,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x2f (Padding)
     {
         "UNKNOWN",
@@ -495,7 +502,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x30 (Padding)
     {
         "UNKNOWN",
@@ -503,7 +510,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x31 (Padding)
     {
         "UNKNOWN",
@@ -511,7 +518,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x32 (Padding)
     {
         "UNKNOWN",
@@ -519,7 +526,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x33 (Padding)
     {
         "UNKNOWN",
@@ -527,7 +534,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x34 (Padding)
     {
         "UNKNOWN",
@@ -535,7 +542,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x35 (Padding)
     {
         "UNKNOWN",
@@ -543,7 +550,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x36 (Padding)
     {
         "UNKNOWN",
@@ -551,7 +558,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x37 (Padding)
     {
         "UNKNOWN",
@@ -559,7 +566,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x38 (Padding)
     {
         "UNKNOWN",
@@ -567,7 +574,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x39 (Padding)
     {
         "UNKNOWN",
@@ -575,7 +582,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3a (Padding)
     {
         "UNKNOWN",
@@ -583,7 +590,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3b (Padding)
     {
         "UNKNOWN",
@@ -591,7 +598,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3c (Padding)
     {
         "UNKNOWN",
@@ -599,7 +606,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3d (Padding)
     {
         "UNKNOWN",
@@ -607,7 +614,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3e (Padding)
     {
         "UNKNOWN",
@@ -615,7 +622,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x3f (Padding)
     {
         "UNKNOWN",
@@ -623,7 +630,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R32G32B32_FLOAT (0x40)
     {
         "R32G32B32_FLOAT",
@@ -641,6 +648,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32_SINT (0x41)
     {
@@ -659,6 +667,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32_UINT (0x42)
     {
@@ -677,6 +686,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x43 (Padding)
     {
@@ -685,7 +695,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x44 (Padding)
     {
         "UNKNOWN",
@@ -693,7 +703,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R32G32B32_SSCALED (0x45)
     {
         "R32G32B32_SSCALED",
@@ -711,6 +721,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32B32_USCALED (0x46)
     {
@@ -729,6 +740,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x47 (Padding)
     {
@@ -737,7 +749,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x48 (Padding)
     {
         "UNKNOWN",
@@ -745,7 +757,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x49 (Padding)
     {
         "UNKNOWN",
@@ -753,7 +765,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4a (Padding)
     {
         "UNKNOWN",
@@ -761,7 +773,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4b (Padding)
     {
         "UNKNOWN",
@@ -769,7 +781,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4c (Padding)
     {
         "UNKNOWN",
@@ -777,7 +789,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4d (Padding)
     {
         "UNKNOWN",
@@ -785,7 +797,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4e (Padding)
     {
         "UNKNOWN",
@@ -793,7 +805,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x4f (Padding)
     {
         "UNKNOWN",
@@ -801,7 +813,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x50 (Padding)
     {
         "UNKNOWN",
@@ -809,7 +821,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x51 (Padding)
     {
         "UNKNOWN",
@@ -817,7 +829,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x52 (Padding)
     {
         "UNKNOWN",
@@ -825,7 +837,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x53 (Padding)
     {
         "UNKNOWN",
@@ -833,7 +845,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x54 (Padding)
     {
         "UNKNOWN",
@@ -841,7 +853,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x55 (Padding)
     {
         "UNKNOWN",
@@ -849,7 +861,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x56 (Padding)
     {
         "UNKNOWN",
@@ -857,7 +869,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x57 (Padding)
     {
         "UNKNOWN",
@@ -865,7 +877,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x58 (Padding)
     {
         "UNKNOWN",
@@ -873,7 +885,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x59 (Padding)
     {
         "UNKNOWN",
@@ -881,7 +893,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5a (Padding)
     {
         "UNKNOWN",
@@ -889,7 +901,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5b (Padding)
     {
         "UNKNOWN",
@@ -897,7 +909,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5c (Padding)
     {
         "UNKNOWN",
@@ -905,7 +917,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5d (Padding)
     {
         "UNKNOWN",
@@ -913,7 +925,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5e (Padding)
     {
         "UNKNOWN",
@@ -921,7 +933,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x5f (Padding)
     {
         "UNKNOWN",
@@ -929,7 +941,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x60 (Padding)
     {
         "UNKNOWN",
@@ -937,7 +949,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x61 (Padding)
     {
         "UNKNOWN",
@@ -945,7 +957,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x62 (Padding)
     {
         "UNKNOWN",
@@ -953,7 +965,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x63 (Padding)
     {
         "UNKNOWN",
@@ -961,7 +973,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x64 (Padding)
     {
         "UNKNOWN",
@@ -969,7 +981,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x65 (Padding)
     {
         "UNKNOWN",
@@ -977,7 +989,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x66 (Padding)
     {
         "UNKNOWN",
@@ -985,7 +997,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x67 (Padding)
     {
         "UNKNOWN",
@@ -993,7 +1005,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x68 (Padding)
     {
         "UNKNOWN",
@@ -1001,7 +1013,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x69 (Padding)
     {
         "UNKNOWN",
@@ -1009,7 +1021,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6a (Padding)
     {
         "UNKNOWN",
@@ -1017,7 +1029,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6b (Padding)
     {
         "UNKNOWN",
@@ -1025,7 +1037,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6c (Padding)
     {
         "UNKNOWN",
@@ -1033,7 +1045,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6d (Padding)
     {
         "UNKNOWN",
@@ -1041,7 +1053,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6e (Padding)
     {
         "UNKNOWN",
@@ -1049,7 +1061,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x6f (Padding)
     {
         "UNKNOWN",
@@ -1057,7 +1069,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x70 (Padding)
     {
         "UNKNOWN",
@@ -1065,7 +1077,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x71 (Padding)
     {
         "UNKNOWN",
@@ -1073,7 +1085,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x72 (Padding)
     {
         "UNKNOWN",
@@ -1081,7 +1093,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x73 (Padding)
     {
         "UNKNOWN",
@@ -1089,7 +1101,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x74 (Padding)
     {
         "UNKNOWN",
@@ -1097,7 +1109,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x75 (Padding)
     {
         "UNKNOWN",
@@ -1105,7 +1117,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x76 (Padding)
     {
         "UNKNOWN",
@@ -1113,7 +1125,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x77 (Padding)
     {
         "UNKNOWN",
@@ -1121,7 +1133,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x78 (Padding)
     {
         "UNKNOWN",
@@ -1129,7 +1141,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x79 (Padding)
     {
         "UNKNOWN",
@@ -1137,7 +1149,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7a (Padding)
     {
         "UNKNOWN",
@@ -1145,7 +1157,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7b (Padding)
     {
         "UNKNOWN",
@@ -1153,7 +1165,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7c (Padding)
     {
         "UNKNOWN",
@@ -1161,7 +1173,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7d (Padding)
     {
         "UNKNOWN",
@@ -1169,7 +1181,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7e (Padding)
     {
         "UNKNOWN",
@@ -1177,7 +1189,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x7f (Padding)
     {
         "UNKNOWN",
@@ -1185,7 +1197,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R16G16B16A16_UNORM (0x80)
     {
         "R16G16B16A16_UNORM",
@@ -1203,6 +1215,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 1.0f / 65535.0f, 1.0f / 65535.0f, 1.0f / 65535.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16A16_SNORM (0x81)
     {
@@ -1221,6 +1234,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / 32767.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16A16_SINT (0x82)
     {
@@ -1239,6 +1253,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16A16_UINT (0x83)
     {
@@ -1257,6 +1272,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16A16_FLOAT (0x84)
     {
@@ -1275,6 +1291,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32_FLOAT (0x85)
     {
@@ -1293,6 +1310,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32_SINT (0x86)
     {
@@ -1311,6 +1329,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32_UINT (0x87)
     {
@@ -1329,6 +1348,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32_FLOAT_X8X24_TYPELESS (0x88)
     {
@@ -1347,6 +1367,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x89 (Padding)
     {
@@ -1355,15 +1376,26 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x8a (Padding)
+        1, 1, false    },
+    // L32A32_FLOAT (0x8a)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L32A32_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 32, 32, 0, 0 }, // Bits per component
+        64, // Bits per element
+        8, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x8b (Padding)
     {
         "UNKNOWN",
@@ -1371,7 +1403,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x8c (Padding)
     {
         "UNKNOWN",
@@ -1379,7 +1411,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x8d (Padding)
     {
         "UNKNOWN",
@@ -1387,7 +1419,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R16G16B16X16_UNORM (0x8e)
     {
         "R16G16B16X16_UNORM",
@@ -1405,6 +1437,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 1.0f / 65535.0f, 1.0f / 65535.0f, 1.0f / 65535.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16X16_FLOAT (0x8f)
     {
@@ -1423,6 +1456,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x90 (Padding)
     {
@@ -1431,23 +1465,45 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x91 (Padding)
+        1, 1, false    },
+    // L32X32_FLOAT (0x91)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x92 (Padding)
+        "L32X32_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 32, 32, 0, 0 }, // Bits per component
+        64, // Bits per element
+        8, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // I32X32_FLOAT (0x92)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "I32X32_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 32, 32, 0, 0 }, // Bits per component
+        64, // Bits per element
+        8, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // R16G16B16A16_SSCALED (0x93)
     {
         "R16G16B16A16_SSCALED",
@@ -1465,6 +1521,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16A16_USCALED (0x94)
     {
@@ -1483,6 +1540,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32_SSCALED (0x95)
     {
@@ -1501,6 +1559,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32G32_USCALED (0x96)
     {
@@ -1519,6 +1578,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x97 (Padding)
     {
@@ -1527,7 +1587,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R32_FLOAT_X8X24_TYPELESS_LD (0x98)
     {
         "R32_FLOAT_X8X24_TYPELESS_LD",
@@ -1545,6 +1605,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x99 (Padding)
     {
@@ -1553,7 +1614,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9a (Padding)
     {
         "UNKNOWN",
@@ -1561,7 +1622,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9b (Padding)
     {
         "UNKNOWN",
@@ -1569,7 +1630,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9c (Padding)
     {
         "UNKNOWN",
@@ -1577,7 +1638,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9d (Padding)
     {
         "UNKNOWN",
@@ -1585,7 +1646,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9e (Padding)
     {
         "UNKNOWN",
@@ -1593,7 +1654,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x9f (Padding)
     {
         "UNKNOWN",
@@ -1601,7 +1662,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa0 (Padding)
     {
         "UNKNOWN",
@@ -1609,7 +1670,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa1 (Padding)
     {
         "UNKNOWN",
@@ -1617,7 +1678,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa2 (Padding)
     {
         "UNKNOWN",
@@ -1625,7 +1686,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa3 (Padding)
     {
         "UNKNOWN",
@@ -1633,7 +1694,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa4 (Padding)
     {
         "UNKNOWN",
@@ -1641,7 +1702,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa5 (Padding)
     {
         "UNKNOWN",
@@ -1649,7 +1710,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa6 (Padding)
     {
         "UNKNOWN",
@@ -1657,7 +1718,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa7 (Padding)
     {
         "UNKNOWN",
@@ -1665,7 +1726,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa8 (Padding)
     {
         "UNKNOWN",
@@ -1673,7 +1734,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xa9 (Padding)
     {
         "UNKNOWN",
@@ -1681,7 +1742,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xaa (Padding)
     {
         "UNKNOWN",
@@ -1689,7 +1750,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xab (Padding)
     {
         "UNKNOWN",
@@ -1697,7 +1758,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xac (Padding)
     {
         "UNKNOWN",
@@ -1705,7 +1766,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xad (Padding)
     {
         "UNKNOWN",
@@ -1713,7 +1774,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xae (Padding)
     {
         "UNKNOWN",
@@ -1721,7 +1782,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xaf (Padding)
     {
         "UNKNOWN",
@@ -1729,7 +1790,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb0 (Padding)
     {
         "UNKNOWN",
@@ -1737,7 +1798,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb1 (Padding)
     {
         "UNKNOWN",
@@ -1745,7 +1806,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb2 (Padding)
     {
         "UNKNOWN",
@@ -1753,7 +1814,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb3 (Padding)
     {
         "UNKNOWN",
@@ -1761,7 +1822,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb4 (Padding)
     {
         "UNKNOWN",
@@ -1769,7 +1830,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb5 (Padding)
     {
         "UNKNOWN",
@@ -1777,7 +1838,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb6 (Padding)
     {
         "UNKNOWN",
@@ -1785,7 +1846,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb7 (Padding)
     {
         "UNKNOWN",
@@ -1793,7 +1854,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb8 (Padding)
     {
         "UNKNOWN",
@@ -1801,7 +1862,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xb9 (Padding)
     {
         "UNKNOWN",
@@ -1809,7 +1870,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xba (Padding)
     {
         "UNKNOWN",
@@ -1817,7 +1878,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xbb (Padding)
     {
         "UNKNOWN",
@@ -1825,7 +1886,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xbc (Padding)
     {
         "UNKNOWN",
@@ -1833,7 +1894,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xbd (Padding)
     {
         "UNKNOWN",
@@ -1841,7 +1902,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xbe (Padding)
     {
         "UNKNOWN",
@@ -1849,7 +1910,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xbf (Padding)
     {
         "UNKNOWN",
@@ -1857,7 +1918,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // B8G8R8A8_UNORM (0xc0)
     {
         "B8G8R8A8_UNORM",
@@ -1875,6 +1936,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B8G8R8A8_UNORM_SRGB (0xc1)
     {
@@ -1893,6 +1955,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_UNORM (0xc2)
     {
@@ -1911,6 +1974,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 3.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_UNORM_SRGB (0xc3)
     {
@@ -1929,6 +1993,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 3.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_UINT (0xc4)
     {
@@ -1947,6 +2012,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xc5 (Padding)
     {
@@ -1955,7 +2021,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xc6 (Padding)
     {
         "UNKNOWN",
@@ -1963,7 +2029,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8G8B8A8_UNORM (0xc7)
     {
         "R8G8B8A8_UNORM",
@@ -1981,6 +2047,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_UNORM_SRGB (0xc8)
     {
@@ -1999,6 +2066,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_SNORM (0xc9)
     {
@@ -2017,6 +2085,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 1.0f / 127.0f, 1.0f / 127.0f, 1.0f / 127.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_SINT (0xca)
     {
@@ -2035,6 +2104,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_UINT (0xcb)
     {
@@ -2053,6 +2123,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_UNORM (0xcc)
     {
@@ -2071,6 +2142,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 1.0f / 65535.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_SNORM (0xcd)
     {
@@ -2089,6 +2161,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 32767.0f, 1.0f / 32767.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_SINT (0xce)
     {
@@ -2107,6 +2180,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_UINT (0xcf)
     {
@@ -2125,6 +2199,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_FLOAT (0xd0)
     {
@@ -2143,6 +2218,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_UNORM (0xd1)
     {
@@ -2161,6 +2237,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 3.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_UNORM_SRGB (0xd2)
     {
@@ -2179,6 +2256,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 3.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R11G11B10_FLOAT (0xd3)
     {
@@ -2197,6 +2275,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xd4 (Padding)
     {
@@ -2205,7 +2284,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xd5 (Padding)
     {
         "UNKNOWN",
@@ -2213,7 +2292,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R32_SINT (0xd6)
     {
         "R32_SINT",
@@ -2231,6 +2310,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32_UINT (0xd7)
     {
@@ -2249,6 +2329,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32_FLOAT (0xd8)
     {
@@ -2267,6 +2348,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R24_UNORM_X8_TYPELESS (0xd9)
     {
@@ -2285,6 +2367,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 16777215.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xda (Padding)
     {
@@ -2293,7 +2376,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xdb (Padding)
     {
         "UNKNOWN",
@@ -2301,7 +2384,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R24_UNORM_X8_TYPELESS_LD (0xdc)
     {
         "R24_UNORM_X8_TYPELESS_LD",
@@ -2319,15 +2402,27 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 16777215.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
-    // 0xdd (Padding)
+    // L32_UNORM (0xdd)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L32_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 32, 0, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 4294967295.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0xde (Padding)
     {
         "UNKNOWN",
@@ -2335,31 +2430,64 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xdf (Padding)
+        1, 1, false    },
+    // L16A16_UNORM (0xdf)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xe0 (Padding)
+        "L16A16_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 16, 16, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 65535.0f, 1.0f / 65535.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // I24X8_UNORM (0xe0)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xe1 (Padding)
+        "I24X8_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 24, 8, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 16777215.0f, 1.0f / 255.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L24X8_UNORM (0xe1)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L24X8_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 24, 8, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 16777215.0f, 1.0f / 255.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0xe2 (Padding)
     {
         "UNKNOWN",
@@ -2367,23 +2495,45 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xe3 (Padding)
+        1, 1, false    },
+    // I32_FLOAT (0xe3)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xe4 (Padding)
+        "I32_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 32, 0, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L32_FLOAT (0xe4)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L32_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 32, 0, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // A32_FLOAT (0xe5)
     {
         "A32_FLOAT",
@@ -2401,6 +2551,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xe6 (Padding)
     {
@@ -2409,7 +2560,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xe7 (Padding)
     {
         "UNKNOWN",
@@ -2417,7 +2568,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xe8 (Padding)
     {
         "UNKNOWN",
@@ -2425,7 +2576,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // B8G8R8X8_UNORM (0xe9)
     {
         "B8G8R8X8_UNORM",
@@ -2443,6 +2594,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B8G8R8X8_UNORM_SRGB (0xea)
     {
@@ -2461,6 +2613,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8X8_UNORM (0xeb)
     {
@@ -2479,6 +2632,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8X8_UNORM_SRGB (0xec)
     {
@@ -2497,6 +2651,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R9G9B9E5_SHAREDEXP (0xed)
     {
@@ -2515,6 +2670,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10X2_UNORM (0xee)
     {
@@ -2533,6 +2689,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 1023.0f, 1.0f / 3.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xef (Padding)
     {
@@ -2541,15 +2698,26 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0xf0 (Padding)
+        1, 1, false    },
+    // L16A16_FLOAT (0xf0)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L16A16_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 16, 16, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0xf1 (Padding)
     {
         "UNKNOWN",
@@ -2557,7 +2725,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xf2 (Padding)
     {
         "UNKNOWN",
@@ -2565,7 +2733,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R10G10B10X2_USCALED (0xf3)
     {
         "R10G10B10X2_USCALED",
@@ -2583,6 +2751,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_SSCALED (0xf4)
     {
@@ -2601,6 +2770,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8A8_USCALED (0xf5)
     {
@@ -2619,6 +2789,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_SSCALED (0xf6)
     {
@@ -2637,6 +2808,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16_USCALED (0xf7)
     {
@@ -2655,6 +2827,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32_SSCALED (0xf8)
     {
@@ -2673,6 +2846,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R32_USCALED (0xf9)
     {
@@ -2691,6 +2865,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0xfa (Padding)
     {
@@ -2699,7 +2874,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xfb (Padding)
     {
         "UNKNOWN",
@@ -2707,7 +2882,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xfc (Padding)
     {
         "UNKNOWN",
@@ -2715,7 +2890,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xfd (Padding)
     {
         "UNKNOWN",
@@ -2723,7 +2898,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xfe (Padding)
     {
         "UNKNOWN",
@@ -2731,7 +2906,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0xff (Padding)
     {
         "UNKNOWN",
@@ -2739,7 +2914,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // B5G6R5_UNORM (0x100)
     {
         "B5G6R5_UNORM",
@@ -2757,6 +2932,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 63.0f, 1.0f / 31.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B5G6R5_UNORM_SRGB (0x101)
     {
@@ -2775,6 +2951,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 63.0f, 1.0f / 31.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B5G5R5A1_UNORM (0x102)
     {
@@ -2793,6 +2970,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B5G5R5A1_UNORM_SRGB (0x103)
     {
@@ -2811,6 +2989,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B4G4R4A4_UNORM (0x104)
     {
@@ -2829,6 +3008,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 15.0f, 1.0f / 15.0f, 1.0f / 15.0f, 1.0f / 15.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B4G4R4A4_UNORM_SRGB (0x105)
     {
@@ -2847,6 +3027,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 15.0f, 1.0f / 15.0f, 1.0f / 15.0f, 1.0f / 15.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_UNORM (0x106)
     {
@@ -2865,6 +3046,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_SNORM (0x107)
     {
@@ -2883,6 +3065,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 1.0f / 127.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_SINT (0x108)
     {
@@ -2901,6 +3084,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_UINT (0x109)
     {
@@ -2919,6 +3103,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_UNORM (0x10a)
     {
@@ -2937,6 +3122,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_SNORM (0x10b)
     {
@@ -2955,6 +3141,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 32767.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_SINT (0x10c)
     {
@@ -2973,6 +3160,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_UINT (0x10d)
     {
@@ -2991,6 +3179,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_FLOAT (0x10e)
     {
@@ -3009,6 +3198,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x10f (Padding)
     {
@@ -3017,7 +3207,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x110 (Padding)
     {
         "UNKNOWN",
@@ -3025,23 +3215,45 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x111 (Padding)
+        1, 1, false    },
+    // I16_UNORM (0x111)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x112 (Padding)
+        "I16_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 16, 0, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 65535.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L16_UNORM (0x112)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L16_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 16, 0, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 65535.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // A16_UNORM (0x113)
     {
         "A16_UNORM",
@@ -3059,31 +3271,65 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
-    // 0x114 (Padding)
+    // L8A8_UNORM (0x114)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x115 (Padding)
+        "L8A8_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 8, 8, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 1.0f / 255.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // I16_FLOAT (0x115)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x116 (Padding)
+        "I16_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 16, 0, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L16_FLOAT (0x116)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L16_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 16, 0, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // A16_FLOAT (0x117)
     {
         "A16_FLOAT",
@@ -3101,15 +3347,27 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
-    // 0x118 (Padding)
+    // L8A8_UNORM_SRGB (0x118)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L8A8_UNORM_SRGB",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 8, 8, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        2, // Num components
+        true, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 1.0f / 255.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x119 (Padding)
     {
         "UNKNOWN",
@@ -3117,7 +3375,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // B5G5R5X1_UNORM (0x11a)
     {
         "B5G5R5X1_UNORM",
@@ -3135,6 +3393,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B5G5R5X1_UNORM_SRGB (0x11b)
     {
@@ -3153,6 +3412,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 31.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_SSCALED (0x11c)
     {
@@ -3171,6 +3431,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8_USCALED (0x11d)
     {
@@ -3189,6 +3450,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_SSCALED (0x11e)
     {
@@ -3207,6 +3469,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16_USCALED (0x11f)
     {
@@ -3225,6 +3488,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x120 (Padding)
     {
@@ -3233,7 +3497,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x121 (Padding)
     {
         "UNKNOWN",
@@ -3241,7 +3505,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x122 (Padding)
     {
         "UNKNOWN",
@@ -3249,7 +3513,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x123 (Padding)
     {
         "UNKNOWN",
@@ -3257,7 +3521,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x124 (Padding)
     {
         "UNKNOWN",
@@ -3265,7 +3529,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x125 (Padding)
     {
         "UNKNOWN",
@@ -3273,23 +3537,45 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x126 (Padding)
+        1, 1, false    },
+    // L8A8_UINT (0x126)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x127 (Padding)
+        "L8A8_UINT",
+        { SWR_TYPE_UINT, SWR_TYPE_UINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 8, 8, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L8A8_SINT (0x127)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L8A8_SINT",
+        { SWR_TYPE_SINT, SWR_TYPE_SINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 3, 0, 0 }, // Swizzle
+        { 8, 8, 0, 0 }, // Bits per component
+        16, // Bits per element
+        2, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x128 (Padding)
     {
         "UNKNOWN",
@@ -3297,7 +3583,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x129 (Padding)
     {
         "UNKNOWN",
@@ -3305,7 +3591,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12a (Padding)
     {
         "UNKNOWN",
@@ -3313,7 +3599,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12b (Padding)
     {
         "UNKNOWN",
@@ -3321,7 +3607,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12c (Padding)
     {
         "UNKNOWN",
@@ -3329,7 +3615,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12d (Padding)
     {
         "UNKNOWN",
@@ -3337,7 +3623,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12e (Padding)
     {
         "UNKNOWN",
@@ -3345,7 +3631,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x12f (Padding)
     {
         "UNKNOWN",
@@ -3353,7 +3639,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x130 (Padding)
     {
         "UNKNOWN",
@@ -3361,7 +3647,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x131 (Padding)
     {
         "UNKNOWN",
@@ -3369,7 +3655,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x132 (Padding)
     {
         "UNKNOWN",
@@ -3377,7 +3663,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x133 (Padding)
     {
         "UNKNOWN",
@@ -3385,7 +3671,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x134 (Padding)
     {
         "UNKNOWN",
@@ -3393,7 +3679,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x135 (Padding)
     {
         "UNKNOWN",
@@ -3401,7 +3687,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x136 (Padding)
     {
         "UNKNOWN",
@@ -3409,7 +3695,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x137 (Padding)
     {
         "UNKNOWN",
@@ -3417,7 +3703,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x138 (Padding)
     {
         "UNKNOWN",
@@ -3425,7 +3711,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x139 (Padding)
     {
         "UNKNOWN",
@@ -3433,7 +3719,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13a (Padding)
     {
         "UNKNOWN",
@@ -3441,7 +3727,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13b (Padding)
     {
         "UNKNOWN",
@@ -3449,7 +3735,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13c (Padding)
     {
         "UNKNOWN",
@@ -3457,7 +3743,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13d (Padding)
     {
         "UNKNOWN",
@@ -3465,7 +3751,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13e (Padding)
     {
         "UNKNOWN",
@@ -3473,7 +3759,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x13f (Padding)
     {
         "UNKNOWN",
@@ -3481,7 +3767,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8_UNORM (0x140)
     {
         "R8_UNORM",
@@ -3499,6 +3785,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8_SNORM (0x141)
     {
@@ -3517,6 +3804,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8_SINT (0x142)
     {
@@ -3535,6 +3823,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8_UINT (0x143)
     {
@@ -3553,6 +3842,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // A8_UNORM (0x144)
     {
@@ -3571,23 +3861,46 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
-    // 0x145 (Padding)
+    // I8_UNORM (0x145)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x146 (Padding)
+        "I8_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L8_UNORM (0x146)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L8_UNORM",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x147 (Padding)
     {
         "UNKNOWN",
@@ -3595,7 +3908,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x148 (Padding)
     {
         "UNKNOWN",
@@ -3603,7 +3916,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8_SSCALED (0x149)
     {
         "R8_SSCALED",
@@ -3621,6 +3934,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8_USCALED (0x14a)
     {
@@ -3639,6 +3953,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 0, 0, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x14b (Padding)
     {
@@ -3647,15 +3962,26 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x14c (Padding)
+        1, 1, false    },
+    // L8_UNORM_SRGB (0x14c)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "L8_UNORM_SRGB",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        true, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x14d (Padding)
     {
         "UNKNOWN",
@@ -3663,7 +3989,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x14e (Padding)
     {
         "UNKNOWN",
@@ -3671,7 +3997,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x14f (Padding)
     {
         "UNKNOWN",
@@ -3679,7 +4005,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x150 (Padding)
     {
         "UNKNOWN",
@@ -3687,7 +4013,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x151 (Padding)
     {
         "UNKNOWN",
@@ -3695,39 +4021,83 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x152 (Padding)
+        1, 1, false    },
+    // L8_UINT (0x152)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x153 (Padding)
+        "L8_UINT",
+        { SWR_TYPE_UINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // L8_SINT (0x153)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x154 (Padding)
+        "L8_SINT",
+        { SWR_TYPE_SINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // I8_UINT (0x154)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
-    // 0x155 (Padding)
+        "I8_UINT",
+        { SWR_TYPE_UINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
+    // I8_SINT (0x155)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        "I8_SINT",
+        { SWR_TYPE_SINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        8, // Bits per element
+        1, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        true, // isLuminance
+    },
     // 0x156 (Padding)
     {
         "UNKNOWN",
@@ -3735,7 +4105,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x157 (Padding)
     {
         "UNKNOWN",
@@ -3743,7 +4113,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x158 (Padding)
     {
         "UNKNOWN",
@@ -3751,7 +4121,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x159 (Padding)
     {
         "UNKNOWN",
@@ -3759,7 +4129,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15a (Padding)
     {
         "UNKNOWN",
@@ -3767,7 +4137,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15b (Padding)
     {
         "UNKNOWN",
@@ -3775,7 +4145,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15c (Padding)
     {
         "UNKNOWN",
@@ -3783,7 +4153,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15d (Padding)
     {
         "UNKNOWN",
@@ -3791,7 +4161,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15e (Padding)
     {
         "UNKNOWN",
@@ -3799,7 +4169,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x15f (Padding)
     {
         "UNKNOWN",
@@ -3807,7 +4177,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x160 (Padding)
     {
         "UNKNOWN",
@@ -3815,7 +4185,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x161 (Padding)
     {
         "UNKNOWN",
@@ -3823,7 +4193,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x162 (Padding)
     {
         "UNKNOWN",
@@ -3831,7 +4201,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x163 (Padding)
     {
         "UNKNOWN",
@@ -3839,7 +4209,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x164 (Padding)
     {
         "UNKNOWN",
@@ -3847,7 +4217,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x165 (Padding)
     {
         "UNKNOWN",
@@ -3855,7 +4225,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x166 (Padding)
     {
         "UNKNOWN",
@@ -3863,7 +4233,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x167 (Padding)
     {
         "UNKNOWN",
@@ -3871,7 +4241,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x168 (Padding)
     {
         "UNKNOWN",
@@ -3879,7 +4249,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x169 (Padding)
     {
         "UNKNOWN",
@@ -3887,7 +4257,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16a (Padding)
     {
         "UNKNOWN",
@@ -3895,7 +4265,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16b (Padding)
     {
         "UNKNOWN",
@@ -3903,7 +4273,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16c (Padding)
     {
         "UNKNOWN",
@@ -3911,7 +4281,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16d (Padding)
     {
         "UNKNOWN",
@@ -3919,7 +4289,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16e (Padding)
     {
         "UNKNOWN",
@@ -3927,7 +4297,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x16f (Padding)
     {
         "UNKNOWN",
@@ -3935,7 +4305,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x170 (Padding)
     {
         "UNKNOWN",
@@ -3943,7 +4313,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x171 (Padding)
     {
         "UNKNOWN",
@@ -3951,7 +4321,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x172 (Padding)
     {
         "UNKNOWN",
@@ -3959,7 +4329,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x173 (Padding)
     {
         "UNKNOWN",
@@ -3967,7 +4337,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x174 (Padding)
     {
         "UNKNOWN",
@@ -3975,7 +4345,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x175 (Padding)
     {
         "UNKNOWN",
@@ -3983,7 +4353,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x176 (Padding)
     {
         "UNKNOWN",
@@ -3991,7 +4361,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x177 (Padding)
     {
         "UNKNOWN",
@@ -3999,7 +4369,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x178 (Padding)
     {
         "UNKNOWN",
@@ -4007,7 +4377,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x179 (Padding)
     {
         "UNKNOWN",
@@ -4015,7 +4385,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17a (Padding)
     {
         "UNKNOWN",
@@ -4023,7 +4393,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17b (Padding)
     {
         "UNKNOWN",
@@ -4031,7 +4401,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17c (Padding)
     {
         "UNKNOWN",
@@ -4039,7 +4409,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17d (Padding)
     {
         "UNKNOWN",
@@ -4047,7 +4417,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17e (Padding)
     {
         "UNKNOWN",
@@ -4055,7 +4425,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x17f (Padding)
     {
         "UNKNOWN",
@@ -4063,7 +4433,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x180 (Padding)
     {
         "UNKNOWN",
@@ -4071,7 +4441,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x181 (Padding)
     {
         "UNKNOWN",
@@ -4079,7 +4449,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x182 (Padding)
     {
         "UNKNOWN",
@@ -4087,7 +4457,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // YCRCB_SWAPUVY (0x183)
     {
         "YCRCB_SWAPUVY",
@@ -4105,6 +4475,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         2, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x184 (Padding)
     {
@@ -4113,7 +4484,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x185 (Padding)
     {
         "UNKNOWN",
@@ -4121,7 +4492,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // BC1_UNORM (0x186)
     {
         "BC1_UNORM",
@@ -4139,6 +4510,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC2_UNORM (0x187)
     {
@@ -4157,6 +4529,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC3_UNORM (0x188)
     {
@@ -4175,6 +4548,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC4_UNORM (0x189)
     {
@@ -4193,6 +4567,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC5_UNORM (0x18a)
     {
@@ -4211,6 +4586,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC1_UNORM_SRGB (0x18b)
     {
@@ -4229,6 +4605,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC2_UNORM_SRGB (0x18c)
     {
@@ -4247,6 +4624,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC3_UNORM_SRGB (0x18d)
     {
@@ -4265,6 +4643,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // 0x18e (Padding)
     {
@@ -4273,7 +4652,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // YCRCB_SWAPUV (0x18f)
     {
         "YCRCB_SWAPUV",
@@ -4291,6 +4670,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         2, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x190 (Padding)
     {
@@ -4299,7 +4679,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x191 (Padding)
     {
         "UNKNOWN",
@@ -4307,7 +4687,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x192 (Padding)
     {
         "UNKNOWN",
@@ -4315,7 +4695,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8G8B8_UNORM (0x193)
     {
         "R8G8B8_UNORM",
@@ -4333,6 +4713,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8_SNORM (0x194)
     {
@@ -4351,6 +4732,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 1.0f / 127.0f, 1.0f / 127.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8_SSCALED (0x195)
     {
@@ -4369,6 +4751,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8_USCALED (0x196)
     {
@@ -4387,6 +4770,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x197 (Padding)
     {
@@ -4395,7 +4779,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x198 (Padding)
     {
         "UNKNOWN",
@@ -4403,7 +4787,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // BC4_SNORM (0x199)
     {
         "BC4_SNORM",
@@ -4421,6 +4805,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC5_SNORM (0x19a)
     {
@@ -4439,6 +4824,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 127.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_FLOAT (0x19b)
     {
@@ -4457,6 +4843,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_UNORM (0x19c)
     {
@@ -4475,6 +4862,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 65535.0f, 1.0f / 65535.0f, 1.0f / 65535.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_SNORM (0x19d)
     {
@@ -4493,6 +4881,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 32767.0f, 1.0f / 32767.0f, 1.0f / 32767.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_SSCALED (0x19e)
     {
@@ -4511,6 +4900,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_USCALED (0x19f)
     {
@@ -4529,6 +4919,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x1a0 (Padding)
     {
@@ -4537,7 +4928,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1a1 (Padding)
     {
         "UNKNOWN",
@@ -4545,7 +4936,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // BC7_UNORM (0x1a2)
     {
         "BC7_UNORM",
@@ -4563,6 +4954,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // BC7_UNORM_SRGB (0x1a3)
     {
@@ -4581,6 +4973,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
         4, // bcWidth
         4, // bcHeight
+        false, // isLuminance
     },
     // 0x1a4 (Padding)
     {
@@ -4589,7 +4982,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1a5 (Padding)
     {
         "UNKNOWN",
@@ -4597,7 +4990,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1a6 (Padding)
     {
         "UNKNOWN",
@@ -4605,7 +4998,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1a7 (Padding)
     {
         "UNKNOWN",
@@ -4613,7 +5006,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8G8B8_UNORM_SRGB (0x1a8)
     {
         "R8G8B8_UNORM_SRGB",
@@ -4631,6 +5024,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 255.0f, 1.0f / 255.0f, 1.0f / 255.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x1a9 (Padding)
     {
@@ -4639,7 +5033,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1aa (Padding)
     {
         "UNKNOWN",
@@ -4647,7 +5041,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1ab (Padding)
     {
         "UNKNOWN",
@@ -4655,7 +5049,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1ac (Padding)
     {
         "UNKNOWN",
@@ -4663,7 +5057,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1ad (Padding)
     {
         "UNKNOWN",
@@ -4671,7 +5065,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1ae (Padding)
     {
         "UNKNOWN",
@@ -4679,7 +5073,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1af (Padding)
     {
         "UNKNOWN",
@@ -4687,7 +5081,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R16G16B16_UINT (0x1b0)
     {
         "R16G16B16_UINT",
@@ -4705,6 +5099,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R16G16B16_SINT (0x1b1)
     {
@@ -4723,6 +5118,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x1b2 (Padding)
     {
@@ -4731,7 +5127,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R10G10B10A2_SNORM (0x1b3)
     {
         "R10G10B10A2_SNORM",
@@ -4749,6 +5145,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 511.0f, 1.0f / 511.0f, 1.0f / 511.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_USCALED (0x1b4)
     {
@@ -4767,6 +5164,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_SSCALED (0x1b5)
     {
@@ -4785,6 +5183,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R10G10B10A2_SINT (0x1b6)
     {
@@ -4803,6 +5202,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_SNORM (0x1b7)
     {
@@ -4821,6 +5221,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f / 511.0f, 1.0f / 511.0f, 1.0f / 511.0f, 1.0f / 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_USCALED (0x1b8)
     {
@@ -4839,6 +5240,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_SSCALED (0x1b9)
     {
@@ -4857,6 +5259,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_UINT (0x1ba)
     {
@@ -4875,6 +5278,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // B10G10R10A2_SINT (0x1bb)
     {
@@ -4893,6 +5297,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // 0x1bc (Padding)
     {
@@ -4901,7 +5306,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1bd (Padding)
     {
         "UNKNOWN",
@@ -4909,7 +5314,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1be (Padding)
     {
         "UNKNOWN",
@@ -4917,7 +5322,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1bf (Padding)
     {
         "UNKNOWN",
@@ -4925,7 +5330,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c0 (Padding)
     {
         "UNKNOWN",
@@ -4933,7 +5338,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c1 (Padding)
     {
         "UNKNOWN",
@@ -4941,7 +5346,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c2 (Padding)
     {
         "UNKNOWN",
@@ -4949,7 +5354,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c3 (Padding)
     {
         "UNKNOWN",
@@ -4957,7 +5362,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c4 (Padding)
     {
         "UNKNOWN",
@@ -4965,7 +5370,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c5 (Padding)
     {
         "UNKNOWN",
@@ -4973,7 +5378,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c6 (Padding)
     {
         "UNKNOWN",
@@ -4981,7 +5386,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // 0x1c7 (Padding)
     {
         "UNKNOWN",
@@ -4989,7 +5394,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1,    },
+        1, 1, false    },
     // R8G8B8_UINT (0x1c8)
     {
         "R8G8B8_UINT",
@@ -5007,6 +5412,7 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
     // R8G8B8_SINT (0x1c9)
     {
@@ -5025,5 +5431,6 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
         1, // bcWidth
         1, // bcHeight
+        false, // isLuminance
     },
 };

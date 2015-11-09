@@ -40,11 +40,7 @@
 //////////////////////////////////////////////////////////////////////////
 struct MacroTileQueue
 {
-    MacroTileQueue()
-    {
-        mFifo.initialize();
-    }
-
+    MacroTileQueue() { }
     ~MacroTileQueue() { }
 
     //////////////////////////////////////////////////////////////////////////
@@ -63,9 +59,9 @@ struct MacroTileQueue
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief Clear fifo and unlock it.
-    void clear()
+    void clear(Arena& arena)
     {
-        mFifo.clear();
+        mFifo.clear(arena);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -75,9 +71,9 @@ struct MacroTileQueue
         return mFifo.peek();
     }
 
-    bool enqueue_try_nosync(const BE_WORK* entry)
+    bool enqueue_try_nosync(Arena& arena, const BE_WORK* entry)
     {
-        return mFifo.enqueue_try_nosync(entry);
+        return mFifo.enqueue_try_nosync(arena, entry);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -108,7 +104,7 @@ private:
 class MacroTileMgr
 {
 public:
-    MacroTileMgr();
+    MacroTileMgr(Arena& arena);
     ~MacroTileMgr()
     {
         for (auto &tile : mTiles)
@@ -139,6 +135,7 @@ public:
     void operator delete (void *p);
 
 private:
+    Arena& mArena;
     SWR_FORMAT mFormat;
     std::unordered_map<uint32_t, MacroTileQueue> mTiles;
 

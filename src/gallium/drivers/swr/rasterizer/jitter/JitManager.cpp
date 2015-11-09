@@ -56,8 +56,8 @@
 #include <cstring>
 
 #define INTEL_OUTPUT_DIR "c:\\Intel"
-#define RASTY_OUTPUT_DIR INTEL_OUTPUT_DIR "\\Rasty"
-#define JITTER_OUTPUT_DIR RASTY_OUTPUT_DIR "\\Jitter"
+#define SWR_OUTPUT_DIR INTEL_OUTPUT_DIR "\\SWR"
+#define JITTER_OUTPUT_DIR SWR_OUTPUT_DIR "\\Jitter"
 #endif
 
 using namespace llvm;
@@ -94,7 +94,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch)
 
     StringRef hostCPUName;
 
-    // force JIT to use the same CPU arch as the rest of rasty
+    // force JIT to use the same CPU arch as the rest of swr
     if(mArch.AVX512F())
     {
         assert(0 && "Implement AVX512 jitter");
@@ -186,7 +186,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch)
     if (KNOB_DUMP_SHADER_IR)
     {
         CreateDirectory(INTEL_OUTPUT_DIR, NULL);
-        CreateDirectory(RASTY_OUTPUT_DIR, NULL);
+        CreateDirectory(SWR_OUTPUT_DIR, NULL);
         CreateDirectory(JITTER_OUTPUT_DIR, NULL);
     }
 #endif

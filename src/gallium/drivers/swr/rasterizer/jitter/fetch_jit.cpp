@@ -559,9 +559,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
         partialInboundsSize = LOAD(partialInboundsSize);
         Value* vPartialVertexSize = VBROADCAST(partialInboundsSize);
         Value* vBpp = VBROADCAST(C(info.Bpp));
+        Value* vAlignmentOffsets = VBROADCAST(C(ied.AlignedByteOffset));
 
         // is the element is <= the partially valid size
-        Value* vElementInBoundsMask = ICMP_ULE(vBpp, vPartialVertexSize);
+        Value* vElementInBoundsMask = ICMP_SLE(vBpp, SUB(vPartialVertexSize, vAlignmentOffsets));
 
         // are vertices partially OOB?
         Value* vMaxVertex = VBROADCAST(maxVertex);
@@ -576,7 +577,6 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState, Value* f
 
         // calculate the actual offsets into the VB
         Value* vOffsets = MUL(vCurIndices, vStride);
-        Value* vAlignmentOffsets = VBROADCAST(C(ied.AlignedByteOffset));
         vOffsets = ADD(vOffsets, vAlignmentOffsets);
 
         // Packing and component control 

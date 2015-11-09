@@ -97,6 +97,7 @@ struct PA_STATE_OPT : public PA_STATE
 
     PFN_PA_FUNC        pfnPaFunc;        // PA state machine function for assembling 4 triangles.
     PFN_PA_SINGLE_FUNC pfnPaSingleFunc;  // PA state machine function for assembling single triangle.
+    PFN_PA_FUNC        pfnPaFuncReset;   // initial state to set on reset
 
     // state used to advance the PA when Next is called
     PFN_PA_FUNC        pfnPaNextFunc;
@@ -217,6 +218,7 @@ struct PA_STATE_OPT : public PA_STATE
 
     void Reset()
     {
+        this->pfnPaFunc = this->pfnPaFuncReset;
         this->numPrimsComplete = 0;
         this->numSimdPrims = 0;
         this->cur = 0;

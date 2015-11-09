@@ -523,10 +523,9 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                 vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
             }
 
-            // @todo: uint32_t sampleMask = state.rastState.sampleMask & MultisampleTraits<sampleCount>::sampleMask;
             for(uint32_t sample = 0; sample < numSamples; sample++)
             {
-                /// @todo: sampleMask / inputcoverage
+                /// @todo: inputcoverage
                 if (work.coverageMask[sample] & MASK)
                 {
                     RDTSC_START(BEBarycentric);
@@ -561,8 +560,10 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                         coverageMask &= ~ComputeUserClipMask(rastState.clipDistanceMask, work.pUserClipBuffer,
                             psContext.vI, psContext.vJ);
                     }
-
-                    simdscalar depthPassMask = vMask(coverageMask);
+                    
+                    simdscalar vCoverageMask = vMask(coverageMask);
+                    simdscalar depthPassMask = vCoverageMask;
+                    simdscalar stencilPassMask = vCoverageMask;
 
                     uint8_t *pDepthSample, *pStencilSample;
                     if(sampleCount == SWR_MULTISAMPLE_1X)
@@ -581,12 +582,17 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     if (CanEarlyZ(pPSState))
                     {
                         RDTSC_START(BEEarlyDepthTest);
-                        depthPassMask = ZTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
-                                              psContext.vZ, pDepthBase, depthPassMask, pStencilBase, pPSState->killsPixel);
+                        depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                                              psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
+                        // early-exit if no samples passed depth
                         if (!_simd_movemask_ps(depthPassMask))
                         {
+                            // need to call depth/stencil write for stencil write
+                            DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                                pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
+
                             work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
                             continue;
                         }
@@ -595,25 +601,29 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     // interpolate 1/w
                     psContext.vOneOverW = vplaneps(vAOneOverW, vBOneOverW, vCOneOverW, psContext.vI, psContext.vJ);
                     psContext.sampleIndex = sample;
-                    psContext.mask = _simd_castps_si(depthPassMask);
+                    psContext.mask = _simd_castps_si(vCoverageMask);
 
                     // execute pixel shader
                     RDTSC_START(BEPixelShader);
                     state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
                     RDTSC_STOP(BEPixelShader, 0, 0);
 
-                    depthPassMask = _simd_castsi_ps(psContext.mask);
+                    vCoverageMask = _simd_castsi_ps(psContext.mask);
 
                     //// late-Z
-                    if (!CanEarlyZ(pPSState) || pPSState->killsPixel)
+                    if (!CanEarlyZ(pPSState))
                     {
                         RDTSC_START(BELateDepthTest);
-                        depthPassMask = ZTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
-                                              psContext.vZ, pDepthSample, depthPassMask, pStencilSample, false);
+                        depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                                              psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
                         RDTSC_STOP(BELateDepthTest, 0, 0);
 
                         if (!_simd_movemask_ps(depthPassMask))
                         {
+                            // need to call depth/stencil write for stencil write
+                            DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                                pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
+
                             work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
                             continue;
                         }
@@ -622,8 +632,6 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     uint32_t statMask = _simd_movemask_ps(depthPassMask);
                     uint32_t statCount = _mm_popcnt_u32(statMask);
                     UPDATE_STAT(DepthPassCount, statCount);
-
-                    simdscalari mask = _simd_castps_si(depthPassMask);
 
                     // output merger
                     RDTSC_START(BEOutputMerger);
@@ -651,11 +659,20 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
 
-                        // Blend outputs
-                        if (pRTBlend->colorBlendEnable)
+                        // Blend outputs and update coverage mask for alpha test
+                        if (state.pfnBlendFunc[rt] != nullptr)
                         {
-                            state.pfnBlendFunc[rt](pBlendState, psContext.shaded[rt], psContext.shaded[1], pColorSample, psContext.shaded[rt]);
+                            state.pfnBlendFunc[rt](
+                                pBlendState,
+                                psContext.shaded[rt],
+                                psContext.shaded[1],
+                                pColorSample,
+                                psContext.shaded[rt],
+                                (simdscalari*)&vCoverageMask);
                         }
+
+                        // final write mask 
+                        simdscalari vOutputMask = _simd_castps_si(_simd_and_ps(vCoverageMask, depthPassMask));
 
                         ///@todo can only use maskstore fast path if bpc is 32. Assuming hot tile is RGBA32_FLOAT.
                         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
@@ -665,21 +682,25 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                         // store with color mask
                         if (!pRTBlend->writeDisableRed)
                         {
-                            _simd_maskstore_ps((float*)pColorSample, mask, psContext.shaded[rt].x);
+                            _simd_maskstore_ps((float*)pColorSample, vOutputMask, psContext.shaded[rt].x);
                         }
                         if (!pRTBlend->writeDisableGreen)
                         {
-                            _simd_maskstore_ps((float*)(pColorSample + simd), mask, psContext.shaded[rt].y);
+                            _simd_maskstore_ps((float*)(pColorSample + simd), vOutputMask, psContext.shaded[rt].y);
                         }
                         if (!pRTBlend->writeDisableBlue)
                         {
-                            _simd_maskstore_ps((float*)(pColorSample + simd * 2), mask, psContext.shaded[rt].z);
+                            _simd_maskstore_ps((float*)(pColorSample + simd * 2), vOutputMask, psContext.shaded[rt].z);
                         }
                         if (!pRTBlend->writeDisableAlpha)
                         {
-                            _simd_maskstore_ps((float*)(pColorSample + simd * 3), mask, psContext.shaded[rt].w);
+                            _simd_maskstore_ps((float*)(pColorSample + simd * 3), vOutputMask, psContext.shaded[rt].w);
                         }
                     }
+
+                    // do final depth write after all pixel kills
+                    DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
+                        pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
 
                     RDTSC_STOP(BEOutputMerger, 0, 0);
                 }
@@ -698,7 +719,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     }
 }
 
-template<uint32_t MaxRT, SWR_MULTISAMPLE_COUNT sampleCount>
+template<uint32_t MaxRT, SWR_MULTISAMPLE_COUNT sampleCount, SWR_MSAA_SAMPLE_PATTERN samplePattern>
 void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
     RDTSC_START(BESetup);
@@ -749,7 +770,17 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.pSamplePos = work.pSamplePos;
     psContext.sampleIndex = 0;
 
-    const uint32_t numSamples = MultisampleTraits<sampleCount>::numSamples;
+    uint32_t numCoverageSamples;
+    if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
+    {
+        numCoverageSamples = MultisampleTraits<sampleCount>::numSamples;
+    }
+    else
+    {
+        numCoverageSamples = 1;
+    }
+    const uint32_t numOMSamples = MultisampleTraits<sampleCount>::numSamples;
+    
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         simdscalar vYSamplePosUL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
@@ -782,7 +813,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 // interpolate 1/w
                 psContext.vOneOverW = vplaneps(vAOneOverW, vBOneOverW, vCOneOverW, psContext.vI, psContext.vJ);
 
-                /// @todo: sampleMask / inputcoverage
+                /// @todo: inputcoverage
                 // for now just pass in all 1s
                 psContext.mask = _simd_set1_epi32(-1);
 
@@ -793,16 +824,17 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             }
             else
             {
-                /// @todo: sampleMask / inputcoverage
+                /// @todo: inputcoverage
                 // for now just through full pixel output
                 psContext.mask = _simd_set1_epi32(-1);
             }
 
-            simdscalar depthPassMask[numSamples];
+            simdscalar depthPassMask[numOMSamples]; // need to declare enough space for all samples
+            simdscalar stencilPassMask[numOMSamples];
             simdscalar anyDepthSamplePassed = _simd_setzero_ps();
-            for(uint32_t sample = 0; sample < numSamples; sample++)
+            for(uint32_t sample = 0; sample < numCoverageSamples; sample++)
             {
-                /// @todo: sampleMask / inputcoverage
+                /// @todo: inputcoverage
                 depthPassMask[sample] = vMask(work.coverageMask[sample] & MASK);
                 // pull mask back out for any discards and and with coverage
                 depthPassMask[sample] = _simd_and_ps(depthPassMask[sample], _simd_castsi_ps(psContext.mask));
@@ -818,9 +850,19 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 if(!pPSState->writesODepth || rastState.clipDistanceMask)
                 {
                     RDTSC_START(BEBarycentric);
-                    // calculate per sample positions
-                    simdscalar vSamplePosX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
-                    simdscalar vSamplePosY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
+                    simdscalar vSamplePosX;
+                    simdscalar vSamplePosY;
+                    if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
+                    {
+                        // calculate per sample positions
+                        vSamplePosX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
+                        vSamplePosY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
+                    }
+                    else
+                    {
+                        vSamplePosX = vXSamplePosCenter;
+                        vSamplePosY = vYSamplePosCenter;
+                    }
 
                     // evaluate I,J at sample positions
                     psContext.vI = vplaneps(vIa, vIb, vIc, vSamplePosX, vSamplePosY);
@@ -851,8 +893,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
 
                 // ZTest for this sample
                 RDTSC_START(BEEarlyDepthTest);
-                depthPassMask[sample] = ZTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
-                                        psContext.vZ, pDepthSample, depthPassMask[sample], pStencilSample, false);
+                stencilPassMask[sample] = depthPassMask[sample];
+                depthPassMask[sample] = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                                        psContext.vZ, pDepthSample, depthPassMask[sample], pStencilSample, &stencilPassMask[sample]);
                 RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
                 anyDepthSamplePassed = _simd_or_ps(anyDepthSamplePassed, depthPassMask[sample]);
@@ -894,7 +937,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             }
 
             // loop over all samples, broadcasting the results of the PS to all passing pixels
-            for(uint32_t sample = 0; sample < numSamples; sample++)
+            for(uint32_t sample = 0; sample < numOMSamples; sample++)
             {
                 if(sampleCount != SWR_MULTISAMPLE_1X)
                 {
@@ -905,12 +948,27 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 // output merger
                 RDTSC_START(BEOutputMerger);
                 // skip if none of the pixels for this sample passed
-                if(!_simd_movemask_ps(depthPassMask[sample]))
+                simdscalari mask;
+                if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
                 {
-                    depthPassMask[sample] = _simd_setzero_ps();
-                    continue;
+                    if(!_simd_movemask_ps(depthPassMask[sample]))
+                    {
+                        depthPassMask[sample] = _simd_setzero_ps();
+                        continue;
+                    }
+                    mask = _simd_castps_si(depthPassMask[sample]);
                 }
-                simdscalari mask = _simd_castps_si(depthPassMask[sample]);
+                else
+                {
+                    // center pattern only needs to use a single depth test as all samples are at the same position
+                    if(!_simd_movemask_ps(depthPassMask[0]))
+                    {
+                        depthPassMask[0] = _simd_setzero_ps();
+                        continue;
+                    }
+                    mask = _simd_castps_si(depthPassMask[0]);
+                }
+
                 uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
                 for(uint32_t rt = 0; rt <= MaxRT; ++rt)
                 {
@@ -919,9 +977,14 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
 
                     // Blend outputs
-                    if(pRTBlend->colorBlendEnable)
+                    if (state.pfnBlendFunc[rt] != nullptr)
                     {
-                        state.pfnBlendFunc[rt](pBlendState, psContext.shaded[rt], psContext.shaded[1], pColorSample, psContext.shaded[rt]);
+                        state.pfnBlendFunc[rt](pBlendState, 
+                            psContext.shaded[rt],
+                            psContext.shaded[1],
+                            pColorSample,
+                            psContext.shaded[rt],
+                            &mask);
                     }
 
                     ///@todo can only use maskstore fast path if bpc is 32. Assuming hot tile is RGBA32_FLOAT.
@@ -947,12 +1010,19 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                         _simd_maskstore_ps((float*)(pColorSample + simd * 3), mask, psContext.shaded[rt].w);
                     }
                 }
+
+                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
+                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
+
+                DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ, pDepthSample, _simd_castsi_ps(mask),
+                    depthPassMask[sample], pStencilSample, stencilPassMask[sample]);
+
                 RDTSC_STOP(BEOutputMerger, 0, 0);
             }
 
 Endtile:
             RDTSC_START(BEEndTile);
-            for(uint32_t sample = 0; sample < numSamples; sample++)
+            for(uint32_t sample = 0; sample < numCoverageSamples; sample++)
             {
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
@@ -1022,9 +1092,13 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                 RDTSC_STOP(BEBarycentric, 0, 0);
 
                 simdscalar depthPassMask = vMask(coverageMask & MASK);
+                simdscalar stencilPassMask = depthPassMask;
+
                 RDTSC_START(BEEarlyDepthTest);
-                depthPassMask = ZTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
-                                      psContext.vZ, pDepthBase, depthPassMask, pStencilBase, false);
+                depthPassMask = DepthStencilTest(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing,
+                                      psContext.vZ, pDepthBase, depthPassMask, pStencilBase, &stencilPassMask);
+                DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ, pDepthBase, depthPassMask, depthPassMask,
+                    pStencilBase, stencilPassMask);
                 RDTSC_STOP(BEEarlyDepthTest, 0, 0);
 
                 uint32_t statMask = _simd_movemask_ps(depthPassMask);
@@ -1106,45 +1180,88 @@ PFN_BACKEND_FUNC gSampleRateBackendTable[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_REN
 };
 
 // MSAA per pixel shading rate
-PFN_BACKEND_FUNC gPixelRateBackendTable[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS] ={
+PFN_BACKEND_FUNC gPixelRateBackendTableStandard[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS] ={
     {
-        BackendPixelRate<0, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<1, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<2, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<3, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<4, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<5, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<6, SWR_MULTISAMPLE_2X>,
-        BackendPixelRate<7, SWR_MULTISAMPLE_2X>,
+        BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN>,
     },
     {
-        BackendPixelRate<0, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<1, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<2, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<3, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<4, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<5, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<6, SWR_MULTISAMPLE_4X>,
-        BackendPixelRate<7, SWR_MULTISAMPLE_4X>,
+        BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN>,
     },
     {
-        BackendPixelRate<0, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<1, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<2, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<3, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<4, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<5, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<6, SWR_MULTISAMPLE_8X>,
-        BackendPixelRate<7, SWR_MULTISAMPLE_8X>,
+        BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN>,
     },
     {
-        BackendPixelRate<0, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<1, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<2, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<3, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<4, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<5, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<6, SWR_MULTISAMPLE_16X>,
-        BackendPixelRate<7, SWR_MULTISAMPLE_16X>,
+        BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN>,
+    }
+};
+
+PFN_BACKEND_FUNC gPixelRateBackendTableCenter[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS] ={
+    {
+        BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN>,
+    },
+    {
+        BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN>,
+    },
+    {
+        BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN>,
+    },
+    {
+        BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
+        BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN>,
     }
 };

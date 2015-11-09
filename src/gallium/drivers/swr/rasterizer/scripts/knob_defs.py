@@ -91,6 +91,12 @@ KNOBS = [
                        'for this to have an effect.'],
     }],
 
+    ['BUCKETS_ENABLE_THREADVIZ', {
+        'type'      : 'bool',
+        'default'   : 'false',
+        'desc'      : ['Enable threadviz output.'],
+    }],
+
     ['TOSS_DRAW', {
         'type'      : 'bool',
         'default'   : 'false',

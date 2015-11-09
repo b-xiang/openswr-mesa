@@ -1250,6 +1250,8 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
     };
 
+    this->pfnPaFuncReset = this->pfnPaFunc;
+
     //    simdscalari id8 = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
     //    simdscalari id4 = _mm256_set_epi32(0, 0, 1, 1, 2, 2, 3, 3);
     simdscalari id8 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);

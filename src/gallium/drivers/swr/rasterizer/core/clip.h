@@ -304,6 +304,13 @@ public:
         // input/output vertex store for clipper
         simdvertex vertices[7]; // maximum 7 verts generated per triangle
 
+        LONG constantInterpMask = this->state.backendState.constantInterpolationMask;
+        uint32_t provokingVertex = 0;
+        if (pa.binTopology == TOP_TRIANGLE_FAN)
+        {
+            provokingVertex = 1;
+        }
+
         // assemble pos
         simdvector tmpVector[NumVertsPerPrim];
         pa.Assemble(VERTEX_POSITION_SLOT, tmpVector);
@@ -316,28 +323,37 @@ public:
         DWORD slot = 0;
         uint32_t mapIdx = 0;
         uint32_t tmpLinkage = this->state.linkageMask;
+
+        int32_t maxSlot = -1;
         while (_BitScanForward(&slot, tmpLinkage))
         {
             tmpLinkage &= ~(1 << slot);
             // Compute absolute attrib slot in vertex array
-            uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + this->state.linkageMap[mapIdx++];
+            uint32_t mapSlot = this->state.linkageMap[mapIdx++];
+            maxSlot = std::max<int32_t>(maxSlot, mapSlot);
+            uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + mapSlot;
 
             pa.Assemble(inputSlot, tmpVector);
-            for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
+
+            // if constant interpolation enabled for this attribute, assign the provoking
+            // vertex values to all edges
+            if (_bittest(&constantInterpMask, slot))
             {
-                vertices[i].attrib[inputSlot] = tmpVector[i];
+                for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
+                {
+                    vertices[i].attrib[inputSlot] = tmpVector[provokingVertex];
+                }
+            }
+            else
+            {
+                for (uint32_t i = 0; i < NumVertsPerPrim; ++i)
+                {
+                    vertices[i].attrib[inputSlot] = tmpVector[i];
+                }
             }
         }
 
-        uint32_t numAttribs;
-        if (_BitScanReverse((DWORD*)&numAttribs, this->state.linkageMask))
-        {
-            numAttribs++;
-        }
-        else
-        {
-            numAttribs = 0;
-        }
+        uint32_t numAttribs = maxSlot + 1;
 
         simdscalari vNumClippedVerts = ClipPrims((float*)&vertices[0], vPrimMask, vClipMask, numAttribs);
 

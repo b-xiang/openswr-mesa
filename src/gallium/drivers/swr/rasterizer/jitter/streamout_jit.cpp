@@ -157,7 +157,7 @@ struct StreamOutJit : public Builder
 
             // cast input to <4xfloat>
             Value* src = BITCAST(vpackedAttrib, simd4Ty);
-            CALL3(maskStore, pOut, ToMask(packedMask), src);
+            CALL(maskStore, {pOut, ToMask(packedMask), src});
         }
 
         // increment SO buffer
@@ -339,10 +339,19 @@ extern "C" PFN_SO_FUNC JITCALL JitCompileStreamout(HANDLE hJitMgr, const STREAMO
 {
     JitManager* pJitMgr = reinterpret_cast<JitManager*>(hJitMgr);
 
+    STREAMOUT_COMPILE_STATE soState = state;
+    if (soState.offsetAttribs)
+    {
+        for (uint32_t i = 0; i < soState.stream.numDecls; ++i)
+        {
+            soState.stream.decl[i].attribSlot -= soState.offsetAttribs;
+        }
+    }
+
     pJitMgr->SetupNewModule();
 
     StreamOutJit theJit(pJitMgr);
-    HANDLE hFunc = theJit.Create(state);
+    HANDLE hFunc = theJit.Create(soState);
 
     return JitStreamoutFunc(hJitMgr, hFunc);
 }

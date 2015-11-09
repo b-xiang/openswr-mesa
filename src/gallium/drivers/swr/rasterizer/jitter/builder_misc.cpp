@@ -32,6 +32,116 @@
 
 void __cdecl CallPrint(const char* fmt, ...);
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Convert an IEEE 754 32-bit single precision float to an
+///        16 bit float with 5 exponent bits and a variable
+///        number of mantissa bits.
+/// @param val - 32-bit float
+/// @todo Maybe move this outside of this file into a header?
+static uint16_t Convert32To16Float(float val)
+{
+    uint32_t sign, exp, mant;
+    uint32_t roundBits;
+
+    // Extract the sign, exponent, and mantissa
+    uint32_t uf = *(uint32_t*)&val;
+    sign = (uf & 0x80000000) >> 31;
+    exp = (uf & 0x7F800000) >> 23;
+    mant = uf & 0x007FFFFF;
+
+    // Check for out of range
+    if (std::isnan(val))
+    {
+        exp = 0x1F;
+        mant = 0x200;
+        sign = 1;                     // set the sign bit for NANs
+    }
+    else if (std::isinf(val))
+    {
+        exp = 0x1f;
+        mant = 0x0;
+    }
+    else if (exp > (0x70 + 0x1E)) // Too big to represent -> max representable value
+    {
+        exp = 0x1E;
+        mant = 0x3FF;
+    }
+    else if ((exp <= 0x70) && (exp >= 0x66)) // It's a denorm
+    {
+        mant |= 0x00800000;
+        for (; exp <= 0x70; mant >>= 1, exp++)
+            ;
+        exp = 0;
+        mant = mant >> 13;
+    }
+    else if (exp < 0x66) // Too small to represent -> Zero
+    {
+        exp = 0;
+        mant = 0;
+    }
+    else
+    {
+        // Saves bits that will be shifted off for rounding
+        roundBits = mant & 0x1FFFu;
+        // convert exponent and mantissa to 16 bit format
+        exp = exp - 0x70;
+        mant = mant >> 13;
+
+        // Essentially RTZ, but round up if off by only 1 lsb
+        if (roundBits == 0x1FFFu)
+        {
+            mant++;
+            // check for overflow
+            if ((mant & 0xC00u) != 0)
+                exp++;
+            // make sure only the needed bits are used
+            mant &= 0x3FF;
+        }
+    }
+
+    uint32_t tmpVal = (sign << 15) | (exp << 10) | mant;
+    return (uint16_t)tmpVal;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Convert an IEEE 754 16-bit float to an 32-bit single precision
+///        float
+/// @param val - 16-bit float
+/// @todo Maybe move this outside of this file into a header?
+static float ConvertSmallFloatTo32(UINT val)
+{
+    UINT result;
+    if ((val & 0x7fff) == 0)
+    {
+        result = ((uint32_t)(val & 0x8000)) << 16;
+    }
+    else if ((val & 0x7c00) == 0x7c00)
+    {
+        result = ((val & 0x3ff) == 0) ? 0x7f800000 : 0x7fc00000;
+        result |= ((uint32_t)val & 0x8000) << 16;
+    }
+    else
+    {
+        uint32_t sign = (val & 0x8000) << 16;
+        uint32_t mant = (val & 0x3ff) << 13;
+        uint32_t exp = (val >> 10) & 0x1f;
+        if ((exp == 0) && (mant != 0)) // Adjust exponent and mantissa for denormals
+        {
+            mant <<= 1;
+            while (mant < (0x400 << 13))
+            {
+                exp--;
+                mant <<= 1;
+            }
+            mant &= (0x3ff << 13);
+        }
+        exp = ((exp - 15 + 127) & 0xff) << 23;
+        result = sign | exp | mant;
+    }
+
+    return *(float*)&result;
+}
+
 Constant *Builder::C(bool i)
 {
     return ConstantInt::get(IRB()->getInt1Ty(), (i ? 1 : 0));
@@ -122,10 +232,12 @@ Value *Builder::VUNDEF(Type* t)
     return UndefValue::get(VectorType::get(t, JM()->mVWidth));
 }
 
-Value *Builder::VINSERT(Value *vec, Value *val, int index)
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+Value *Builder::VINSERT(Value *vec, Value *val, uint64_t index)
 {
-    return VINSERT(vec, val, C(index));
+    return VINSERT(vec, val, C((int64_t)index));
 }
+#endif
 
 Value *Builder::VBROADCAST(Value *src)
 {
@@ -135,11 +247,7 @@ Value *Builder::VBROADCAST(Value *src)
         return src;
     }
 
-    Value *vecRet = VUNDEF(src->getType());
-    vecRet = VINSERT(vecRet, src, 0);
-    vecRet = VSHUFFLE(vecRet, vecRet, VIMMED1(0));
-
-    return vecRet;
+    return VECTOR_SPLAT(JM()->mVWidth, src);
 }
 
 uint32_t Builder::IMMED(Value* v)
@@ -229,13 +337,13 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
     if(JM()->mArch.AVX2())
     {
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::x86_avx2_maskload_d_256);
-        vResult = CALL2(func,src,mask);   
+        vResult = CALL(func,{src,mask});
     }
     else
     {
         Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule,Intrinsic::x86_avx_maskload_ps_256);
         Value* fMask = BITCAST(mask,VectorType::get(mFP32Ty,JM()->mVWidth));
-        vResult = BITCAST(CALL2(func,src,fMask), VectorType::get(mInt32Ty,JM()->mVWidth));
+        vResult = BITCAST(CALL(func,{src,fMask}), VectorType::get(mInt32Ty,JM()->mVWidth));
     }
     return vResult;
 }
@@ -321,7 +429,11 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
 
     // get a pointer to the first character in the constant string array
     std::vector<Constant*> geplist{C(0),C(0)};
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
     Constant *strGEP = ConstantExpr::getGetElementPtr(gvPtr,geplist,false);
+#else
+    Constant *strGEP = ConstantExpr::getGetElementPtr(nullptr, gvPtr,geplist,false);
+#endif
 
     // insert the pointer to the format string in the argument vector
     printCallArgs[0] = strGEP;
@@ -592,31 +704,23 @@ Value *Builder::CVTPH2PS(Value* a)
     }
     else
     {
-        Value* vExt = S_EXT(a, mSimdInt32Ty);
-        Value* sign = AND(vExt,0x80000000);
+        FunctionType* pFuncTy = FunctionType::get(mFP32Ty, mInt16Ty);
+        Function* pCvtPh2Ps = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("ConvertSmallFloatTo32", pFuncTy));
 
-        // normal case
-        Value* mantissa = SHL(AND(vExt, 0x03ff), 13);
-        Value* exponent = AND(vExt, 0x7c00);
-        exponent = ADD(exponent, VIMMED1(0x1c000));
-        exponent = SHL(exponent, 13);
+        if (sys::DynamicLibrary::SearchForAddressOfSymbol("ConvertSmallFloatTo32") == nullptr)
+        {
+            sys::DynamicLibrary::AddSymbol("ConvertSmallFloatTo32", (void *)&ConvertSmallFloatTo32);
+        }
 
-        Value* result = OR(OR(sign, mantissa), exponent);
+        Value* pResult = UndefValue::get(mSimdFP32Ty);
+        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        {
+            Value* pSrc = VEXTRACT(a, C(i));
+            Value* pConv = CALL(pCvtPh2Ps, std::initializer_list<Value*>{pSrc});
+            pResult = VINSERT(pResult, pConv, C(i));
+        }
 
-        // handle 0
-        Value* zeroMask = ICMP_EQ(AND(vExt, 0x7fff), VIMMED1(0));
-        result = SELECT(zeroMask, sign, result);
-
-        // handle infinity
-        Value* infMask = ICMP_EQ(AND(vExt, 0x7c00), VIMMED1(0x7c00));
-        Value* signedInf = OR(VIMMED1(0x7f800000), sign);
-        result = SELECT(infMask, signedInf, result);
-
-        // @todo handle subnormal
-
-        // cast to f32
-        result = BITCAST(result, mSimdFP32Ty);
-        return result;
+        return pResult;
     }
 }
 
@@ -632,8 +736,24 @@ Value *Builder::CVTPS2PH(Value* a, Value* rounding)
     }
     else
     {
-        SWR_ASSERT(false, "Emulation of VCVTPH2PS unimplemented.");
-        return nullptr;
+        // call scalar C function for now
+        FunctionType* pFuncTy = FunctionType::get(mInt16Ty, mFP32Ty);
+        Function* pCvtPs2Ph = cast<Function>(JM()->mpCurrentModule->getOrInsertFunction("Convert32To16Float", pFuncTy));
+
+        if (sys::DynamicLibrary::SearchForAddressOfSymbol("Convert32To16Float") == nullptr)
+        {
+            sys::DynamicLibrary::AddSymbol("Convert32To16Float", (void *)&Convert32To16Float);
+        }
+
+        Value* pResult = UndefValue::get(mSimdInt16Ty);
+        for (uint32_t i = 0; i < JM()->mVWidth; ++i)
+        {
+            Value* pSrc = VEXTRACT(a, C(i));
+            Value* pConv = CALL(pCvtPs2Ph, std::initializer_list<Value*>{pSrc});
+            pResult = VINSERT(pResult, pConv, C(i));
+        }
+
+        return pResult;
     }
 }
 
@@ -651,12 +771,12 @@ Value *Builder::PMAXSD(Value* a, Value* b)
         // low 128
         Value* aLo = VEXTRACTI128(a, C((uint8_t)0));
         Value* bLo = VEXTRACTI128(b, C((uint8_t)0));
-        Value* resLo = CALL2(pmaxsd, aLo, bLo);
+        Value* resLo = CALL(pmaxsd, {aLo, bLo});
 
         // high 128
         Value* aHi = VEXTRACTI128(a, C((uint8_t)1));
         Value* bHi = VEXTRACTI128(b, C((uint8_t)1));
-        Value* resHi = CALL2(pmaxsd, aHi, bHi);
+        Value* resHi = CALL(pmaxsd, {aHi, bHi});
 
         // combine 
         Value* result = VINSERTI128(VUNDEF_I(), resLo, C((uint8_t)0));
@@ -680,12 +800,12 @@ Value *Builder::PMINSD(Value* a, Value* b)
         // low 128
         Value* aLo = VEXTRACTI128(a, C((uint8_t)0));
         Value* bLo = VEXTRACTI128(b, C((uint8_t)0));
-        Value* resLo = CALL2(pminsd, aLo, bLo);
+        Value* resLo = CALL(pminsd, {aLo, bLo});
 
         // high 128
         Value* aHi = VEXTRACTI128(a, C((uint8_t)1));
         Value* bHi = VEXTRACTI128(b, C((uint8_t)1));
-        Value* resHi = CALL2(pminsd, aHi, bHi);
+        Value* resHi = CALL(pminsd, {aHi, bHi});
 
         // combine 
         Value* result = VINSERTI128(VUNDEF_I(), resLo, C((uint8_t)0));
@@ -1142,13 +1262,17 @@ Value *Builder::FCLAMP(Value* src, float low, float high)
 Value* Builder::STACKSAVE()
 {
     Function* pfnStackSave = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stacksave);
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
     return CALL(pfnStackSave);
+#else
+    return CALLA(pfnStackSave);
+#endif
 }
 
 void Builder::STACKRESTORE(Value* pSaved)
 {
     Function* pfnStackRestore = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::stackrestore);
-    CALL(pfnStackRestore, pSaved);
+    CALL(pfnStackRestore, std::initializer_list<Value*>{pSaved});
 }
 
 Value *Builder::FMADDPS(Value* a, Value* b, Value* c)
@@ -1169,7 +1293,7 @@ Value *Builder::FMADDPS(Value* a, Value* b, Value* c)
 Value* Builder::POPCNT(Value* a)
 {
     Function* pCtPop = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::ctpop, { a->getType() });
-    return CALL(pCtPop, a);
+    return CALL(pCtPop, std::initializer_list<Value*>{a});
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1192,4 +1316,47 @@ void __cdecl CallPrint(const char* fmt, ...)
     OutputDebugString(strBuf);
 #endif
 #endif // #if defined( DEBUG ) || defined( _DEBUG )
+}
+
+Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)
+{
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+    Function *func =
+        Intrinsic::getDeclaration(JM()->mpCurrentModule,
+                                  Intrinsic::x86_avx_vextractf128_si_256);
+    return CALL(func, {a, imm8});
+#else
+    bool flag = !imm8->isZeroValue();
+    SmallVector<Constant*,8> idx;
+    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
+        idx.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    }
+    return VSHUFFLE(a, VUNDEF_I(), ConstantVector::get(idx));
+#endif
+}
+
+Value *Builder::VINSERTI128(Value* a, Value* b, Constant* imm8)
+{
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR == 6
+    Function *func =
+        Intrinsic::getDeclaration(JM()->mpCurrentModule,
+                                  Intrinsic::x86_avx_vinsertf128_si_256);
+    return CALL(func, {a, b, imm8});
+#else
+    bool flag = !imm8->isZeroValue();
+    SmallVector<Constant*,8> idx;
+    for (unsigned i = 0; i < JM()->mVWidth; i++) {
+        idx.push_back(C(i));
+    }
+    Value *inter = VSHUFFLE(b, VUNDEF_I(), ConstantVector::get(idx));
+
+    SmallVector<Constant*,8> idx2;
+    for (unsigned i = 0; i < JM()->mVWidth / 2; i++) {
+        idx2.push_back(C(flag ? i : i + JM()->mVWidth));
+    }
+    for (unsigned i = JM()->mVWidth / 2; i < JM()->mVWidth; i++) {
+        idx2.push_back(C(flag ? i + JM()->mVWidth / 2 : i));
+    }
+    return VSHUFFLE(a, inter, ConstantVector::get(idx2));
+#endif
 }
