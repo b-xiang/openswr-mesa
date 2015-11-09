@@ -109,5 +109,9 @@ def AddOptions(opts):
     opts.Add(BoolOption('texture_float',
                         'enable floating-point textures and renderbuffers',
                         'no'))
+    opts.Add(EnumOption('swr_arch',
+                        'AVX architecture for swr (avx | core-avx2)',
+                        'core-avx2',
+                        allowed_values=('avx', 'core-avx2')))
     if host_platform == 'windows':
         opts.Add('MSVC_VERSION', 'Microsoft Visual C/C++ version')
