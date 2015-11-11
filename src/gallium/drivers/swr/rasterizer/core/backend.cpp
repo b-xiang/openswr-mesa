@@ -79,6 +79,13 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     const COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->pDispatch->GetTasksData();
     SWR_ASSERT(pTaskData != nullptr);
 
+    // Ensure spill fill memory has been allocated.
+    if (pDC->pSpillFill[workerId] == nullptr)
+    {
+        ///@todo Add state which indicates the spill fill size.
+        pDC->pSpillFill[workerId] = (uint8_t*)pDC->arena.AllocAlignedSync(4096 * 1024, sizeof(float) * 8);
+    }
+
     const API_STATE& state = GetApiState(pDC);
 
     SWR_CS_CONTEXT csContext{ 0 };
@@ -87,6 +94,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     csContext.dispatchDims[1] = pTaskData->threadGroupCountY;
     csContext.dispatchDims[2] = pTaskData->threadGroupCountZ;
     csContext.pTGSM = pContext->pScratch[workerId];
+    csContext.pSpillFillBuffer = pDC->pSpillFill[workerId];
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 
@@ -636,14 +644,6 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     // output merger
                     RDTSC_START(BEOutputMerger);
 
-                    if(sampleCount != SWR_MULTISAMPLE_1X)
-                    {
-                        if(rastState.isSampleMasked[sample])
-                        {
-                            continue;
-                        }
-                    }
-
                     uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
                     for (uint32_t rt = 0; rt <= MaxRT; ++rt)
                     {
@@ -666,6 +666,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                                 pBlendState,
                                 psContext.shaded[rt],
                                 psContext.shaded[1],
+                                sample,
                                 pColorSample,
                                 psContext.shaded[rt],
                                 (simdscalari*)&vCoverageMask);
@@ -939,12 +940,6 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             // loop over all samples, broadcasting the results of the PS to all passing pixels
             for(uint32_t sample = 0; sample < numOMSamples; sample++)
             {
-                if(sampleCount != SWR_MULTISAMPLE_1X)
-                {
-                    if(rastState.isSampleMasked[sample])
-                        continue;
-                }
-
                 // output merger
                 RDTSC_START(BEOutputMerger);
                 // skip if none of the pixels for this sample passed
@@ -982,6 +977,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                         state.pfnBlendFunc[rt](pBlendState, 
                             psContext.shaded[rt],
                             psContext.shaded[1],
+                            sample,
                             pColorSample,
                             psContext.shaded[rt],
                             &mask);

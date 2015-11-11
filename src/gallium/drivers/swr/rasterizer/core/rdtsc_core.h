@@ -39,6 +39,7 @@ enum CORE_BUCKETS
     APIStoreTiles,
     APIGetDrawContext,
     APISync,
+    APIWaitForIdle,
     FEProcessDraw,
     FEProcessDrawIndexed,
     FEFetchShader,

@@ -32,17 +32,23 @@
 ******************************************************************************/
 #pragma once
 
+#include <mutex>
+
 class Arena
 {
 public:
-    Arena() : m_pCurBlock(nullptr), m_pUsedBlocks(nullptr), m_memUsed(0) { }
-    ~Arena() { }
+    Arena() : m_pCurBlock(nullptr), m_pUsedBlocks(nullptr), m_memUsed(0), m_pMutex(nullptr) {}
+    ~Arena();
 
-    VOID    Init();
+    void    Init();
 
-    VOID*   AllocAligned(uint32_t  size, uint32_t  align);
-    VOID*   Alloc(uint32_t  size);
-    VOID    Reset();
+    void*   AllocAligned(uint32_t  size, uint32_t  align);
+    void*   Alloc(uint32_t  size);
+
+    void*   AllocAlignedSync(uint32_t size, uint32_t align);
+    void*   AllocSync(uint32_t size);
+
+    void    Reset();
 
 private:
 
@@ -50,7 +56,7 @@ private:
     {
         ArenaBlock() : pMem(nullptr), blockSize(0), pNext(nullptr) {}
 
-        VOID        *pMem;
+        void        *pMem;
         uint32_t    blockSize;
         uint32_t    offset;
         ArenaBlock *pNext;
@@ -60,4 +66,7 @@ private:
     ArenaBlock      *m_pUsedBlocks;
 
     uint32_t        m_memUsed;      // total bytes allocated since last reset.
+
+    /// @note Mutex is only used by sync allocation functions.
+    std::mutex*      m_pMutex;
 };

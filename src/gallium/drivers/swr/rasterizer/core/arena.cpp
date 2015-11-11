@@ -36,14 +36,23 @@
 
 #include <cmath>
 
-VOID Arena::Init()
+Arena::~Arena()
+{
+    Reset();        // Reset just in case to avoid leaking memory.
+
+    delete m_pMutex;
+}
+
+void Arena::Init()
 {
     m_memUsed = 0;
     m_pCurBlock = nullptr;
     m_pUsedBlocks = nullptr;
+
+    m_pMutex = new std::mutex();
 }
 
-VOID* Arena::AllocAligned(uint32_t size, uint32_t align)
+void* Arena::AllocAligned(uint32_t size, uint32_t align)
 {
     if (m_pCurBlock)
     {
@@ -73,7 +82,7 @@ VOID* Arena::AllocAligned(uint32_t size, uint32_t align)
     uint32_t blockSize = std::max(size, defaultBlockSize);
     blockSize = AlignUp(blockSize, KNOB_SIMD_WIDTH*4);
 
-    VOID *pMem = _aligned_malloc(blockSize, KNOB_SIMD_WIDTH*4);    // Arena blocks are always simd byte aligned.
+    void *pMem = _aligned_malloc(blockSize, KNOB_SIMD_WIDTH*4);    // Arena blocks are always simd byte aligned.
     SWR_ASSERT(pMem != nullptr);
 
     m_pCurBlock = (ArenaBlock*)malloc(sizeof(ArenaBlock));
@@ -90,12 +99,38 @@ VOID* Arena::AllocAligned(uint32_t size, uint32_t align)
     return pMem;
 }
 
-VOID* Arena::Alloc(uint32_t size)
+void* Arena::Alloc(uint32_t size)
 {
     return AllocAligned(size, 1);
 }
 
-VOID Arena::Reset()
+void* Arena::AllocAlignedSync(uint32_t size, uint32_t align)
+{
+    void* pAlloc = nullptr;
+
+    SWR_ASSERT(m_pMutex != nullptr);
+
+    m_pMutex->lock();
+    pAlloc = AllocAligned(size, align);
+    m_pMutex->unlock();
+
+    return pAlloc;
+}
+
+void* Arena::AllocSync(uint32_t size)
+{
+    void* pAlloc = nullptr;
+
+    SWR_ASSERT(m_pMutex != nullptr);
+
+    m_pMutex->lock();
+    pAlloc = Alloc(size);
+    m_pMutex->unlock();
+
+    return pAlloc;
+}
+
+void Arena::Reset()
 {
     if (m_pCurBlock)
     {

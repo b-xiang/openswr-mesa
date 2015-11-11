@@ -346,6 +346,8 @@ struct DRAW_CONTEXT
 
     DRAW_STATE* pState;
     Arena    arena;
+
+    uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
 };
 
 INLINE const API_STATE& GetApiState(const DRAW_CONTEXT* pDC)

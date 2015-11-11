@@ -267,6 +267,11 @@ uint32_t GetNumPrims(
     case TOP_LINE_LIST: return numElements / 2;
     case TOP_LINE_LOOP: return numElements;
     case TOP_RECT_LIST: return numElements / 3;
+    case TOP_LINE_LIST_ADJ: return numElements / 4;
+    case TOP_LISTSTRIP_ADJ: return numElements < 3 ? 0 : numElements - 3;
+    case TOP_TRI_LIST_ADJ: return numElements / 6;
+    case TOP_TRI_STRIP_ADJ: return numElements < 4 ? 0 : (numElements / 2) - 2;
+    case TOP_TRI_STRIP_REVERSE: return numElements < 4 ? 0 : (numElements / 2) - 2;
 
     case TOP_PATCHLIST_1:
     case TOP_PATCHLIST_2:
@@ -302,11 +307,6 @@ uint32_t GetNumPrims(
     case TOP_PATCHLIST_32:
         return numElements / (mode - TOP_PATCHLIST_BASE);
 
-    case TOP_LINE_LIST_ADJ:
-    case TOP_LISTSTRIP_ADJ:
-    case TOP_TRI_LIST_ADJ:
-    case TOP_TRI_STRIP_ADJ:
-    case TOP_TRI_STRIP_REVERSE:
     case TOP_POLYGON:
     case TOP_POINT_LIST_BF:
     case TOP_LINE_STRIP_CONT:

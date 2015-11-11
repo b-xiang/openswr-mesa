@@ -161,10 +161,9 @@ SIMD_EMU_EPI(_simdemu_cmpgt_epi64, _mm_cmpgt_epi64)
 #define _simd_unpacklo_epi32(a, b) _mm256_castps_si256(_mm256_unpacklo_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 #define _simd_unpackhi_epi32(a, b) _mm256_castps_si256(_mm256_unpackhi_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 
-#define _simd_srli_si(a,i) _simdemu_srli_si128<i>(a)
-#define _simd_slli_epi32(a,i) _simdemu_slli_epi32<i>(a)
-#define _simd_srai_epi32(a,i) _simdemu_srai_epi32<i>(a)
-#define _simd_srli_epi32(a,i) _simdemu_srli_epi32<i>(a)
+#define _simd_slli_epi32(a,i) _simdemu_slli_epi32(a,i)
+#define _simd_srai_epi32(a,i) _simdemu_srai_epi32(a,i)
+#define _simd_srli_epi32(a,i) _simdemu_srli_epi32(a,i)
 #define _simd_srlisi_ps(a,i) _mm256_castsi256_ps(_simdemu_srli_si128<i>(_mm256_castps_si256(a)))
 
 #define _simd128_fmadd_ps _mm_fmaddemu_ps
@@ -328,23 +327,7 @@ void _simd_mov(simdscalar &r, unsigned int rlane, simdscalar& s, unsigned int sl
     r = _mm256_load_ps(rArray);
 }
 
-template <int i>
-__m256i _simdemu_srli_si128(__m256i a)
-{
-	__m128i aHi = _mm256_extractf128_si256(a, 1);
-	__m128i aLo = _mm256_castsi256_si128(a);
-
-	__m128i resHi = _mm_srli_si128(aHi, i);
-	__m128i resLo = _mm_alignr_epi8(aHi, aLo, i);
-
-	__m256i result = _mm256_castsi128_si256(resLo);
-		    result = _mm256_insertf128_si256(result, resHi, 1);
-
-	return result;
-}
-
-template <int i>
-__m256i _simdemu_slli_epi32(__m256i a)
+INLINE __m256i _simdemu_slli_epi32(__m256i a, uint32_t i)
 {
 	__m128i aHi = _mm256_extractf128_si256(a, 1);
 	__m128i aLo = _mm256_castsi256_si128(a);
@@ -358,8 +341,7 @@ __m256i _simdemu_slli_epi32(__m256i a)
 	return result;
 }
 
-template <int i>
-__m256i _simdemu_srai_epi32(__m256i a)
+INLINE __m256i _simdemu_srai_epi32(__m256i a, uint32_t i)
 {
 	__m128i aHi = _mm256_extractf128_si256(a, 1);
 	__m128i aLo = _mm256_castsi256_si128(a);
@@ -373,8 +355,7 @@ __m256i _simdemu_srai_epi32(__m256i a)
 	return result;
 }
 
-template <int i>
-__m256i _simdemu_srli_epi32(__m256i a)
+INLINE __m256i _simdemu_srli_epi32(__m256i a, uint32_t i)
 {
     __m128i aHi = _mm256_extractf128_si256(a, 1);
     __m128i aLo = _mm256_castsi256_si128(a);

@@ -707,10 +707,11 @@ struct SWR_BLEND_STATE
 
     // alpha test reference value in unorm8 or float32
     uint32_t alphaTestReference; 
+    uint32_t sampleMask;
 
     SWR_RENDER_TARGET_BLEND_STATE renderTarget[SWR_NUM_RENDERTARGETS];
 };
-static_assert(sizeof(SWR_BLEND_STATE) == 28, "Invalid SWR_BLEND_STATE size");
+static_assert(sizeof(SWR_BLEND_STATE) == 32, "Invalid SWR_BLEND_STATE size");
 
 //////////////////////////////////////////////////////////////////////////
 /// FUNCTION POINTERS FOR SHADERS
@@ -723,7 +724,7 @@ typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, SWR_GS_CONTEXT* pGsConte
 typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsContext);
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
 typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
-typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, BYTE*, simdvector&, simdscalari*);
+typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*);
 
 //////////////////////////////////////////////////////////////////////////
 /// FRONTEND_STATE
@@ -848,8 +849,6 @@ struct SWR_RASTSTATE
     SWR_MULTISAMPLE_COUNT sampleCount;  // @llvm_enum
     SWR_MULTISAMPLE_COUNT forcedSampleCount;  // @llvm_enum
     uint32_t pixelLocation;     // UL or Center
-    uint32_t sampleMask;
-    uint8_t  isSampleMasked[SWR_MAX_NUM_MULTISAMPLES];   
     bool pixelOffset;           // offset pixel positions by .5 in both the horizontal and vertical direction
     SWR_MULTISAMPLE_POS iSamplePos[SWR_MAX_NUM_MULTISAMPLES];   
 	SWR_MSAA_SAMPLE_PATTERN samplePattern;   // @llvm_enum

@@ -34,6 +34,7 @@ BUCKET_DESC gCoreBuckets[] = {
     { "APIStoreTiles", "", true, 0xff00ffff },
     { "APIGetDrawContext", "", false, 0xffffffff },
     { "APISync", "", true, 0xff6666ff },
+    { "APIWaitForIdle", "", true, 0xff0000ff },
     { "FEProcessDraw", "", true, 0xff009900 },
     { "FEProcessDrawIndexed", "", true, 0xff009900 },
     { "FEFetchShader", "", false, 0xffffffff },

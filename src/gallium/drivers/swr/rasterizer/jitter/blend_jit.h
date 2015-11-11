@@ -51,15 +51,33 @@ enum ALPHA_TEST_FORMAT
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// BLEND_DESC
+//////////////////////////////////////////////////////////////////////////
+struct BLEND_DESC
+{
+    union
+    {
+        struct
+        {
+            uint32_t            alphaTestEnable: 1;
+            uint32_t            independentAlphaBlendEnable: 1;
+            uint32_t            alphaToCoverageEnable: 1;
+            uint32_t            sampleMaskEnable:1;
+            uint32_t            numSamples:4;
+            uint32_t            _reserved : 24;
+        };
+        uint64_t bits;
+    };
+};
+//////////////////////////////////////////////////////////////////////////
 /// State required for blend jit
 //////////////////////////////////////////////////////////////////////////
 struct BLEND_COMPILE_STATE
 {
     SWR_FORMAT format;          // format of render target being blended
-    bool independentAlphaBlendEnable;
     RENDER_TARGET_BLEND_COMPILE_STATE blendState;
+    BLEND_DESC desc;
 
-    bool alphaTestEnable;
     SWR_ZFUNCTION alphaTestFunction;
     ALPHA_TEST_FORMAT alphaTestFormat;
 

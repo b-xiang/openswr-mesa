@@ -74,6 +74,68 @@ INLINE void LoadSOA(const BYTE *pSrc, simdvector &dst)
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Clamps the given component based on the requirements on the 
+///        Format template arg
+/// @param vComp - SIMD vector of floats
+/// @param Component - component
+template<SWR_FORMAT Format>
+INLINE simdscalar Clamp(simdscalar vComp, uint32_t Component)
+{
+    if (FormatTraits<Format>::isNormalized(Component))
+    {
+        if (FormatTraits<Format>::GetType(Component) == SWR_TYPE_UNORM)
+        {
+            vComp = _simd_max_ps(vComp, _simd_setzero_ps());
+        }
+
+        if (FormatTraits<Format>::GetType(Component) == SWR_TYPE_SNORM)
+        {
+            vComp = _simd_max_ps(vComp, _simd_set1_ps(-1.0f));
+        }
+        vComp = _simd_min_ps(vComp, _simd_set1_ps(1.0f));
+    }
+    else if (FormatTraits<Format>::GetBPC(Component) < 32)
+    {
+        if (FormatTraits<Format>::GetType(Component) == SWR_TYPE_UINT)
+        {
+            int iMax = (1 << FormatTraits<Format>::GetBPC(Component)) - 1;
+            int iMin = 0;
+            simdscalari vCompi = _simd_castps_si(vComp);
+            vCompi = _simd_max_epu32(vCompi, _simd_set1_epi32(iMin));
+            vCompi = _simd_min_epu32(vCompi, _simd_set1_epi32(iMax));
+            vComp = _simd_castsi_ps(vCompi);
+        }
+        else if (FormatTraits<Format>::GetType(Component) == SWR_TYPE_SINT)
+        {
+            int iMax = (1 << (FormatTraits<Format>::GetBPC(Component) - 1)) - 1;
+            int iMin = -1 - iMax;
+            simdscalari vCompi = _simd_castps_si(vComp);
+            vCompi = _simd_max_epi32(vCompi, _simd_set1_epi32(iMin));
+            vCompi = _simd_min_epi32(vCompi, _simd_set1_epi32(iMax));
+            vComp = _simd_castsi_ps(vCompi);
+        }
+    }
+
+    return vComp;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Normalize the given component based on the requirements on the
+///        Format template arg
+/// @param vComp - SIMD vector of floats
+/// @param Component - component
+template<SWR_FORMAT Format>
+INLINE simdscalar Normalize(simdscalar vComp, uint32_t Component)
+{
+    if (FormatTraits<Format>::isNormalized(Component))
+    {
+        vComp = _simd_mul_ps(vComp, _simd_set1_ps(FormatTraits<Format>::fromFloat(Component)));
+        vComp = _simd_castsi_ps(_simd_cvtps_epi32(vComp));
+    }
+    return vComp;
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Convert and store simdvector of pixels in SOA
 ///        RGBA32_FLOAT to SOA format
 /// @param src - source data in SOA form
@@ -115,44 +177,11 @@ INLINE void StoreSOA(const simdvector &src, BYTE *pDst)
             }
         }
 
-        // convert
-        if (FormatTraits<DstFormat>::isNormalized(comp))
-        {
-            if (FormatTraits<DstFormat>::GetType(comp) == SWR_TYPE_UNORM)
-            {
-                vComp = _simd_max_ps(vComp, _simd_setzero_ps());
-            }
+        // clamp
+        vComp = Clamp<DstFormat>(vComp, comp);
 
-            if (FormatTraits<DstFormat>::GetType(comp) == SWR_TYPE_SNORM)
-            {
-                vComp = _simd_max_ps(vComp, _simd_set1_ps(-1.0f));
-            }
-            vComp = _simd_min_ps(vComp, _simd_set1_ps(1.0f));
-
-            vComp = _simd_mul_ps(vComp, _simd_set1_ps(FormatTraits<DstFormat>::fromFloat(comp)));
-            vComp = _simd_castsi_ps(_simd_cvtps_epi32(vComp));
-        }
-        else if (FormatTraits<DstFormat>::GetBPC(comp) < 32)
-        {
-            if (FormatTraits<DstFormat>::GetType(comp) == SWR_TYPE_UINT)
-            {
-                int iMax = (1 << FormatTraits<DstFormat>::GetBPC(comp)) - 1;
-                int iMin = 0;
-                simdscalari vCompi = _simd_castps_si(vComp);
-                vCompi = _simd_max_epu32(vCompi, _simd_set1_epi32(iMin));
-                vCompi = _simd_min_epu32(vCompi, _simd_set1_epi32(iMax));
-                vComp = _simd_castsi_ps(vCompi);
-            }
-            else if (FormatTraits<DstFormat>::GetType(comp) == SWR_TYPE_SINT)
-            {
-                int iMax = (1 << (FormatTraits<DstFormat>::GetBPC(comp) - 1)) - 1;
-                int iMin = -1 - iMax;
-                simdscalari vCompi = _simd_castps_si(vComp);
-                vCompi = _simd_max_epi32(vCompi, _simd_set1_epi32(iMin));
-                vCompi = _simd_min_epi32(vCompi, _simd_set1_epi32(iMax));
-                vComp = _simd_castsi_ps(vCompi);
-            }
-        }
+        // normalize
+        vComp = Normalize<DstFormat>(vComp, comp);
 
         // pack
         vComp = FormatTraits<DstFormat>::pack(comp, vComp);

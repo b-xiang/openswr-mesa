@@ -443,9 +443,11 @@ void SwrWaitForIdle(HANDLE hContext)
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
 
+    RDTSC_START(APIWaitForIdle);
     // Wait on the previous DrawContext's drawId, as this function doesn't queue anything.
     if (pContext->pPrevDrawContext)
         WaitForDependencies(pContext, pContext->pPrevDrawContext->drawId);
+    RDTSC_STOP(APIWaitForIdle, 1, 0);
 }
 
 void SwrSetVertexBuffers(
@@ -880,15 +882,6 @@ void InitDraw(
     }
 
     pDC->inUse = true;    // We are using this one now.
-
-    // just test the masked off samples once per draw and use the results in the backend.
-    SWR_RASTSTATE &rastState = pDC->pState->state.rastState;
-    uint32_t sampleMask = rastState.sampleMask;
-    for(uint32_t i = 0; i < SWR_MAX_NUM_MULTISAMPLES; i++)
-    {
-        rastState.isSampleMasked[i] = !(sampleMask & 1);
-        sampleMask>>=1;
-    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1287,6 +1280,9 @@ void SwrDispatch(
 
     pDC->isCompute = true;      // This is a compute context.
     pDC->inUse = true;
+
+    // Ensure spill fill pointers are initialized to nullptr.
+    memset(pDC->pSpillFill, 0, sizeof(pDC->pSpillFill));
 
     COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->arena.AllocAligned(sizeof(COMPUTE_DESC), 64);
 

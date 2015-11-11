@@ -262,6 +262,64 @@ struct ConvertPixelsSOAtoAOS<Format, Format>
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// ConvertPixelsSOAtoAOS - Specialization conversion for B5G6R6_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<>
+struct ConvertPixelsSOAtoAOS < R32G32B32A32_FLOAT, B5G6R5_UNORM >
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Converts a SIMD from the Hot Tile to the destination format
+    ///        and converts from SOA to AOS.
+    /// @param pSrc - Pointer to raster tile.
+    /// @param pDst - Pointer to destination surface or deswizzling buffer.
+    template <size_t NumDests>
+    INLINE static void Convert(const uint8_t* pSrc, uint8_t* (&ppDsts)[NumDests])
+    {
+        static const SWR_FORMAT SrcFormat = R32G32B32A32_FLOAT;
+        static const SWR_FORMAT DstFormat = B5G6R5_UNORM;
+        static const uint32_t MAX_RASTER_TILE_BYTES = 128; // 8 pixels * 16 bytes per pixel
+
+        OSALIGNSIMD(uint8_t) aosTile[MAX_RASTER_TILE_BYTES];
+
+        // Load hot-tile
+        simdvector src, dst;
+        LoadSOA<SrcFormat>(pSrc, src);
+
+        // deswizzle
+        dst.x = src[FormatTraits<DstFormat>::swizzle(0)];
+        dst.y = src[FormatTraits<DstFormat>::swizzle(1)];
+        dst.z = src[FormatTraits<DstFormat>::swizzle(2)];
+
+        // clamp
+        dst.x = Clamp<DstFormat>(dst.x, 0);
+        dst.y = Clamp<DstFormat>(dst.y, 1);
+        dst.z = Clamp<DstFormat>(dst.z, 2);
+
+        // normalize
+        dst.x = Normalize<DstFormat>(dst.x, 0);
+        dst.y = Normalize<DstFormat>(dst.y, 1);
+        dst.z = Normalize<DstFormat>(dst.z, 2);
+
+        // pack
+        simdscalari packed = _simd_castps_si(dst.x);
+        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.y), FormatTraits<DstFormat>::GetBPC(0)));
+        packed = _simd_or_si(packed, _simd_slli_epi32(_simd_castps_si(dst.z), FormatTraits<DstFormat>::GetBPC(0) +
+                                                                              FormatTraits<DstFormat>::GetBPC(1)));
+
+        // pack low 16 bits of each 32 bit lane to low 128 bits of dst
+        uint32_t *pPacked = (uint32_t*)&packed;
+        uint16_t *pAosTile = (uint16_t*)&aosTile[0];
+        for (uint32_t t = 0; t < KNOB_SIMD_WIDTH; ++t)
+        {
+            *pAosTile++ = *pPacked++;
+        }
+
+        // Store data into destination
+        StorePixels<FormatTraits<DstFormat>::bpp, NumDests>::Store(aosTile, ppDsts);
+    }
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// ConvertPixelsSOAtoAOS - Conversion for SIMD pixel (4x2 or 2x2)
 //////////////////////////////////////////////////////////////////////////
 template<>
@@ -1554,7 +1612,7 @@ void InitStoreTilesTableColor(
     
     // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
     table[TileModeT][B10G10R10X2_UNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10X2_UNORM>::StoreGeneric;
-    table[TileModeT][B5G6R5_UNORM]              = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM>::StoreGeneric;
+    table[TileModeT][B5G6R5_UNORM]              = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM>::Store;
     table[TileModeT][B5G6R5_UNORM_SRGB]         = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM_SRGB>::StoreGeneric;
     table[TileModeT][B5G5R5A1_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM>::StoreGeneric;
     table[TileModeT][B5G5R5A1_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM_SRGB>::StoreGeneric;

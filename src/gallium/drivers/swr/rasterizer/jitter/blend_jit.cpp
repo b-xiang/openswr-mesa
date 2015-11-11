@@ -384,6 +384,7 @@ struct BlendJit : public Builder
             PointerType::get(Gen_SWR_BLEND_STATE(JM()), 0), // SWR_BLEND_STATE*
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& src
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& src1
+            Type::getInt32Ty(JM()->mContext),               // sampleNum
             PointerType::get(mSimdFP32Ty, 0),               // uint8_t* pDst
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& result
             PointerType::get(mSimdInt32Ty, 0),              // simdscalari* pMask
@@ -404,6 +405,8 @@ struct BlendJit : public Builder
         pSrc->setName("src");
         Value* pSrc1 = argitr++;
         pSrc1->setName("src1");
+        Value* sampleNum = argitr++;
+        sampleNum->setName("sampleNum");
         Value* pDst = argitr++;
         pDst->setName("pDst");
         Value* pResult = argitr++;
@@ -432,8 +435,19 @@ struct BlendJit : public Builder
             src1[i] = LOAD(pSrc1, { i });
         }
 
+        Value* alphaToCoverageMask;
+        if(state.desc.alphaToCoverageEnable)
+        {
+            alphaToCoverageMask = FP_TO_SI(FMUL(src[3], VBROADCAST(C((float)state.desc.numSamples))), mSimdInt32Ty);
+            alphaToCoverageMask = S_EXT(ICMP_SGT(alphaToCoverageMask, VIMMED1(0)), mSimdInt32Ty);
+        }
+        else
+        {
+            alphaToCoverageMask = VIMMED1(-1);
+        }
+
         // alpha test
-        if (state.alphaTestEnable)
+        if (state.desc.alphaTestEnable)
         {
             AlphaTest(state, pBlendState, src[3], ppMask);
         }
@@ -467,7 +481,7 @@ struct BlendJit : public Builder
 
             Value* srcFactor[4];
             Value* dstFactor[4];
-            if (state.independentAlphaBlendEnable)
+            if (state.desc.independentAlphaBlendEnable)
             {
                 GenerateBlendFactor<true, false>(state.blendState.sourceBlendFactor, constantColor, src, src1, dst, srcFactor);
                 GenerateBlendFactor<false, true>(state.blendState.sourceAlphaBlendFactor, constantColor, src, src1, dst, srcFactor);
@@ -491,6 +505,32 @@ struct BlendJit : public Builder
             {
                 STORE(result[i], pResult, { i });
             }
+        }
+
+        Value* sampleMask;
+        if(state.desc.sampleMaskEnable)
+        {
+            sampleMask = LOAD(pBlendState, { 0, SWR_BLEND_STATE_sampleMask});
+            Value* sampleMasked = SHL(C(1), sampleNum);
+            sampleMask = AND(sampleMask, sampleMasked);
+            sampleMask = VBROADCAST(ICMP_SGT(sampleMask, C(0)));
+            sampleMask = S_EXT(sampleMask, mSimdInt32Ty);
+        }
+        else
+        {
+            sampleMask = VIMMED1(-1);
+        }
+
+        if(state.desc.sampleMaskEnable || state.desc.alphaToCoverageEnable)
+        {
+            // load current mask
+            Value* pMask = LOAD(ppMask);
+            // AND in sampleMask or -1
+            Value* outputMask = AND(pMask, sampleMask);
+            // and in alphaToCoverage mask or -1
+            outputMask = AND(outputMask, alphaToCoverageMask);
+            // store new mask
+            STORE(outputMask, GEP(ppMask, C(0)));
         }
 
         RET_VOID();

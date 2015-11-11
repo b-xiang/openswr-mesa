@@ -396,6 +396,28 @@ template<> struct TypeTraits<SWR_TYPE_SINT, 32> : PackTraits<32>
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// TypeTraits - Format type traits specialization for UNORM5
+//////////////////////////////////////////////////////////////////////////
+template<> struct TypeTraits<SWR_TYPE_UNORM, 5> : PackTraits<5>
+{
+    static const SWR_TYPE MyType = SWR_TYPE_UNORM;
+    static float toFloat() { return 1.0f / 31.0f; }
+    static float fromFloat() { return 31.0f; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// TypeTraits - Format type traits specialization for UNORM6
+//////////////////////////////////////////////////////////////////////////
+template<> struct TypeTraits<SWR_TYPE_UNORM, 6> : PackTraits<6>
+{
+    static const SWR_TYPE MyType = SWR_TYPE_UNORM;
+    static float toFloat() { return 1.0f / 63.0f; }
+    static float fromFloat() { return 63.0f; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// TypeTraits - Format type traits specialization for UNORM8
 //////////////////////////////////////////////////////////////////////////
 template<> struct TypeTraits<SWR_TYPE_UNORM, 8> : PackTraits<8>
