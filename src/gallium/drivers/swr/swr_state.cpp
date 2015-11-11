@@ -1161,14 +1161,21 @@ swr_update_derived(struct swr_context *ctx,
                swr_resource(fb->cbufs[target]->texture);
 
             BLEND_COMPILE_STATE compileState;
+            memset(&compileState, 0, sizeof(compileState));
             compileState.format = colorBuffer->swr.format;
-            compileState.independentAlphaBlendEnable =
-               ctx->blend->pipe.independent_blend_enable;
             memcpy(&compileState.blendState,
                    &ctx->blend->compileState[target],
                    sizeof(compileState.blendState));
 
-            compileState.alphaTestEnable = ctx->depth_stencil->alpha.enabled;
+            compileState.desc.alphaTestEnable =
+               ctx->depth_stencil->alpha.enabled;
+            compileState.desc.independentAlphaBlendEnable =
+               ctx->blend->pipe.independent_blend_enable;
+            compileState.desc.alphaToCoverageEnable =
+               ctx->blend->pipe.alpha_to_coverage;
+            compileState.desc.sampleMaskEnable = 0; // XXX
+            compileState.desc.numSamples = 1; // XXX
+
             compileState.alphaTestFunction =
                swr_convert_depth_func(ctx->depth_stencil->alpha.func);
             compileState.alphaTestFormat = ALPHA_TEST_FLOAT32; // xxx
