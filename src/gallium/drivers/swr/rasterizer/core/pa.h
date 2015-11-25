@@ -1146,13 +1146,14 @@ private:
 
 // Primitive Assembler factory class, responsible for creating and initializing the correct assembler
 // based on state.
+template <bool IsIndexedT>
 struct PA_FACTORY
 {
-    PA_FACTORY(DRAW_CONTEXT* pDC, bool isIndexed, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts) : topo(in_topo)
+    PA_FACTORY(DRAW_CONTEXT* pDC, PRIMITIVE_TOPOLOGY in_topo, uint32_t numVerts) : topo(in_topo)
     {
 #if KNOB_ENABLE_CUT_AWARE_PA == TRUE
         const API_STATE& state = GetApiState(pDC);
-        if ((isIndexed && (
+        if ((IsIndexedT && (
             topo == TOP_TRIANGLE_STRIP ||
             (topo == TOP_POINT_LIST && CanUseSimplePoints(pDC)) ||
             topo == TOP_LINE_LIST || topo == TOP_LINE_STRIP ||
@@ -1162,13 +1163,14 @@ struct PA_FACTORY
 
             // non-indexed draws with adjacency topologies must use cut-aware PA until we add support
             // for them in the optimized PA
-            (!isIndexed && (
+            (!IsIndexedT && (
             topo == TOP_LINE_LIST_ADJ || topo == TOP_LISTSTRIP_ADJ || topo == TOP_TRI_LIST_ADJ || topo == TOP_TRI_STRIP_ADJ)))
         {
+            memset(&indexStore, 0, sizeof(indexStore));
             DWORD numAttribs;
             _BitScanReverse(&numAttribs, state.feAttribMask);
             numAttribs++;
-            this->paCut = PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
+            new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
                 &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;
         }
@@ -1176,7 +1178,7 @@ struct PA_FACTORY
 #endif
         {
             uint32_t numPrims = GetNumPrims(in_topo, numVerts);
-            this->paOpt = PA_STATE_OPT(pDC, numPrims, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, false);
+            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, false);
             cutPA = false;
         }
 

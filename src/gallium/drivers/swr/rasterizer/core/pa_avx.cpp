@@ -864,41 +864,8 @@ bool PaTriPoints1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 }
 
-static void PaTriPointsSprite(PA_STATE_OPT& pa, uint32_t primIndex, __m128 verts[])
-{
-    const API_STATE& state = GetApiState(pa.pDC);
-
-    if (!state.rastState.pointSpriteTopOrigin) {
-        if (primIndex & 1) {
-            verts[0] = _mm_set_ps(1, 0, 1, 0);
-            verts[1] = _mm_set_ps(1, 0, 0, 1);
-            verts[2] = _mm_set_ps(1, 0, 1, 1);
-        } else {
-            verts[0] = _mm_set_ps(1, 0, 1, 0);
-            verts[1] = _mm_set_ps(1, 0, 0, 0);
-            verts[2] = _mm_set_ps(1, 0, 0, 1);
-        }
-    } else {
-        if (primIndex & 1) {
-            verts[0] = _mm_set_ps(1, 0, 0, 0);
-            verts[1] = _mm_set_ps(1, 0, 1, 1);
-            verts[2] = _mm_set_ps(1, 0, 0, 1);
-        } else {
-            verts[0] = _mm_set_ps(1, 0, 0, 0);
-            verts[1] = _mm_set_ps(1, 0, 1, 0);
-            verts[2] = _mm_set_ps(1, 0, 1, 1);
-        }
-    }
-}
-
 void PaTriPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    const API_STATE& state = GetApiState(pa.pDC);
-
-    if (state.rastState.pointSpriteEnable && state.rastState.pointSpriteFESlot == slot) {
-        return PaTriPointsSprite(pa, primIndex, verts);
-    }
-
     simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
 
     switch(primIndex)
@@ -920,12 +887,6 @@ void PaTriPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m
 
 void PaTriPointsSingle1(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    const API_STATE& state = GetApiState(pa.pDC);
-
-    if (state.rastState.pointSpriteEnable && state.rastState.pointSpriteFESlot == slot) {
-        return PaTriPointsSprite(pa, primIndex, verts);
-    }
-
     simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
 
     switch(primIndex)

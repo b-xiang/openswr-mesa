@@ -68,7 +68,6 @@ struct MultisampleTraits
     INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum) = delete;
 
     static const uint32_t numSamples = 0;
-    static const uint32_t sampleMask = 0;
 };
 
 template<>
@@ -134,7 +133,6 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X>
     static const uint32_t samplePosX {0x80};
     static const uint32_t samplePosY {0x80};
     static const uint32_t numSamples = 1;
-    static const uint32_t sampleMask = 1;
 };
 
 template<>
@@ -219,7 +217,6 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X>
     static const uint32_t samplePosX[2];
     static const uint32_t samplePosY[2];
     static const uint32_t numSamples = 2;
-    static const uint32_t sampleMask = 0x3;
 };
 
 template<>
@@ -314,7 +311,6 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
     static const uint32_t samplePosX[4];
     static const uint32_t samplePosY[4];
     static const uint32_t numSamples = 4;
-    static const uint32_t sampleMask = 0xF;
 };
 
 template<>
@@ -425,7 +421,6 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
     static const uint32_t samplePosX[8];
     static const uint32_t samplePosY[8];
     static const uint32_t numSamples = 8;
-    static const uint32_t sampleMask = 0xFF;
 };
 
 template<>
@@ -568,5 +563,4 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
     static const uint32_t samplePosX[16];
     static const uint32_t samplePosY[16];
     static const uint32_t numSamples = 16;
-    static const uint32_t sampleMask = 0xFFFF;
 };

@@ -62,13 +62,16 @@ struct BLEND_DESC
             uint32_t            alphaTestEnable: 1;
             uint32_t            independentAlphaBlendEnable: 1;
             uint32_t            alphaToCoverageEnable: 1;
+            uint32_t            oMaskEnable:1;
+            uint32_t            inputCoverageEnable:1;
             uint32_t            sampleMaskEnable:1;
-            uint32_t            numSamples:4;
-            uint32_t            _reserved : 24;
+            uint32_t            numSamples:5;
+            uint32_t            _reserved : 21;
         };
-        uint64_t bits;
+        uint32_t bits;
     };
 };
+#define BLEND_ENABLE_MASK 0x3C // a2c | oMaskEnable | inputCoverageEnable | sampleMaskEnable
 //////////////////////////////////////////////////////////////////////////
 /// State required for blend jit
 //////////////////////////////////////////////////////////////////////////

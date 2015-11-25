@@ -722,6 +722,18 @@ static T1 AlignUpPow2(T1 value, T2 alignment)
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// Align up ptr to specified alignment
+/// Note: IsPow2(alignment) MUST be true
+//////////////////////////////////////////////////////////////////////////
+template <typename T1, typename T2>
+INLINE
+static T1* AlignUpPow2(T1* value, T2 alignment)
+{
+    return reinterpret_cast<T1*>(
+        AlignDownPow2(reinterpret_cast<uintptr_t>(value) + uintptr_t(alignment - 1), alignment));
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// Align down to specified alignment
 //////////////////////////////////////////////////////////////////////////
 template <typename T1, typename T2>

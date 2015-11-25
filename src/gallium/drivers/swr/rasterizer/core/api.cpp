@@ -777,39 +777,39 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     {
         bool bMultisampleEnable = (pState->state.rastState.sampleCount > SWR_MULTISAMPLE_1X) ? 1 : 0;
 
-        // select backend function based on max slot used by PS
+        // currently only support 'normal' input coverage
+        SWR_ASSERT(pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NORMAL ||
+                   pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NONE);
+        // select backend function
         switch(pState->state.psState.shadingRate)
         {
         case SWR_SHADING_RATE_PIXEL:
-            if(bMultisampleEnable && pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN)
+            if(bMultisampleEnable)
             {
-                pState->pfnBackend = gPixelRateBackendTableStandard[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
-            }
-            else if(bMultisampleEnable && pState->state.rastState.samplePattern == SWR_MSAA_CENTER_PATTERN)
-            {
-                pState->pfnBackend = gPixelRateBackendTableCenter[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
+                pState->pfnBackend = gBackendPixelRateTable[pState->state.psState.maxRTSlotUsed][pState->state.rastState.sampleCount]
+                                                           [pState->state.rastState.samplePattern][pState->state.psState.inputCoverage];
             }
             else
             {
-                pState->pfnBackend = gSingleSampleBackendTable[pState->state.psState.maxRTSlotUsed];
+                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][SWR_MULTISAMPLE_1X][pState->state.psState.inputCoverage];
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
-            assert(pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
+            SWR_ASSERT(pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
             if (!bMultisampleEnable)
             {
                 // If PS is set at per sample rate and multisampling is disabled, set to per pixel and single sample backend
                 pState->state.psState.shadingRate = SWR_SHADING_RATE_PIXEL;
-                pState->pfnBackend = gSingleSampleBackendTable[pState->state.psState.maxRTSlotUsed];
+                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][SWR_MULTISAMPLE_1X][pState->state.psState.inputCoverage];
             }
             else
             {
-                pState->pfnBackend = gSampleRateBackendTable[pState->state.rastState.sampleCount-1][pState->state.psState.maxRTSlotUsed];
+                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][pState->state.rastState.sampleCount][pState->state.psState.inputCoverage];
             }
             break;
         case SWR_SHADING_RATE_COARSE:
         default:
-            assert(0 && "Invalid shading rate");
+            SWR_ASSERT(0 && "Invalid shading rate");
             break;
         }
     }

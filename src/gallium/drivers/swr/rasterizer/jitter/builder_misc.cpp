@@ -371,39 +371,123 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
     std::string tempStr(printStr);
     pos = tempStr.find('%', pos);
     auto v = printArgs.begin();
-    // printing is slow.  now it's slower...
-    while((pos != std::string::npos) && (v != printArgs.end()))
+
+    while ((pos != std::string::npos) && (v != printArgs.end()))
     {
-        // for %f we need to cast float Values to doubles so that they print out correctly
-        if((tempStr[pos+1]=='f') && ((*v)->getType()->isFloatTy()))
+        Value* pArg = *v;
+        Type* pType = pArg->getType();
+
+        if (tempStr[pos + 1] == 't')
         {
-            printCallArgs.push_back(FP_EXT(*v, Type::getDoubleTy(JM()->mContext)));
+            if (pType->isVectorTy())
+            {
+                Type* pContainedType = pType->getContainedType(0);
+
+                std::string vectorFormatStr;
+
+                if (pContainedType->isFloatTy())
+                {
+                    tempStr[pos + 1] = 'f';  // Ensure its %f
+                    printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(0)), mDoubleTy));
+
+                    for (uint32_t i = 1; i < pType->getVectorNumElements(); ++i)
+                    {
+                        vectorFormatStr += "%f ";
+                        printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(i)), mDoubleTy));
+                    }
+                }
+                else if (pContainedType->isIntegerTy())
+                {
+                    tempStr[pos + 1] = 'd';  // Ensure its %d
+                    printCallArgs.push_back(VEXTRACT(pArg, C(0)));
+
+                    for (uint32_t i = 1; i < pType->getVectorNumElements(); ++i)
+                    {
+                        vectorFormatStr += "%d ";
+                        printCallArgs.push_back(VEXTRACT(pArg, C(i)));
+                    }
+                }
+                else
+                {
+                    SWR_ASSERT(0, "Unsupported tyep");
+                }
+
+                tempStr.insert(pos, vectorFormatStr);
+                pos += vectorFormatStr.size();
+            }
+            else
+            {
+                if (pType->isFloatTy())
+                {
+                    tempStr[pos + 1] = 'f';  // Ensure its %f
+                    printCallArgs.push_back(FP_EXT(pArg, mDoubleTy));
+                }
+                else if (pType->isIntegerTy())
+                {
+                    tempStr[pos + 1] = 'd';  // Ensure its %d
+                    printCallArgs.push_back(pArg);
+                }
+            }
+        }
+        else if (toupper(tempStr[pos + 1]) == 'X')
+        {
+            if (pType->isVectorTy())
+            {
+                tempStr[pos] = '0';
+                tempStr.insert(pos + 1, "x%08");
+
+                printCallArgs.push_back(VEXTRACT(pArg, C(0)));
+
+                std::string vectorFormatStr;
+                for (uint32_t i = 1; i < pType->getVectorNumElements(); ++i)
+                {
+                    vectorFormatStr += "0x%08X ";
+                    printCallArgs.push_back(VEXTRACT(pArg, C(i)));
+                }
+
+                tempStr.insert(pos, vectorFormatStr);
+                pos += vectorFormatStr.size();
+            }
+            else
+            {
+                tempStr[pos] = '0';
+                tempStr.insert(pos + 1, "x%08");
+                printCallArgs.push_back(pArg);
+                pos += 3;
+            }
+        }
+        // for %f we need to cast float Values to doubles so that they print out correctly
+        else if ((tempStr[pos + 1] == 'f') && (pType->isFloatTy()))
+        {
+            printCallArgs.push_back(FP_EXT(pArg, Type::getDoubleTy(JM()->mContext)));
             pos++;
         }
         // add special handling for %f and %d format specifiers to make printing llvm vector types easier
-        else if((*v)->getType()->isVectorTy())
+        else if (pType->isVectorTy())
         {
-            if((tempStr[pos+1]=='f') && ((*v)->getType()->getContainedType(0)->isFloatTy()))
+            Type* pContainedType = pType->getContainedType(0);
+
+            if ((tempStr[pos + 1] == 'f') && (pContainedType->isFloatTy()))
             {
                 uint32_t i = 0;
-                for( ; i < ((*v)->getType()->getVectorNumElements())-1; i++)
+                for (; i < (pArg->getType()->getVectorNumElements()) - 1; i++)
                 {
                     tempStr.insert(pos, std::string("%f "));
-                    pos+=3;
-                    printCallArgs.push_back(FP_EXT(VEXTRACT(*v, C(i)), Type::getDoubleTy(JM()->mContext)));
+                    pos += 3;
+                    printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(i)), Type::getDoubleTy(JM()->mContext)));
                 }
-                printCallArgs.push_back(FP_EXT(VEXTRACT(*v,C(i)),Type::getDoubleTy(JM()->mContext)));
+                printCallArgs.push_back(FP_EXT(VEXTRACT(pArg, C(i)), Type::getDoubleTy(JM()->mContext)));
             }
-            else if((tempStr[pos+1]=='d') && ((*v)->getType()->getContainedType(0)->isIntegerTy()))
+            else if ((tempStr[pos + 1] == 'd') && (pContainedType->isIntegerTy()))
             {
                 uint32_t i = 0;
-                for( ; i < ((*v)->getType()->getVectorNumElements())-1; i++)
+                for (; i < (pArg->getType()->getVectorNumElements()) - 1; i++)
                 {
-                    tempStr.insert(pos,std::string("%d "));
+                    tempStr.insert(pos, std::string("%d "));
                     pos += 3;
-                    printCallArgs.push_back(VEXTRACT(*v,C(i)));
+                    printCallArgs.push_back(VEXTRACT(pArg, C(i)));
                 }
-                printCallArgs.push_back(VEXTRACT(*v,C(i)));
+                printCallArgs.push_back(VEXTRACT(pArg, C(i)));
             }
             else
             {
@@ -414,9 +498,9 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
         }
         else
         {
-            printCallArgs.push_back(*v);
+            printCallArgs.push_back(pArg);
         }
- 
+
         // advance to the next arguement
         v++;
         pos = tempStr.find('%', ++pos);
@@ -455,6 +539,13 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
 #else // #if defined( DEBUG ) || defined( _DEBUG )
     return nullptr;
 #endif
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Wrapper around PRINT with initializer list.
+CallInst* Builder::PRINT(const std::string &printStr)
+{
+    return PRINT(printStr, {});
 }
 
 //////////////////////////////////////////////////////////////////////////

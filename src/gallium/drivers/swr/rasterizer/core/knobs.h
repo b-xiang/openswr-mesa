@@ -69,7 +69,7 @@
 #define KNOB_NUM_STREAMS                    32
 
 // Maximum supported number of attributes per vertex
-#define KNOB_NUM_ATTRIBUTES                 37
+#define KNOB_NUM_ATTRIBUTES                 38
 
 // Maximum supported active viewports and scissors
 #define KNOB_NUM_VIEWPORTS_SCISSORS         16
@@ -130,7 +130,6 @@
 // Debug knobs
 ///////////////////////////////////////////////////////////////////////////////
 //#define KNOB_ENABLE_RDTSC
-//#define KNOB_SWRC_TRACING
 
 // Set to 1 to use the dynamic KNOB_TOSS_XXXX knobs.
 #if !defined(KNOB_ENABLE_TOSS_POINTS)

@@ -378,7 +378,7 @@ struct BlendJit : public Builder
         fnName << jitNum++;
 
         // blend function signature
-        // typedef void(*PFN_BLEND_JIT_FUNC)(SWR_BLEND_STATE*, simdvector&, simdvector&, uint8_t*, simdvector&);
+        //typedef void(*PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*, simdscalari*);
 
         std::vector<Type*> args{
             PointerType::get(Gen_SWR_BLEND_STATE(JM()), 0), // SWR_BLEND_STATE*
@@ -387,6 +387,7 @@ struct BlendJit : public Builder
             Type::getInt32Ty(JM()->mContext),               // sampleNum
             PointerType::get(mSimdFP32Ty, 0),               // uint8_t* pDst
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& result
+            PointerType::get(mSimdInt32Ty, 0),              // simdscalari* oMask
             PointerType::get(mSimdInt32Ty, 0),              // simdscalari* pMask
         };
 
@@ -411,6 +412,8 @@ struct BlendJit : public Builder
         pDst->setName("pDst");
         Value* pResult = argitr++;
         pResult->setName("result");
+        Value* ppoMask = argitr++;
+        ppoMask->setName("ppoMask");
         Value* ppMask = argitr++;
         ppMask->setName("pMask");
 
@@ -434,16 +437,10 @@ struct BlendJit : public Builder
             // load src1
             src1[i] = LOAD(pSrc1, { i });
         }
-
-        Value* alphaToCoverageMask;
+        Value* currentMask = VIMMED1(-1);
         if(state.desc.alphaToCoverageEnable)
         {
-            alphaToCoverageMask = FP_TO_SI(FMUL(src[3], VBROADCAST(C((float)state.desc.numSamples))), mSimdInt32Ty);
-            alphaToCoverageMask = S_EXT(ICMP_SGT(alphaToCoverageMask, VIMMED1(0)), mSimdInt32Ty);
-        }
-        else
-        {
-            alphaToCoverageMask = VIMMED1(-1);
+            currentMask = FP_TO_SI(FMUL(src[3], VBROADCAST(C((float)state.desc.numSamples))), mSimdInt32Ty);
         }
 
         // alpha test
@@ -507,28 +504,33 @@ struct BlendJit : public Builder
             }
         }
 
-        Value* sampleMask;
+        if(state.desc.oMaskEnable)
+        {
+            assert(!(state.desc.alphaToCoverageEnable));
+            // load current mask
+            Value* oMask = LOAD(ppoMask);
+            Value* sampleMasked = VBROADCAST(SHL(C(1), sampleNum));
+            oMask = AND(oMask, sampleMasked);
+            currentMask = AND(oMask, currentMask);
+        }
+
         if(state.desc.sampleMaskEnable)
         {
-            sampleMask = LOAD(pBlendState, { 0, SWR_BLEND_STATE_sampleMask});
+            Value* sampleMask = LOAD(pBlendState, { 0, SWR_BLEND_STATE_sampleMask});
             Value* sampleMasked = SHL(C(1), sampleNum);
             sampleMask = AND(sampleMask, sampleMasked);
             sampleMask = VBROADCAST(ICMP_SGT(sampleMask, C(0)));
             sampleMask = S_EXT(sampleMask, mSimdInt32Ty);
-        }
-        else
-        {
-            sampleMask = VIMMED1(-1);
+            currentMask = AND(sampleMask, currentMask);
         }
 
-        if(state.desc.sampleMaskEnable || state.desc.alphaToCoverageEnable)
+        if(state.desc.sampleMaskEnable || state.desc.alphaToCoverageEnable ||
+           state.desc.oMaskEnable)
         {
             // load current mask
             Value* pMask = LOAD(ppMask);
-            // AND in sampleMask or -1
-            Value* outputMask = AND(pMask, sampleMask);
-            // and in alphaToCoverage mask or -1
-            outputMask = AND(outputMask, alphaToCoverageMask);
+            currentMask = S_EXT(ICMP_SGT(currentMask, VBROADCAST(C(0))), mSimdInt32Ty);
+            Value* outputMask = AND(pMask, currentMask);
             // store new mask
             STORE(outputMask, GEP(ppMask, C(0)));
         }

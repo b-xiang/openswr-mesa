@@ -135,6 +135,7 @@ Value *ICLAMP(Value* src, Value* low, Value* high);
 Value *FCLAMP(Value* src, Value* low, Value* high);
 Value *FCLAMP(Value* src, float low, float high);
 
+CallInst *PRINT(const std::string &printStr);
 CallInst *PRINT(const std::string &printStr,const std::initializer_list<Value*> &printArgs);
 Value* STACKSAVE();
 void STACKRESTORE(Value* pSaved);

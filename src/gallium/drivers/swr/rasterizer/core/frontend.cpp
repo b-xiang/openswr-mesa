@@ -248,30 +248,29 @@ void ProcessInvalidateTiles(
 //////////////////////////////////////////////////////////////////////////
 /// @brief Computes the number of primitives given the number of verts.
 /// @param mode - primitive topology for draw operation.
-/// @param numElements - number of vertices or indices for draw.
+/// @param numPrims - number of vertices or indices for draw.
 /// @todo Frontend needs to be refactored. This will go in appropriate place then.
 uint32_t GetNumPrims(
     PRIMITIVE_TOPOLOGY mode,
-    uint32_t numElements)
+    uint32_t numPrims)
 {
     switch (mode)
     {
-    case TOP_POINT_LIST: return numElements;
-    case TOP_TRIANGLE_LIST: return numElements / 3;
-    case TOP_TRIANGLE_STRIP: return numElements < 3 ? 0 : numElements - 2;
-    case TOP_TRIANGLE_FAN: return numElements < 3 ? 0 : numElements - 2;
-    case TOP_TRIANGLE_DISC: return numElements < 2 ? 0 : numElements - 1;
-    case TOP_QUAD_LIST: return numElements / 4;
-    case TOP_QUAD_STRIP: return numElements < 4 ? 0 : (numElements - 2) / 2;
-    case TOP_LINE_STRIP: return numElements < 2 ? 0 : numElements - 1;
-    case TOP_LINE_LIST: return numElements / 2;
-    case TOP_LINE_LOOP: return numElements;
-    case TOP_RECT_LIST: return numElements / 3;
-    case TOP_LINE_LIST_ADJ: return numElements / 4;
-    case TOP_LISTSTRIP_ADJ: return numElements < 3 ? 0 : numElements - 3;
-    case TOP_TRI_LIST_ADJ: return numElements / 6;
-    case TOP_TRI_STRIP_ADJ: return numElements < 4 ? 0 : (numElements / 2) - 2;
-    case TOP_TRI_STRIP_REVERSE: return numElements < 4 ? 0 : (numElements / 2) - 2;
+    case TOP_POINT_LIST: return numPrims;
+    case TOP_TRIANGLE_LIST: return numPrims / 3;
+    case TOP_TRIANGLE_STRIP: return numPrims < 3 ? 0 : numPrims - 2;
+    case TOP_TRIANGLE_FAN: return numPrims < 3 ? 0 : numPrims - 2;
+    case TOP_TRIANGLE_DISC: return numPrims < 2 ? 0 : numPrims - 1;
+    case TOP_QUAD_LIST: return numPrims / 4;
+    case TOP_QUAD_STRIP: return numPrims < 4 ? 0 : (numPrims - 2) / 2;
+    case TOP_LINE_STRIP: return numPrims < 2 ? 0 : numPrims - 1;
+    case TOP_LINE_LIST: return numPrims / 2;
+    case TOP_LINE_LOOP: return numPrims;
+    case TOP_RECT_LIST: return numPrims / 3;
+    case TOP_LINE_LIST_ADJ: return numPrims / 4;
+    case TOP_LISTSTRIP_ADJ: return numPrims < 3 ? 0 : numPrims - 3;
+    case TOP_TRI_LIST_ADJ: return numPrims / 6;
+    case TOP_TRI_STRIP_ADJ: return numPrims < 4 ? 0 : (numPrims / 2) - 2;
 
     case TOP_PATCHLIST_1:
     case TOP_PATCHLIST_2:
@@ -305,7 +304,7 @@ uint32_t GetNumPrims(
     case TOP_PATCHLIST_30:
     case TOP_PATCHLIST_31:
     case TOP_PATCHLIST_32:
-        return numElements / (mode - TOP_PATCHLIST_BASE);
+        return numPrims / (mode - TOP_PATCHLIST_BASE);
 
     case TOP_POLYGON:
     case TOP_POINT_LIST_BF:
@@ -313,6 +312,83 @@ uint32_t GetNumPrims(
     case TOP_LINE_STRIP_BF:
     case TOP_LINE_STRIP_CONT_BF:
     case TOP_TRIANGLE_FAN_NOSTIPPLE:
+    case TOP_TRI_STRIP_REVERSE:
+    case TOP_PATCHLIST_BASE:
+    case TOP_UNKNOWN:
+        SWR_ASSERT(false, "Unsupported topology: %d", mode);
+        return 0;
+    }
+
+    return 0;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Computes the number of verts given the number of primitives.
+/// @param mode - primitive topology for draw operation.
+/// @param numPrims - number of primitives for draw.
+uint32_t GetNumVerts(
+    PRIMITIVE_TOPOLOGY mode,
+    uint32_t numPrims)
+{
+    switch (mode)
+    {
+    case TOP_POINT_LIST: return numPrims;
+    case TOP_TRIANGLE_LIST: return numPrims * 3;
+    case TOP_TRIANGLE_STRIP: return numPrims ? numPrims + 2 : 0;
+    case TOP_TRIANGLE_FAN: return numPrims ? numPrims + 2 : 0;
+    case TOP_TRIANGLE_DISC: return numPrims ? numPrims + 1 : 0;
+    case TOP_QUAD_LIST: return numPrims * 4;
+    case TOP_QUAD_STRIP: return numPrims ? numPrims * 2 + 2 : 0;
+    case TOP_LINE_STRIP: return numPrims ? numPrims + 1 : 0;
+    case TOP_LINE_LIST: return numPrims * 2;
+    case TOP_LINE_LOOP: return numPrims;
+    case TOP_RECT_LIST: return numPrims * 3;
+    case TOP_LINE_LIST_ADJ: return numPrims * 4;
+    case TOP_LISTSTRIP_ADJ: return numPrims ? numPrims + 3 : 0;
+    case TOP_TRI_LIST_ADJ: return numPrims * 6;
+    case TOP_TRI_STRIP_ADJ: return numPrims ? (numPrims + 2) * 2 : 0;
+
+    case TOP_PATCHLIST_1:
+    case TOP_PATCHLIST_2:
+    case TOP_PATCHLIST_3:
+    case TOP_PATCHLIST_4:
+    case TOP_PATCHLIST_5:
+    case TOP_PATCHLIST_6:
+    case TOP_PATCHLIST_7:
+    case TOP_PATCHLIST_8:
+    case TOP_PATCHLIST_9:
+    case TOP_PATCHLIST_10:
+    case TOP_PATCHLIST_11:
+    case TOP_PATCHLIST_12:
+    case TOP_PATCHLIST_13:
+    case TOP_PATCHLIST_14:
+    case TOP_PATCHLIST_15:
+    case TOP_PATCHLIST_16:
+    case TOP_PATCHLIST_17:
+    case TOP_PATCHLIST_18:
+    case TOP_PATCHLIST_19:
+    case TOP_PATCHLIST_20:
+    case TOP_PATCHLIST_21:
+    case TOP_PATCHLIST_22:
+    case TOP_PATCHLIST_23:
+    case TOP_PATCHLIST_24:
+    case TOP_PATCHLIST_25:
+    case TOP_PATCHLIST_26:
+    case TOP_PATCHLIST_27:
+    case TOP_PATCHLIST_28:
+    case TOP_PATCHLIST_29:
+    case TOP_PATCHLIST_30:
+    case TOP_PATCHLIST_31:
+    case TOP_PATCHLIST_32:
+        return numPrims * (mode - TOP_PATCHLIST_BASE);
+
+    case TOP_POLYGON:
+    case TOP_POINT_LIST_BF:
+    case TOP_LINE_STRIP_CONT:
+    case TOP_LINE_STRIP_BF:
+    case TOP_LINE_STRIP_CONT_BF:
+    case TOP_TRIANGLE_FAN_NOSTIPPLE:
+    case TOP_TRI_STRIP_REVERSE:
     case TOP_PATCHLIST_BASE:
     case TOP_UNKNOWN:
         SWR_ASSERT(false, "Unsupported topology: %d", mode);
@@ -967,7 +1043,8 @@ void ProcessDraw(
     simdvertex          vin;
 
     int indexSize = 0;
-    int32_t  endVertex = work.numVerts;
+    uint32_t endVertex = work.numVerts; 
+
     const int32_t* pLastRequestedIndex = nullptr;
     if (IsIndexedT)
     {
@@ -990,6 +1067,11 @@ void ProcessDraw(
         default:
             SWR_ASSERT(0);
         }
+    }
+    else
+    {
+        // No cuts, prune partial primitives.
+        endVertex = GetNumVerts(state.topology, GetNumPrims(state.topology, work.numVerts));
     }
 
     SWR_FETCH_CONTEXT fetchInfo = { 0 };
@@ -1050,14 +1132,14 @@ void ProcessDraw(
     }
 
     // choose primitive assembler
-    PA_FACTORY paFactory(pDC, IsIndexedT, state.topology, work.numVerts);
+    PA_FACTORY<IsIndexedT> paFactory(pDC, state.topology, work.numVerts);
     PA_STATE& pa = paFactory.GetPA();
 
     /// @todo: temporarily move instance loop in the FE to ensure SO ordering
     for (uint32_t instanceNum = 0; instanceNum < work.numInstances; instanceNum++)
     {
         simdscalari vIndex;
-        int32_t  i = 0;
+        uint32_t  i = 0;
 
         if (IsIndexedT)
         {
@@ -1265,6 +1347,7 @@ INLINE void ProcessAttributes(
     DWORD slot = 0;
     uint32_t mapIdx = 0;
     LONG constantInterpMask = pDC->pState->state.backendState.constantInterpolationMask;
+    LONG pointSpriteTexCoordMask = pDC->pState->state.backendState.pointSpriteTexCoordMask;
 
     uint32_t provokingVertex = 0;
     if (pa.binTopology == TOP_TRIANGLE_FAN)
@@ -1277,12 +1360,12 @@ INLINE void ProcessAttributes(
         linkageMask &= ~(1 << slot); // done with this bit.
 
         // compute absolute slot in vertex attrib array
-        uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + pLinkageMap[mapIdx++];
+        uint32_t inputSlot = VERTEX_ATTRIB_START_SLOT + pLinkageMap[mapIdx];
 
         __m128 attrib[3];    // triangle attribs (always 4 wide)
         pa.AssembleSingle(inputSlot, triIndex, attrib);
 
-        if (_bittest(&constantInterpMask, slot))
+        if (_bittest(&constantInterpMask, mapIdx))
         {
             for (uint32_t i = 0; i < NumVerts; ++i)
             {
@@ -1292,6 +1375,34 @@ INLINE void ProcessAttributes(
         }
         else
         {
+            if (_bittest(&pointSpriteTexCoordMask, mapIdx))
+            {
+                if (!pDC->pState->state.rastState.pointSpriteTopOrigin) {
+                    if (triIndex & 1) {
+                        attrib[0] = _mm_set_ps(1, 0, 1, 0);
+                        attrib[1] = _mm_set_ps(1, 0, 0, 1);
+                        attrib[2] = _mm_set_ps(1, 0, 1, 1);
+                    }
+                    else {
+                        attrib[0] = _mm_set_ps(1, 0, 1, 0);
+                        attrib[1] = _mm_set_ps(1, 0, 0, 0);
+                        attrib[2] = _mm_set_ps(1, 0, 0, 1);
+                    }
+                }
+                else {
+                    if (triIndex & 1) {
+                        attrib[0] = _mm_set_ps(1, 0, 0, 0);
+                        attrib[1] = _mm_set_ps(1, 0, 1, 1);
+                        attrib[2] = _mm_set_ps(1, 0, 0, 1);
+                    }
+                    else {
+                        attrib[0] = _mm_set_ps(1, 0, 0, 0);
+                        attrib[1] = _mm_set_ps(1, 0, 1, 0);
+                        attrib[2] = _mm_set_ps(1, 0, 1, 1);
+                    }
+                }
+            }
+
             for (uint32_t i = 0; i < NumVerts; ++i)
             {
                 _mm_store_ps(pBuffer, attrib[i]);
@@ -1308,6 +1419,8 @@ INLINE void ProcessAttributes(
             _mm_store_ps(pBuffer, attrib[NumVerts - 1]);
             pBuffer += 4;
         }
+
+        mapIdx++;
     }
 }
 
@@ -1426,7 +1539,7 @@ void BinTriangles(
         if (rastState.pointParam)
         {
             simdvector size[3];
-            pa.Assemble(rastState.pointSizeAttrib, size);
+            pa.Assemble(VERTEX_POINT_SIZE_SLOT, size);
             ExpandPoint(tri, size[0].x);
         } 
         else 

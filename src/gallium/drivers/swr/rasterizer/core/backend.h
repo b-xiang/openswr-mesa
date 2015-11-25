@@ -40,7 +40,6 @@ void ProcessInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t mac
 void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers);
 void InitClearTilesTable();
 
-extern PFN_BACKEND_FUNC gSingleSampleBackendTable[];
-extern PFN_BACKEND_FUNC gSampleRateBackendTable[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
-extern PFN_BACKEND_FUNC gPixelRateBackendTableStandard[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
-extern PFN_BACKEND_FUNC gPixelRateBackendTableCenter[SWR_MULTISAMPLE_TYPE_MAX-1][SWR_NUM_RENDERTARGETS];
+void InitBackendFuncTables();
+extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_NUM_RENDERTARGETS][SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][SWR_INPUT_COVERAGE_MAX];
+extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_NUM_RENDERTARGETS][SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COVERAGE_MAX];

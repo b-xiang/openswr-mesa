@@ -136,6 +136,7 @@ __m256i func(__m256i a, __m256i b)\
 #define _simd_add_epi8 _simdemu_add_epi8
 #define _simd_cmpeq_epi64 _simdemu_cmpeq_epi64
 #define _simd_cmpgt_epi64 _simdemu_cmpgt_epi64
+#define _simd_movemask_epi8 _simdemu_movemask_epi8
 
 SIMD_EMU_EPI(_simdemu_mul_epi32, _mm_mul_epi32)
 SIMD_EMU_EPI(_simdemu_mullo_epi32, _mm_mullo_epi32)
@@ -242,6 +243,18 @@ __m256i _simd_abs_epi32(__m256i a)
         result = _mm256_insertf128_si256(result, absHi, 1);
         return result;
 }
+
+INLINE 
+int _simdemu_movemask_epi8(__m256i a)
+{
+    __m128i aHi = _mm256_extractf128_si256(a, 1);
+    __m128i aLo = _mm256_castsi256_si128(a);
+
+    int resHi = _mm_movemask_epi8(aHi);
+    int resLo = _mm_movemask_epi8(aLo);
+
+    return (resHi << 16) | resLo;
+}
 #else
 
 #define _simd_mul_epi32 _mm256_mul_epi32
@@ -282,6 +295,7 @@ __m256i _simd_abs_epi32(__m256i a)
 
 #define _simd_cmpeq_epi64 _mm256_cmpeq_epi64
 #define _simd_cmpgt_epi64 _mm256_cmpgt_epi64
+#define _simd_movemask_epi8 _mm256_movemask_epi8
 #endif
 
 #define _simd_shuffleps_epi32(vA, vB, imm) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(vA), _mm256_castsi256_ps(vB), imm))

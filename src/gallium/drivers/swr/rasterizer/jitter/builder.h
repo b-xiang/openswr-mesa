@@ -44,12 +44,15 @@ struct Builder
     IRBuilder<>* mpIRBuilder;
 
     // Built in types.
+    Type*                mVoidTy;
+    Type*                mInt1Ty;
     Type*                mInt8Ty;
     Type*                mInt16Ty;
     Type*                mInt32Ty;
     Type*                mInt64Ty;
     Type*                mFP16Ty;
     Type*                mFP32Ty;
+    Type*                mDoubleTy;
     Type*                mSimdFP16Ty;
     Type*                mSimdFP32Ty;
     Type*                mSimdInt16Ty;

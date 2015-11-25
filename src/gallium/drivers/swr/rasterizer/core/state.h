@@ -187,16 +187,17 @@ enum SWR_OUTER_TESSFACTOR_ID
 /// @brief Defines a vertex element that holds all the data for SIMD vertices.
 ///        Contains position in clip space, hardcoded to attribute 0,
 ///        space for up to 32 attributes, as well as any SGV values generated
-///        by the pipeline (to be implemented)
+///        by the pipeline
 /////////////////////////////////////////////////////////////////////////
 #define VERTEX_POSITION_SLOT 0
 #define VERTEX_ATTRIB_START_SLOT 1
 #define VERTEX_ATTRIB_END_SLOT 32
-#define VERTEX_RTAI_SLOT 33         // GS will write RenderTargetArrayIndex here
-#define VERTEX_PRIMID_SLOT 34       // GS will write PrimId here
-#define VERTEX_CLIPCULL_DIST_LO_SLOT 35 // VS will write lower 4 clip/cull dist
-#define VERTEX_CLIPCULL_DIST_HI_SLOT 36 // VS will write upper 4 clip/cull dist
-static_assert(VERTEX_CLIPCULL_DIST_HI_SLOT < KNOB_NUM_ATTRIBUTES, "Mismatched attribute slot size");
+#define VERTEX_RTAI_SLOT 33         // GS writes RenderTargetArrayIndex here
+#define VERTEX_PRIMID_SLOT 34       // GS writes PrimId here
+#define VERTEX_CLIPCULL_DIST_LO_SLOT 35 // VS writes lower 4 clip/cull dist
+#define VERTEX_CLIPCULL_DIST_HI_SLOT 36 // VS writes upper 4 clip/cull dist
+#define VERTEX_POINT_SIZE_SLOT 37       // VS writes point size here
+static_assert(VERTEX_POINT_SIZE_SLOT < KNOB_NUM_ATTRIBUTES, "Mismatched attribute slot size");
 
 // SoAoSoA
 struct simdvertex
@@ -301,10 +302,12 @@ struct SWR_GS_CONTEXT
 /////////////////////////////////////////////////////////////////////////
 struct SWR_PS_CONTEXT
 {
-    simdscalar vX;        // IN: x location of pixels
-    simdscalar vY;        // IN: y location of pixels
-    simdscalar vZ;        // INOUT: z location of pixels
-    simdscalari mask;     // INOUT: mask for kill
+    simdscalar vX;				// IN: x location of pixels
+    simdscalar vY;				// IN: y location of pixels
+    simdscalar vZ;				// INOUT: z location of pixels
+    simdscalari activeMask;		// OUT: mask for kill
+	simdscalar  inputMask;      // IN: input coverage mask for all samples
+    simdscalari oMask;			// OUT: mask for output coverage
 
     // rasterizer generated barycentric components
     simdscalar vI;        // IN: Barycentric I component
@@ -724,7 +727,7 @@ typedef void(__cdecl *PFN_GS_FUNC)(HANDLE hPrivateData, SWR_GS_CONTEXT* pGsConte
 typedef void(__cdecl *PFN_CS_FUNC)(HANDLE hPrivateData, SWR_CS_CONTEXT* pCsContext);
 typedef void(__cdecl *PFN_SO_FUNC)(SWR_STREAMOUT_CONTEXT& soContext);
 typedef void(__cdecl *PFN_PIXEL_KERNEL)(HANDLE hPrivateData, SWR_PS_CONTEXT *pContext);
-typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*);
+typedef void(__cdecl *PFN_BLEND_JIT_FUNC)(const SWR_BLEND_STATE*, simdvector&, simdvector&, uint32_t, BYTE*, simdvector&, simdscalari*, simdscalari*);
 
 //////////////////////////////////////////////////////////////////////////
 /// FRONTEND_STATE
@@ -789,7 +792,7 @@ enum SWR_FRONTWINDING
 #define SWR_MAX_NUM_MULTISAMPLES 16
 enum SWR_MULTISAMPLE_COUNT
 {
-    SWR_MULTISAMPLE_1X,
+    SWR_MULTISAMPLE_1X = 0,
     SWR_MULTISAMPLE_2X,
     SWR_MULTISAMPLE_4X,
     SWR_MULTISAMPLE_8X,
@@ -832,12 +835,10 @@ struct SWR_RASTSTATE
 
     // point size output from the VS
     bool pointParam;
-    uint32_t pointSizeAttrib;
 
     // point sprite
     bool pointSpriteEnable;
     bool pointSpriteTopOrigin;
-    uint32_t pointSpriteFESlot;
 
     // depth bias
     float depthBias;
@@ -862,6 +863,7 @@ struct SWR_RASTSTATE
 struct SWR_BACKEND_STATE
 {
     uint32_t constantInterpolationMask;
+    uint32_t pointSpriteTexCoordMask;
     uint8_t numAttributes;
     uint8_t numComponents[KNOB_NUM_ATTRIBUTES];
 };
@@ -909,6 +911,12 @@ enum SWR_SHADING_RATE
     SWR_SHADING_RATE_MAX,
 };
 
+enum SWR_INPUT_COVERAGE
+{
+    SWR_INPUT_COVERAGE_NONE,
+    SWR_INPUT_COVERAGE_NORMAL,
+    SWR_INPUT_COVERAGE_MAX,
+};
 // pixel shader state
 struct SWR_PS_STATE
 {
@@ -917,6 +925,7 @@ struct SWR_PS_STATE
 
     // dword 2
     uint32_t killsPixel     : 1;    // pixel shader can kill pixels
+	uint32_t inputCoverage  : 2;    // type of input coverage PS uses
     uint32_t writesODepth   : 1;    // pixel shader writes to depth
     uint32_t usesSourceDepth: 1;    // pixel shader reads depth
     uint32_t maxRTSlotUsed  : 3;    // maximum render target slot pixel shader writes to [0..7]

@@ -170,17 +170,8 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     RET_VOID();
 
-    //#define KNOB_SWRC_TRACING
+    JitManager::DumpToFile(fetch, "src");
 
-#if defined(KNOB_SWRC_TRACING)
-    std::string err;
-    char fName[1024];
-    const char *funcName = fetch->getName().data();
-    sprintf(fName, "%s.ll", funcName);
-    raw_fd_ostream fetchFD(fName, err, LLVM_F_NONE);
-    fetch->print(fetchFD);
-    fetchFD.flush();
-#endif
     verifyFunction(*fetch);
 
     FunctionPassManager setupPasses(JM()->mpCurrentModule);
@@ -193,12 +184,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
 
     setupPasses.run(*fetch);
 
-#if defined(KNOB_SWRC_TRACING)
-    sprintf(fName, "%s.se.ll", funcName);
-    raw_fd_ostream seFetchFD(fName, err, LLVM_F_NONE);
-    fetch->print(seFetchFD);
-    seFetchFD.flush();
-#endif
+    JitManager::DumpToFile(fetch, "se");
 
     FunctionPassManager optPasses(JM()->mpCurrentModule);
 
@@ -214,12 +200,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     optPasses.run(*fetch);
     optPasses.run(*fetch);
 
-#if defined(KNOB_SWRC_TRACING)
-    sprintf(fName, "%s.opt.ll", funcName);
-    raw_fd_ostream optFetchFD(fName, err, LLVM_F_NONE);
-    fetch->print(optFetchFD);
-    optFetchFD.flush();
-#endif
+    JitManager::DumpToFile(fetch, "opt");
 
     return fetch;
 }
