@@ -728,12 +728,10 @@ swr_update_derived(struct swr_context *ctx,
          : 1.0f;
 
       rastState->pointParam = ctx->rasterizer->point_size_per_vertex;
-      rastState->pointSizeAttrib = ctx->vs->pointSizeAttrib;
 
       rastState->pointSpriteEnable = ctx->rasterizer->sprite_coord_enable;
       rastState->pointSpriteTopOrigin =
          ctx->rasterizer->sprite_coord_mode == PIPE_SPRITE_COORD_UPPER_LEFT;
-      rastState->pointSpriteFESlot = ctx->vs->info.base.num_outputs;
 
       /* XXX TODO: Add multisample */
       rastState->sampleCount = SWR_MULTISAMPLE_1X;
@@ -1239,6 +1237,8 @@ swr_update_derived(struct swr_context *ctx,
    backendState.numAttributes = 1;
    backendState.numComponents[0] = 4;
    backendState.constantInterpolationMask = ctx->fs->constantMask;
+   backendState.pointSpriteTexCoordMask = ctx->fs->pointSpriteMask;
+
    SwrSetBackendState(ctx->swrContext, &backendState);
 
    ctx->dirty = post_update_dirty_flags;

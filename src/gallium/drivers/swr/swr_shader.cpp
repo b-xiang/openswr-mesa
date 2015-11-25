@@ -117,9 +117,6 @@ BuilderSWR::CompileVS(struct pipe_context *ctx, swr_vertex_shader *swr_vs)
       switch (swr_vs->info.base.output_semantic_name[i]) {
       case TGSI_SEMANTIC_POSITION:
          break;
-      case TGSI_SEMANTIC_PSIZE:
-         swr_vs->pointSizeAttrib = i;
-         break;
       default:
          swr_vs->linkageMask |= (1 << i);
          break;
@@ -211,7 +208,11 @@ BuilderSWR::CompileVS(struct pipe_context *ctx, swr_vertex_shader *swr_vs)
             continue;
 
          Value *val = LOAD(unwrap(outputs[attrib][channel]));
-         STORE(val, vtxOutput, {0, 0, attrib, channel});
+
+         uint32_t outSlot = attrib;
+         if (swr_vs->info.base.output_semantic_name[attrib] == TGSI_SEMANTIC_PSIZE)
+            outSlot = VERTEX_POINT_SIZE_SLOT;
+         STORE(val, vtxOutput, {0, 0, outSlot, channel});
       }
    }
 
@@ -334,6 +335,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
       LOAD(pPS, {0, SWR_PS_CONTEXT_pPerspAttribs}, "pPerspAttribs");
 
    swr_fs->constantMask = 0;
+   swr_fs->pointSpriteMask = 0;
 
    for (int attrib = 0; attrib < PIPE_MAX_SHADER_INPUTS; attrib++) {
       const unsigned mask = swr_fs->info.base.input_usage_mask[attrib];
@@ -378,6 +380,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
          // not found - check for point sprite
          if (ctx->rasterizer->sprite_coord_enable) {
             linkedAttrib = ctx->vs->info.base.num_outputs - 1;
+            swr_fs->pointSpriteMask |= (1 << linkedAttrib);
          } else {
             fprintf(stderr,
                     "Missing %s[%d]\n",
