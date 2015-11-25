@@ -38,6 +38,7 @@ extern "C" {
 #include "swr_query.h"
 
 #include "api.h"
+#include "backend.h"
 
 static struct pipe_surface *
 swr_create_surface(struct pipe_context *pipe,
@@ -352,6 +353,8 @@ swr_create_context(struct pipe_screen *screen, void *priv)
 
    /* Init Load/Store/ClearTiles Tables */
    swr_InitMemoryModule();
+
+   InitBackendFuncTables();
 
    if (ctx->swrContext == NULL)
       goto fail;

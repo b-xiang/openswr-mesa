@@ -960,6 +960,7 @@ swr_update_derived(struct swr_context *ctx,
       SWR_PS_STATE psState = {0};
       psState.pfnPixelShader = func;
       psState.killsPixel = ctx->fs->info.base.uses_kill;
+      psState.inputCoverage = SWR_INPUT_COVERAGE_NORMAL;
       psState.writesODepth = ctx->fs->info.base.writes_z;
       psState.usesSourceDepth = ctx->fs->info.base.reads_z;
       psState.maxRTSlotUsed =

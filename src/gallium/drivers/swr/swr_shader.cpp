@@ -460,7 +460,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
    struct lp_build_mask_context mask;
 
    if (swr_fs->info.base.uses_kill) {
-      Value *mask_val = LOAD(pPS, {0, SWR_PS_CONTEXT_mask}, "coverage_mask");
+      Value *mask_val = LOAD(pPS, {0, SWR_PS_CONTEXT_activeMask}, "activeMask");
       lp_build_mask_begin(
          &mask, gallivm, lp_type_float_vec(32, 32 * 8), wrap(mask_val));
    }
@@ -534,7 +534,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
    IRB()->SetInsertPoint(unwrap(LLVMGetInsertBlock(gallivm->builder)));
 
    if (swr_fs->info.base.uses_kill) {
-      STORE(unwrap(mask_result), pPS, {0, SWR_PS_CONTEXT_mask});
+      STORE(unwrap(mask_result), pPS, {0, SWR_PS_CONTEXT_activeMask});
    }
 
    RET_VOID();
