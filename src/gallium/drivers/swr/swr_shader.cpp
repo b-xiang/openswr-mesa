@@ -155,10 +155,10 @@ BuilderSWR::CompileVS(struct pipe_context *ctx, swr_vertex_shader *swr_vs)
    IRB()->SetInsertPoint(block);
    LLVMPositionBuilderAtEnd(gallivm->builder, wrap(block));
 
-   auto argitr = pFunction->getArgumentList().begin();
-   Value *hPrivateData = argitr++;
+   auto argitr = pFunction->arg_begin();
+   Value *hPrivateData = &*argitr++;
    hPrivateData->setName("hPrivateData");
-   Value *pVsCtx = argitr++;
+   Value *pVsCtx = &*argitr++;
    pVsCtx->setName("vsCtx");
 
    Value *consts_ptr = GEP(hPrivateData, {0, swr_draw_context_constantVS});
@@ -305,10 +305,10 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
    IRB()->SetInsertPoint(block);
    LLVMPositionBuilderAtEnd(gallivm->builder, wrap(block));
 
-   auto &args = pFunction->getArgumentList();
-   Value *hPrivateData = args.begin();
+   auto args = pFunction->arg_begin();
+   Value *hPrivateData = &*args++;
    hPrivateData->setName("hPrivateData");
-   Value *pPS = ++args.begin();
+   Value *pPS = &*args++;
    pPS->setName("psCtx");
 
    Value *consts_ptr = GEP(hPrivateData, {0, swr_draw_context_constantFS});
