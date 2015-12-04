@@ -572,7 +572,11 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       winsys->displaytarget_destroy(winsys, res->display_target);
    }
 
-   _aligned_free(res->swr.pBaseAddress);
+   #ifndef __MSVC
+      // this doesn't need to be freed if the winsys already freed it
+      _aligned_free(res->swr.pBaseAddress);
+   #endif
+
    _aligned_free(res->secondary.pBaseAddress);
 
    FREE(res);
