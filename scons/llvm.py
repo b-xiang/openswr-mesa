@@ -109,15 +109,30 @@ def generate(env):
         # LIBS should match the output of `llvm-config --libs engine mcjit bitwriter x86asmprinter`
         if llvm_version >= distutils.version.LooseVersion('3.6'):
             env.Prepend(LIBS = [
-                'LLVMBitWriter', 'LLVMX86Disassembler', 'LLVMX86AsmParser',
-                'LLVMX86CodeGen', 'LLVMSelectionDAG', 'LLVMAsmPrinter',
-                'LLVMCodeGen', 'LLVMScalarOpts', 'LLVMProfileData',
-                'LLVMInstCombine', 'LLVMTransformUtils', 'LLVMipa',
-                'LLVMAnalysis', 'LLVMX86Desc', 'LLVMMCDisassembler',
-                'LLVMX86Info', 'LLVMX86AsmPrinter', 'LLVMX86Utils',
-                'LLVMMCJIT', 'LLVMTarget', 'LLVMExecutionEngine',
-                'LLVMRuntimeDyld', 'LLVMObject', 'LLVMMCParser',
-                'LLVMBitReader', 'LLVMMC', 'LLVMCore', 'LLVMSupport'
+               'LLVMAArch64AsmParser', 'LLVMAArch64AsmPrinter', 'LLVMAArch64CodeGen', 'LLVMAArch64Desc',
+                 'LLVMAArch64Disassembler', 'LLVMAArch64Info', 'LLVMAArch64Utils', 'LLVMAnalysis',
+                'LLVMARMAsmPrinter', 'LLVMARMCodeGen', 'LLVMARMDesc', 'LLVMARMDisassembler', 
+                'LLVMARMInfo', 'LLVMAsmParser', 'LLVMAsmPrinter', 'LLVMBitReader', 'LLVMBitWriter',
+                'LLVMCodeGen', 'LLVMCore', 'LLVMCppBackendCodeGen', 'LLVMCppBackendInfo', 
+                'LLVMDebugInfo', 'LLVMExecutionEngine', 'LLVMHexagonCodeGen', 'LLVMHexagonDesc',
+                'LLVMHexagonDisassembler', 'LLVMHexagonInfo', 'LLVMInstCombine', 'LLVMInstrumentation',
+                'LLVMInterpreter', 'LLVMipa', 'LLVMipo', 'LLVMIRReader', 'LLVMLineEditor', 'LLVMLinker',
+                'LLVMLTO', 'LLVMMC', 'LLVMMCDisassembler', 'LLVMMCJIT', 'LLVMMCParser', 'LLVMMipsAsmParser',
+                'LLVMMipsAsmPrinter', 'LLVMMipsCodeGen', 'LLVMMipsDesc', 'LLVMMipsDisassembler', 
+                'LLVMMipsInfo', 'LLVMMSP430AsmPrinter', 'LLVMMSP430CodeGen', 'LLVMMSP430Desc',
+                'LLVMMSP430Info', 'LLVMNVPTXAsmPrinter', 'LLVMNVPTXCodeGen', 'LLVMNVPTXDesc', 
+                'LLVMNVPTXInfo', 'LLVMObjCARCOpts', 'LLVMObject', 'LLVMOption', 'LLVMPowerPCAsmParser', 
+                'LLVMPowerPCAsmPrinter', 'LLVMPowerPCCodeGen', 'LLVMPowerPCDesc', 'LLVMPowerPCDisassembler',
+                'LLVMPowerPCInfo', 'LLVMProfileData', 'LLVMR600AsmParser', 'LLVMR600AsmPrinter',
+                'LLVMR600CodeGen', 'LLVMR600Desc', 'LLVMR600Info', 'LLVMRuntimeDyld', 'LLVMScalarOpts',
+                'LLVMSelectionDAG', 'LLVMSparcAsmParser', 'LLVMSparcAsmPrinter', 'LLVMSparcCodeGen',
+                'LLVMSparcDesc', 'LLVMSparcDisassembler', 'LLVMSparcInfo', 'LLVMSupport', 
+                'LLVMSystemZAsmParser', 'LLVMSystemZAsmPrinter', 'LLVMSystemZCodeGen', 'LLVMSystemZDesc', 
+                'LLVMSystemZDisassembler', 'LLVMSystemZInfo', 'LLVMTableGen', 'LLVMTarget', 
+                'LLVMTransformUtils', 'LLVMVectorize', 'LLVMX86AsmParser', 'LLVMX86AsmPrinter', 
+                'LLVMX86CodeGen', 'LLVMX86Desc', 'LLVMX86Disassembler', 'LLVMX86Info', 'LLVMX86Utils', 
+                'LLVMXCoreAsmPrinter', 'LLVMXCoreCodeGen', 'LLVMXCoreDesc', 'LLVMXCoreDisassembler', 
+                'LLVMXCoreInfo'
             ])
         elif llvm_version >= distutils.version.LooseVersion('3.5'):
             env.Prepend(LIBS = [

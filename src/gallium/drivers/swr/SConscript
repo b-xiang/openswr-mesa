@@ -18,22 +18,30 @@ env.Append(CPPDEFINES = [
 	])
 
 if env["swr_arch"] == "avx":
-  env.Append(CPPDEFINES = [
+    env.Append(CPPDEFINES = [
     'KNOB_ARCH=KNOB_ARCH_AVX',
-  ])
-  env.Append(CCFLAGS = [
-    '-march=core-avx-i',
     ])
-else:
-  env.Append(CPPDEFINES = [
-    'KNOB_ARCH=KNOB_ARCH_AVX2',
-  ])
-  env.Append(CCFLAGS = [
-    '-march=core-avx2',
-    ])
+    if env['msvc'] :
+        env.Append(CCFLAGS = ['/arch:AVX'])
+    else :
+        env.Append(CCFLAGS = ['-march=core-avx'])
 
-env.Append(CCFLAGS = [
-    '-std=c++11',
+else:
+    env.Append(CPPDEFINES = [
+    'KNOB_ARCH=KNOB_ARCH_AVX2',
+    ])
+    if env['msvc'] :
+        env.Append(CCFLAGS = ['/arch:AVX2'])
+    else :
+        env.Append(CCFLAGS = ['-march=core-avx2'])
+
+if not env['msvc'] :
+    env.Append(CCFLAGS = [
+        '-std=c++11',
+    ])
+else :
+    env.Append(CPPDEFINES = [
+        '__MSVC'
     ])
 
 env.Prepend(CPPPATH = [
@@ -104,6 +112,10 @@ source += env.ParseSourceList('Makefile.sources', [
     'JITTER_CXX_SOURCES',
     'MEMORY_CXX_SOURCES'
 ])
+
+
+if env['msvc'] : # Visual Studio compiler
+    source = filter(lambda f: not f.endswith(".h") and not f.endswith(".hpp"), source)
 
 swr = env.ConvenienceLibrary(
 	target = 'swr',
