@@ -26,8 +26,10 @@
 
 
 #include <limits.h>
-#include "os/os_thread.h"
 
+#ifndef __MSVC
+	#include "os/os_thread.h"
+#endif
 
 struct swr_query {
    unsigned type; /* PIPE_QUERY_* */
