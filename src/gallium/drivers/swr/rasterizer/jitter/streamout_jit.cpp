@@ -280,7 +280,7 @@ struct StreamOutJit : public Builder
 
         // arguments
         auto argitr = soFunc->getArgumentList().begin();
-        Value* pSoCtx = argitr++;
+        Value* pSoCtx = &*argitr++;
         pSoCtx->setName("pSoCtx");
 
         const STREAMOUT_STREAM& streamState = state.stream;

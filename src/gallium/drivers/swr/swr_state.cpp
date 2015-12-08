@@ -98,6 +98,9 @@ swr_create_blend_state(struct pipe_context *pipe,
          (rt_blend->colormask & PIPE_MASK_B) ? 0 : 1;
       blendState.writeDisableAlpha =
          (rt_blend->colormask & PIPE_MASK_A) ? 0 : 1;
+
+      if (rt_blend->colormask == 0)
+         compileState.blendEnable = false;
    }
 
    return state;
@@ -1147,6 +1150,7 @@ swr_update_derived(struct swr_context *ctx,
          blendState.renderTarget[0].writeDisableGreen = 1;
          blendState.renderTarget[0].writeDisableBlue = 1;
          blendState.renderTarget[0].writeDisableAlpha = 1;
+         SwrSetBlendFunc(ctx->swrContext, 0, NULL);
       }
       else
          for (int target = 0;
@@ -1165,6 +1169,11 @@ swr_update_derived(struct swr_context *ctx,
             memcpy(&compileState.blendState,
                    &ctx->blend->compileState[target],
                    sizeof(compileState.blendState));
+
+            if (compileState.blendState.blendEnable == false) {
+               SwrSetBlendFunc(ctx->swrContext, target, NULL);
+               continue;
+            }
 
             compileState.desc.alphaTestEnable =
                ctx->depth_stencil->alpha.enabled;

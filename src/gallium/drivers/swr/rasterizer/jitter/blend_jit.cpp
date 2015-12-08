@@ -400,21 +400,21 @@ struct BlendJit : public Builder
 
         // arguments
         auto argitr = blendFunc->getArgumentList().begin();
-        Value* pBlendState = argitr++;
+        Value* pBlendState = &*argitr++;
         pBlendState->setName("pBlendState");
-        Value* pSrc = argitr++;
+        Value* pSrc = &*argitr++;
         pSrc->setName("src");
-        Value* pSrc1 = argitr++;
+        Value* pSrc1 = &*argitr++;
         pSrc1->setName("src1");
-        Value* sampleNum = argitr++;
+        Value* sampleNum = &*argitr++;
         sampleNum->setName("sampleNum");
-        Value* pDst = argitr++;
+        Value* pDst = &*argitr++;
         pDst->setName("pDst");
-        Value* pResult = argitr++;
+        Value* pResult = &*argitr++;
         pResult->setName("result");
-        Value* ppoMask = argitr++;
+        Value* ppoMask = &*argitr++;
         ppoMask->setName("ppoMask");
-        Value* ppMask = argitr++;
+        Value* ppMask = &*argitr++;
         ppMask->setName("pMask");
 
         static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");

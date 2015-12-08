@@ -43,6 +43,8 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+
+#include "llvm/Analysis/CFGPrinter.h"
 #include "llvm/IRReader/IRReader.h"
 
 #include "core/state.h"
@@ -78,7 +80,9 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch)
     tOpts.NoNaNsFPMath = false;
     tOpts.UnsafeFPMath = true;
 #if defined(_DEBUG)
+#if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR < 7
     tOpts.NoFramePointerElim = true;
+#endif
 #endif
 
     //tOpts.PrintMachineCode    = true;
@@ -275,7 +279,18 @@ void JitManager::DumpToFile(Function *f, const char *fileName)
         raw_fd_ostream fd(fName, EC, llvm::sys::fs::F_None);
         Module* pModule = f->getParent();
         pModule->print(fd, nullptr);
+
+#if defined(_WIN32)
+        sprintf(fName, "%s\\cfg.%s.%s.dot", outDir.str().c_str(), funcName, fileName);
+#else
+        sprintf(fName, "cfg.%s.%s.dot", funcName, fileName);
+#endif
         fd.flush();
+
+        raw_fd_ostream fd_cfg(fName, EC, llvm::sys::fs::F_Text);
+        WriteGraph(fd_cfg, (const Function*)f);
+
+        fd_cfg.flush();
     }
 }
 

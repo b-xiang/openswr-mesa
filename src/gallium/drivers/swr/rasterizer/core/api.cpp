@@ -844,6 +844,8 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     if ((pState->state.psState.pfnPixelShader == nullptr) &&
         (pState->state.depthStencilState.depthTestEnable == FALSE) &&
         (pState->state.depthStencilState.depthWriteEnable == FALSE) &&
+        (pState->state.depthStencilState.stencilTestEnable == FALSE) &&
+        (pState->state.depthStencilState.stencilWriteEnable == FALSE) &&
         (pState->state.linkageCount == 0))
     {
         pState->pfnProcessPrims = nullptr;
@@ -863,6 +865,38 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         for (uint32_t i = 0; i < 4; ++i)
         {
             pState->state.feAttribMask |= pState->state.soState.streamMasks[i];
+        }
+    }
+
+    // complicated logic to test for cases where we don't need backing hottile memory for a draw
+    // have to check for the special case where depth/stencil test is enabled but depthwrite is disabled.
+    pState->state.depthHottileEnable = ((!(pState->state.depthStencilState.depthTestEnable &&
+                                           !pState->state.depthStencilState.depthWriteEnable &&
+                                           pState->state.depthStencilState.depthTestFunc == ZFUNC_ALWAYS)) && 
+                                        (pState->state.depthStencilState.depthTestEnable || 
+                                         pState->state.depthStencilState.depthWriteEnable)) ? true : false;
+
+    pState->state.stencilHottileEnable = (((!(pState->state.depthStencilState.stencilTestEnable &&
+                                             !pState->state.depthStencilState.stencilWriteEnable &&
+                                              pState->state.depthStencilState.stencilTestFunc == ZFUNC_ALWAYS)) ||
+                                          // for stencil we have to check the double sided state as well
+                                          (!(pState->state.depthStencilState.doubleSidedStencilTestEnable &&
+                                             !pState->state.depthStencilState.stencilWriteEnable &&
+                                              pState->state.depthStencilState.backfaceStencilTestFunc == ZFUNC_ALWAYS))) && 
+                                          (pState->state.depthStencilState.stencilTestEnable  ||
+                                           pState->state.depthStencilState.stencilWriteEnable)) ? true : false;
+
+    uint32_t numRTs = pState->state.psState.maxRTSlotUsed;
+    pState->state.colorHottileEnable = 0;
+    if(pState->state.psState.pfnPixelShader != nullptr)
+    {
+        for (uint32_t rt = 0; rt <= numRTs; ++rt)
+        {
+            pState->state.colorHottileEnable |=  
+                (!pState->state.blendState.renderTarget[rt].writeDisableAlpha ||
+                 !pState->state.blendState.renderTarget[rt].writeDisableRed ||
+                 !pState->state.blendState.renderTarget[rt].writeDisableGreen ||
+                 !pState->state.blendState.renderTarget[rt].writeDisableBlue) ? (1 << rt) : 0;
         }
     }
 }
@@ -1055,10 +1089,11 @@ void DrawInstanced(
             pState->soState.soEnable,
             pDC->pState->pfnProcessPrims != nullptr);
         pDC->FeWork.desc.draw.numVerts = numVertsForDraw;
-        pDC->FeWork.desc.draw.startVertex = startVertex + draw * maxVertsPerDraw;
+        pDC->FeWork.desc.draw.startVertex = startVertex;
         pDC->FeWork.desc.draw.numInstances = numInstances;
         pDC->FeWork.desc.draw.startInstance = startInstance;
         pDC->FeWork.desc.draw.startPrimID = draw * primsPerDraw;
+        pDC->FeWork.desc.draw.startVertexID = draw * maxVertsPerDraw;
 
         //enqueue DC
         QueueDraw(pContext);

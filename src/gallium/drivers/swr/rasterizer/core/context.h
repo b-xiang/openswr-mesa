@@ -184,6 +184,7 @@ struct DRAW_WORK
     uint32_t   numInstances;        // Number of instances
     uint32_t   startInstance;       // Instance offset
     uint32_t   startPrimID;         // starting primitiveID for this draw batch
+    uint32_t   startVertexID;       // starting VertexID for this draw batch (only needed for non-indexed draws)
     SWR_FORMAT type;                // index buffer type
 };
 
@@ -291,6 +292,13 @@ OSALIGNLINE(struct) API_STATE
 
     // Stats are incremented when this is true.
     bool enableStats;
+
+    struct
+    {
+        uint32_t colorHottileEnable : 8;
+        uint32_t depthHottileEnable: 1;
+        uint32_t stencilHottileEnable : 1;
+    };
 };
 
 class MacroTileMgr;
