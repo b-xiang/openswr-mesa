@@ -45,7 +45,7 @@ extern "C" {
 
 #include <stdio.h>
 
-#if defined(__MSVC)
+#if defined(PIPE_CC_MSVC)
    // portable case instensitive compare 
    #define strcasecmp lstrcmpiA  
 #endif
@@ -572,7 +572,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       winsys->displaytarget_destroy(winsys, res->display_target);
    }
 
-   #ifndef __MSVC
+   #ifndef PIPE_CC_MSVC
       // this doesn't need to be freed if the winsys already freed it
       _aligned_free(res->swr.pBaseAddress);
    #endif
