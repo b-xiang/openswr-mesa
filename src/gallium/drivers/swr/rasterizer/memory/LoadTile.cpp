@@ -185,6 +185,12 @@ void LoadHotTile(
         return;
     }
     
+    // force 0 if requested renderTargetArrayIndex is OOB
+    if (renderTargetArrayIndex >= pSrcSurface->depth)
+    {
+        renderTargetArrayIndex = 0;
+    }
+
     if (renderTargetIndex < SWR_ATTACHMENT_DEPTH)
     {
         switch (pSrcSurface->tileMode)

@@ -1510,8 +1510,16 @@ void StoreHotTile(
     uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex,
     uint8_t *pSrcHotTile)
 {
-    // shouldn't ever see a null surface come through StoreTiles
-    SWR_ASSERT(pDstSurface->type != SURFACE_NULL);
+    if (pDstSurface->type == SURFACE_NULL)
+    {
+        return;
+    }
+
+    // force 0 if requested renderTargetArrayIndex is OOB
+    if (renderTargetArrayIndex >= pDstSurface->depth)
+    {
+        renderTargetArrayIndex = 0;
+    }
 
     PFN_STORE_TILES pfnStoreTiles = nullptr;
     if(renderTargetIndex <= SWR_ATTACHMENT_COLOR7)

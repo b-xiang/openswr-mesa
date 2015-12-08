@@ -347,8 +347,6 @@ void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macro
 {
     const API_STATE& state = GetApiState(pDC);
     HotTileMgr *pHotTileMgr = pContext->pHotTileMgr;
-    const SWR_PS_STATE& psState = state.psState;
-    uint32_t numRTs = psState.maxRTSlotUsed + 1;
 
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroID, x, y);
@@ -358,33 +356,33 @@ void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macro
     uint32_t numSamples = GetNumSamples(state.rastState.sampleCount);
 
     // check RT if enabled
-    if (state.psState.pfnPixelShader != nullptr)
+    unsigned long rtSlot = 0;
+    uint32_t colorHottileEnableMask = state.colorHottileEnable;
+    while(_BitScanForward(&rtSlot, colorHottileEnableMask))
     {
-        for (uint32_t rt = 0; rt < numRTs; ++rt)
-        {
-            HOTTILE* pHotTile = pHotTileMgr->GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rt), true, numSamples);
+        HOTTILE* pHotTile = pHotTileMgr->GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), true, numSamples);
 
-            if (pHotTile->state == HOTTILE_INVALID)
-            {
-                RDTSC_START(BELoadTiles);
-                // invalid hottile before draw requires a load from surface before we can draw to it
-                pContext->pfnLoadTile(GetPrivateState(pDC), KNOB_COLOR_HOT_TILE_FORMAT, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rt), x, y, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
-                pHotTile->state = HOTTILE_DIRTY;
-                RDTSC_STOP(BELoadTiles, 0, 0);
-            }
-            else if (pHotTile->state == HOTTILE_CLEAR)
-            {
-                RDTSC_START(BELoadTiles);
-                // Clear the tile.
-                ClearColorHotTile(pHotTile);
-                pHotTile->state = HOTTILE_DIRTY;
-                RDTSC_STOP(BELoadTiles, 0, 0);
-            }
+        if (pHotTile->state == HOTTILE_INVALID)
+        {
+            RDTSC_START(BELoadTiles);
+            // invalid hottile before draw requires a load from surface before we can draw to it
+            pContext->pfnLoadTile(GetPrivateState(pDC), KNOB_COLOR_HOT_TILE_FORMAT, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), x, y, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
         }
+        else if (pHotTile->state == HOTTILE_CLEAR)
+        {
+            RDTSC_START(BELoadTiles);
+            // Clear the tile.
+            ClearColorHotTile(pHotTile);
+            pHotTile->state = HOTTILE_DIRTY;
+            RDTSC_STOP(BELoadTiles, 0, 0);
+        }
+        colorHottileEnableMask &= ~(1 << rtSlot);
     }
 
     // check depth if enabled
-    if (state.depthStencilState.depthTestEnable || state.depthStencilState.depthWriteEnable)
+    if (state.depthHottileEnable)
     {
         HOTTILE* pHotTile = pHotTileMgr->GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_DEPTH, true, numSamples);
         if (pHotTile->state == HOTTILE_INVALID)
@@ -406,7 +404,7 @@ void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macro
     }
 
     // check stencil if enabled
-    if (state.depthStencilState.stencilTestEnable || state.depthStencilState.stencilWriteEnable)
+    if (state.stencilHottileEnable)
     {
         HOTTILE* pHotTile = pHotTileMgr->GetHotTile(pContext, pDC, macroID, SWR_ATTACHMENT_STENCIL, true, numSamples);
         if (pHotTile->state == HOTTILE_INVALID)

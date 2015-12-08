@@ -4929,14 +4929,25 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { false, false, false, false },
         { 0.0f, 0.0f, 0.0f, 0.0f },
         1, 1, false    },
-    // 0x1a1 (Padding)
+    // BC6H_SF16 (0x1a1)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1, false    },
+        "BC6H_SF16",
+        { SWR_TYPE_SNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        128, // Bits per element
+        16, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        true, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 127.0f, 0, 0, 0 }, // To float scale factor
+        4, // bcWidth
+        4, // bcHeight
+        false, // isLuminance
+    },
     // BC7_UNORM (0x1a2)
     {
         "BC7_UNORM",
@@ -4975,14 +4986,25 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         4, // bcHeight
         false, // isLuminance
     },
-    // 0x1a4 (Padding)
+    // BC6H_UF16 (0x1a4)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1, false    },
+        "BC6H_UF16",
+        { SWR_TYPE_UNORM, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 8, 0, 0, 0 }, // Bits per component
+        128, // Bits per element
+        16, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        true, // isBC
+        false, // isSubsampled
+        { true, true, true, true }, // Is normalized?
+        { 1.0f / 255.0f, 0, 0, 0 }, // To float scale factor
+        4, // bcWidth
+        4, // bcHeight
+        false, // isLuminance
+    },
     // 0x1a5 (Padding)
     {
         "UNKNOWN",

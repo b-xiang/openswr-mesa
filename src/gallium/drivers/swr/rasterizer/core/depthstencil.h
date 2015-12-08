@@ -113,6 +113,7 @@ simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENC
         case ZFUNC_GT: depthResult = _simd_cmpgt_ps(interpZ, zbuf); break;
         case ZFUNC_GE: depthResult = _simd_cmpge_ps(interpZ, zbuf); break;
         case ZFUNC_EQ: depthResult = _simd_cmpeq_ps(interpZ, zbuf); break;
+        case ZFUNC_NE: depthResult = _simd_cmpneq_ps(interpZ, zbuf); break;
         }
     }
 
@@ -120,7 +121,6 @@ simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENC
 
     if (pDSState->stencilTestEnable)
     {
-
         uint8_t stencilRefValue;
         uint32_t stencilTestFunc;
         uint8_t stencilTestMask;
@@ -138,20 +138,27 @@ simdscalar DepthStencilTest(const SWR_VIEWPORT* pViewport, const SWR_DEPTH_STENC
         }
 
         simdvector sbuf;
-        LoadSOA<R8_UINT>(pStencilBase, sbuf);
-
-        // apply stencil read mask
-        simdscalar stencilWithMask = _simd_castsi_ps(_simd_and_si(_simd_castps_si(sbuf.v[0]), _simd_set1_epi32(stencilTestMask)));
-
-        // do stencil compare in float to avoid simd integer emulation in AVX1
-        stencilWithMask = _simd_cvtepi32_ps(_simd_castps_si(stencilWithMask));
-
-        simdscalar stencilRef = _simd_set1_ps((float)(stencilRefValue & stencilTestMask));
-
-        switch (stencilTestFunc)
+        simdscalar stencilWithMask;
+        simdscalar stencilRef;
+        switch(stencilTestFunc)
         {
-        case ZFUNC_ALWAYS: break;
         case ZFUNC_NEVER: stencilMask = _simd_setzero_ps(); break;
+        case ZFUNC_ALWAYS: break;
+        default:
+            LoadSOA<R8_UINT>(pStencilBase, sbuf);
+            
+            // apply stencil read mask
+            stencilWithMask = _simd_castsi_ps(_simd_and_si(_simd_castps_si(sbuf.v[0]), _simd_set1_epi32(stencilTestMask)));
+
+            // do stencil compare in float to avoid simd integer emulation in AVX1
+            stencilWithMask = _simd_cvtepi32_ps(_simd_castps_si(stencilWithMask));
+
+            stencilRef = _simd_set1_ps((float)(stencilRefValue & stencilTestMask));
+            break;
+        }
+
+        switch(stencilTestFunc)
+        {
         case ZFUNC_LE: stencilMask = _simd_cmple_ps(stencilRef, stencilWithMask); break;
         case ZFUNC_LT: stencilMask = _simd_cmplt_ps(stencilRef, stencilWithMask); break;
         case ZFUNC_GT: stencilMask = _simd_cmpgt_ps(stencilRef, stencilWithMask); break;

@@ -130,9 +130,23 @@ void _mm256_storeu2_m128i(__m128i *hi, __m128i *lo, __m256i a)
 #endif
 
 inline
+unsigned char _BitScanForward(unsigned long *Index, unsigned long Mask)
+{
+    *Index = __builtin_ctz(Mask);
+    return (Mask != 0);
+}
+
+inline
 unsigned char _BitScanForward(unsigned int *Index, unsigned int Mask)
 {
     *Index = __builtin_ctz(Mask);
+    return (Mask != 0);
+}
+
+inline
+unsigned char _BitScanReverse(unsigned long *Index, unsigned long Mask)
+{
+    *Index = __builtin_clz(Mask);
     return (Mask != 0);
 }
 

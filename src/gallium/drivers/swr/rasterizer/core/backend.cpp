@@ -595,9 +595,13 @@ void generateInputCoverage(const uint64_t *const coverageMask, __m256 &inputCove
     inputCoverage = _simd_castsi_ps(_mm256_set_epi32(inputMask[7], inputMask[6], inputMask[5], inputMask[4], inputMask[3], inputMask[2], inputMask[1], inputMask[0]));
 }
 
-template<uint32_t MaxRT, SWR_MULTISAMPLE_COUNT sampleCountT, SWR_INPUT_COVERAGE coverageT>
+template<uint32_t MaxRT, uint32_t sampleCountT, uint32_t samplePatternT, uint32_t coverageT>
 void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
+    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
+    static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
+    static const SWR_INPUT_COVERAGE coverage = (SWR_INPUT_COVERAGE)coverageT;
+
     RDTSC_START(BESetup);
 
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -644,12 +648,12 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
     psContext.pSamplePos = work.pSamplePos;
-    const uint32_t numSamples = MultisampleTraits<sampleCountT>::numSamples;
+    const uint32_t numSamples = MultisampleTraits<sampleCount>::numSamples;
 
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         simdscalar vYSamplePosUL;
-        if(sampleCountT == SWR_MULTISAMPLE_1X)
+        if(sampleCount == SWR_MULTISAMPLE_1X)
         {
             // pixel center
             psContext.vY = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
@@ -664,12 +668,12 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
         {
             simdscalar vXSamplePosUL;
 
-            if(coverageT == SWR_INPUT_COVERAGE_NORMAL)
+            if(coverage == SWR_INPUT_COVERAGE_NORMAL)
             {
-                generateInputCoverage<sampleCountT, SWR_MSAA_STANDARD_PATTERN>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                generateInputCoverage<sampleCount, SWR_MSAA_STANDARD_PATTERN>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
             }
 
-            if(sampleCountT > SWR_MULTISAMPLE_1X)
+            if(sampleCount > SWR_MULTISAMPLE_1X)
             {
                 // UL pixel corner
                 vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
@@ -681,7 +685,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                 {
                     RDTSC_START(BEBarycentric);
 
-                    if(sampleCountT == SWR_MULTISAMPLE_1X)
+                    if(sampleCount == SWR_MULTISAMPLE_1X)
                     {
                         // pixel center
                         psContext.vX = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
@@ -689,8 +693,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     else
                     {
                         // calculate per sample positions
-                        psContext.vX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCountT>::vX(sample));
-                        psContext.vY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCountT>::vY(sample));
+                        psContext.vX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
+                        psContext.vY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
                     }
 
                     // evaluate I,J
@@ -717,7 +721,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     simdscalar stencilPassMask = vCoverageMask;
 
                     uint8_t *pDepthSample, *pStencilSample;
-                    if(sampleCountT == SWR_MULTISAMPLE_1X)
+                    if(sampleCount == SWR_MULTISAMPLE_1X)
                     {
                         pDepthSample = pDepthBase;
                         pStencilSample = pStencilBase;
@@ -725,8 +729,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     else
                     {
                         // offset depth/stencil buffers current sample
-                        pDepthSample = pDepthBase + MultisampleTraits<sampleCountT>::RasterTileDepthOffset(sample);
-                        pStencilSample = pStencilBase + MultisampleTraits<sampleCountT>::RasterTileStencilOffset(sample);
+                        pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
+                        pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
                     }
 
                     // Early-Z?
@@ -787,11 +791,11 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     // output merger
                     RDTSC_START(BEOutputMerger);
 
-                    uint32_t rasterTileColorOffset = MultisampleTraits<sampleCountT>::RasterTileColorOffset(sample);
+                    uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
                     for (uint32_t rt = 0; rt <= MaxRT; ++rt)
                     {
                         uint8_t *pColorSample;
-                        if(sampleCountT == SWR_MULTISAMPLE_1X)
+                        if(sampleCount == SWR_MULTISAMPLE_1X)
                         {
                             pColorSample = pColorBase[rt];
                         }
@@ -864,9 +868,14 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     }
 }
 
-template<uint32_t MaxRT, SWR_MULTISAMPLE_COUNT sampleCountT, SWR_MSAA_SAMPLE_PATTERN samplePatternT, SWR_INPUT_COVERAGE coverageT>
+template<uint32_t MaxRT, uint32_t sampleCountT, uint32_t samplePatternT, uint32_t coverageT>
 void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
+    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
+    static const SWR_MULTISAMPLE_COUNT sampleCount = (SWR_MULTISAMPLE_COUNT)sampleCountT;
+    static const SWR_MSAA_SAMPLE_PATTERN samplePattern = (SWR_MSAA_SAMPLE_PATTERN)samplePatternT;
+    static const SWR_INPUT_COVERAGE coverage = (SWR_INPUT_COVERAGE)coverageT;
+
     RDTSC_START(BESetup);
 
     SWR_CONTEXT *pContext = pDC->pContext;
@@ -916,15 +925,15 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.sampleIndex = 0;
 
     uint32_t numCoverageSamples;
-    if(samplePatternT == SWR_MSAA_STANDARD_PATTERN)
+    if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
     {
-        numCoverageSamples = MultisampleTraits<sampleCountT>::numSamples;
+        numCoverageSamples = MultisampleTraits<sampleCount>::numSamples;
     }
     else
     {
         numCoverageSamples = 1;
     }
-    const uint32_t numOMSamples = MultisampleTraits<sampleCountT>::numSamples;
+    const uint32_t numOMSamples = MultisampleTraits<sampleCount>::numSamples;
     
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -932,9 +941,9 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
         simdscalar vYSamplePosCenter = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            if (coverageT == SWR_INPUT_COVERAGE_NORMAL)
+            if (coverage == SWR_INPUT_COVERAGE_NORMAL)
             {
-                generateInputCoverage<sampleCountT, samplePatternT>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
+                generateInputCoverage<sampleCount, samplePattern>(&work.coverageMask[0], psContext.inputMask, pBlendState->sampleMask);
             }
 
             simdscalar vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
@@ -995,11 +1004,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     RDTSC_START(BEBarycentric);
                     simdscalar vSamplePosX;
                     simdscalar vSamplePosY;
-                    if(samplePatternT == SWR_MSAA_STANDARD_PATTERN)
+                    if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
                     {
                         // calculate per sample positions
-                        vSamplePosX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCountT>::vX(sample));
-                        vSamplePosY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCountT>::vY(sample));
+                        vSamplePosX = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
+                        vSamplePosY = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
                     }
                     else
                     {
@@ -1031,8 +1040,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 // else 'broadcast' and test psContext.vZ from the PS invocation for each sample
 
                 // offset depth/stencil buffers current sample
-                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCountT>::RasterTileDepthOffset(sample);
-                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCountT>::RasterTileStencilOffset(sample);
+                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
+                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
 
                 // ZTest for this sample
                 RDTSC_START(BEEarlyDepthTest);
@@ -1086,7 +1095,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 RDTSC_START(BEOutputMerger);
                 // skip if none of the pixels for this sample passed
                 simdscalari mask;
-                if(samplePatternT == SWR_MSAA_STANDARD_PATTERN)
+                if(samplePattern == SWR_MSAA_STANDARD_PATTERN)
                 {
                     if(!_simd_movemask_ps(depthPassMask[sample]))
                     {
@@ -1106,7 +1115,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     mask = _simd_castps_si(depthPassMask[0]);
                 }
 
-                uint32_t rasterTileColorOffset = MultisampleTraits<sampleCountT>::RasterTileColorOffset(sample);
+                uint32_t rasterTileColorOffset = MultisampleTraits<sampleCount>::RasterTileColorOffset(sample);
                 for(uint32_t rt = 0; rt <= MaxRT; ++rt)
                 {
                     uint8_t *pColorSample = pColorBase[rt] + rasterTileColorOffset;
@@ -1150,8 +1159,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     }
                 }
 
-                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCountT>::RasterTileDepthOffset(sample);
-                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCountT>::RasterTileStencilOffset(sample);
+                uint8_t *pDepthSample = pDepthBase + MultisampleTraits<sampleCount>::RasterTileDepthOffset(sample);
+                uint8_t * pStencilSample = pStencilBase + MultisampleTraits<sampleCount>::RasterTileStencilOffset(sample);
 
                 DepthStencilWrite(&state.vp[0], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ, pDepthSample, _simd_castsi_ps(mask),
                     depthPassMask[sample], pStencilSample, stencilPassMask[sample]);
@@ -1265,313 +1274,137 @@ void InitClearTilesTable()
 PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_NUM_RENDERTARGETS][SWR_MULTISAMPLE_TYPE_MAX][SWR_MSAA_SAMPLE_PATTERN_MAX][SWR_INPUT_COVERAGE_MAX] = {};
 PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_NUM_RENDERTARGETS][SWR_MULTISAMPLE_TYPE_MAX][SWR_INPUT_COVERAGE_MAX] = {};
 
-///@todo: can change this to compile time template loop so its not so huge, or remove when we JIT the backend
-template <uint32_t numRenderTargetsT, uint32_t numSampleRatesT, uint32_t numSamplePatternsT, uint32_t numCoverageModesT>
+// Recursive template used to auto-nest conditionals.  Converts dynamic enum function
+// arguments to static template arguments.
+template <uint32_t... ArgsT>
+struct BEChooser
+{
+    // Last Arg Terminator
+    static PFN_BACKEND_FUNC GetFunc(SWR_SHADING_RATE tArg)
+    {
+        switch(tArg)
+        {
+        case SWR_SHADING_RATE_PIXEL: return BackendPixelRate<ArgsT...>; break;
+        case SWR_SHADING_RATE_SAMPLE: return BackendSampleRate<ArgsT...>; break;
+        case SWR_SHADING_RATE_COARSE:
+        default:
+            SWR_ASSERT(0 && "Invalid shading rate\n");
+            return nullptr;
+            break;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_RENDERTARGET_ATTACHMENT tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_ATTACHMENT_COLOR0: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR0>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR1: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR1>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR2: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR2>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR3: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR3>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR4: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR4>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR5: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR5>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR6: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR6>::GetFunc(remainingArgs...); break;
+        case SWR_ATTACHMENT_COLOR7: return BEChooser<ArgsT..., SWR_ATTACHMENT_COLOR7>::GetFunc(remainingArgs...); break;
+        default:
+            SWR_ASSERT(0 && "Invalid RT index\n");
+            return nullptr;
+            break;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_MULTISAMPLE_COUNT tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_MULTISAMPLE_1X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_1X>::GetFunc(remainingArgs...); break;
+        case SWR_MULTISAMPLE_2X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_2X>::GetFunc(remainingArgs...); break;
+        case SWR_MULTISAMPLE_4X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_4X>::GetFunc(remainingArgs...); break;
+        case SWR_MULTISAMPLE_8X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_8X>::GetFunc(remainingArgs...); break;
+        case SWR_MULTISAMPLE_16X: return BEChooser<ArgsT..., SWR_MULTISAMPLE_16X>::GetFunc(remainingArgs...); break;
+        default:
+            SWR_ASSERT(0 && "Invalid sample count\n");
+            return nullptr;
+            break;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_MSAA_SAMPLE_PATTERN tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_MSAA_CENTER_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_CENTER_PATTERN>::GetFunc(remainingArgs...); break;
+        case SWR_MSAA_STANDARD_PATTERN: return BEChooser<ArgsT..., SWR_MSAA_STANDARD_PATTERN>::GetFunc(remainingArgs...); break;
+        default:
+            SWR_ASSERT(0 && "Invalid sample pattern\n");
+            return nullptr;
+            break;
+        }
+    }
+
+    // Recursively parse args
+    template <typename... TArgsT>
+    static PFN_BACKEND_FUNC GetFunc(SWR_INPUT_COVERAGE tArg, TArgsT... remainingArgs)
+    {
+        switch(tArg)
+        {
+        case SWR_INPUT_COVERAGE_NONE: return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_NONE>::GetFunc(remainingArgs...); break;
+        case SWR_INPUT_COVERAGE_NORMAL: return BEChooser<ArgsT..., SWR_INPUT_COVERAGE_NORMAL>::GetFunc(remainingArgs...); break;
+        default:
+            SWR_ASSERT("Invalid input coverage mode\n");
+            return nullptr;
+            break;
+        }
+    }
+};
+
+template <SWR_RENDERTARGET_ATTACHMENT numRenderTargetsT, SWR_MULTISAMPLE_COUNT numSampleRatesT, SWR_MSAA_SAMPLE_PATTERN numSamplePatternsT, SWR_INPUT_COVERAGE numCoverageModesT>
 void InitBackendPixelFuncTable(PFN_BACKEND_FUNC (&table)[numRenderTargetsT][numSampleRatesT][numSamplePatternsT][numCoverageModesT])
 {
-    // center pattern, no input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    // center pattern, normal input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_1X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_MSAA_CENTER_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_CENTER_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    // standard pattern, no input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NONE] = BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NONE>;
-
-    // standard pattern, normal input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<0, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<1, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<2, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<3, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<4, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<5, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<6, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_1X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_2X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_4X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_8X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_MSAA_STANDARD_PATTERN][SWR_INPUT_COVERAGE_NORMAL] = BackendPixelRate<7, SWR_MULTISAMPLE_16X, SWR_MSAA_STANDARD_PATTERN, SWR_INPUT_COVERAGE_NORMAL>;
+    for(int rtNum = SWR_ATTACHMENT_COLOR0; rtNum < numRenderTargetsT; rtNum++)
+    {
+        for(int sampleCount = SWR_MULTISAMPLE_1X; sampleCount < numSampleRatesT; sampleCount++)
+        {
+            for(int samplePattern = SWR_MSAA_CENTER_PATTERN; samplePattern < numSamplePatternsT; samplePattern++)
+            {
+                for(int inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < numCoverageModesT; inputCoverage++)
+                {
+                    table[rtNum][sampleCount][samplePattern][inputCoverage] = 
+                        BEChooser<>::GetFunc((SWR_RENDERTARGET_ATTACHMENT)rtNum, (SWR_MULTISAMPLE_COUNT)sampleCount, 
+                                             (SWR_MSAA_SAMPLE_PATTERN)samplePattern,(SWR_INPUT_COVERAGE)inputCoverage, (SWR_SHADING_RATE)SWR_SHADING_RATE_PIXEL);
+                }
+            }
+        }
+    }
 }
 
 template <uint32_t numRenderTargetsT, uint32_t numSampleRatesT, uint32_t numCoverageModesT>
 void InitBackendSampleFuncTable(PFN_BACKEND_FUNC (&table)[numRenderTargetsT][numSampleRatesT][numCoverageModesT])
 {
-    // no input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<0, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<0, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<0, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<0, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<0, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<1, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<1, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<1, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<1, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<1, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<2, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<2, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<2, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<2, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<2, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<3, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<3, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<3, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<3, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<3, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<4, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<4, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<4, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<4, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<4, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<5, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<5, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<5, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<5, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<5, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<6, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<6, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<6, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<6, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<6, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<7, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<7, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<7, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<7, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NONE>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NONE] = BackendSampleRate<7, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NONE>;
-
-    // normal input coverage
-    table[0][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<0, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<0, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<0, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<0, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[0][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<0, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[1][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<1, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<1, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<1, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<1, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[1][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<1, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[2][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<2, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<2, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<2, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<2, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[2][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<2, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[3][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<3, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<3, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<3, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<3, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[3][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<3, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[4][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<4, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<4, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<4, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<4, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[4][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<4, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[5][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<5, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<5, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<5, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<5, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[5][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<5, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[6][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<6, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<6, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<6, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<6, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[6][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<6, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
-
-    table[7][SWR_MULTISAMPLE_1X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<7, SWR_MULTISAMPLE_1X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_2X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<7, SWR_MULTISAMPLE_2X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_4X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<7, SWR_MULTISAMPLE_4X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_8X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<7, SWR_MULTISAMPLE_8X, SWR_INPUT_COVERAGE_NORMAL>;
-    table[7][SWR_MULTISAMPLE_16X][SWR_INPUT_COVERAGE_NORMAL] = BackendSampleRate<7, SWR_MULTISAMPLE_16X, SWR_INPUT_COVERAGE_NORMAL>;
+    for(uint32_t rtNum = SWR_ATTACHMENT_COLOR0; rtNum < numRenderTargetsT; rtNum++)
+    {
+        for(uint32_t sampleCount = SWR_MULTISAMPLE_1X; sampleCount < numSampleRatesT; sampleCount++)
+        {
+            for(uint32_t inputCoverage = SWR_INPUT_COVERAGE_NONE; inputCoverage < numCoverageModesT; inputCoverage++)
+            {
+                table[rtNum][sampleCount][inputCoverage] =
+                    BEChooser<>::GetFunc((SWR_RENDERTARGET_ATTACHMENT)rtNum, (SWR_MULTISAMPLE_COUNT)sampleCount, SWR_MSAA_STANDARD_PATTERN,
+                                         (SWR_INPUT_COVERAGE)inputCoverage, (SWR_SHADING_RATE)SWR_SHADING_RATE_SAMPLE);
+            }
+        }
+    }
 }
 
 void InitBackendFuncTables()
 {
     memset(gBackendPixelRateTable, 0, sizeof(gBackendPixelRateTable));
     memset(gBackendSampleRateTable, 0, sizeof(gBackendSampleRateTable));
-    InitBackendPixelFuncTable<(uint32_t)SWR_NUM_RENDERTARGETS, (uint32_t)SWR_MULTISAMPLE_TYPE_MAX, (uint32_t)SWR_MSAA_SAMPLE_PATTERN_MAX, (uint32_t)SWR_INPUT_COVERAGE_MAX>(gBackendPixelRateTable);
+    InitBackendPixelFuncTable<(SWR_RENDERTARGET_ATTACHMENT)SWR_NUM_RENDERTARGETS, SWR_MULTISAMPLE_TYPE_MAX, SWR_MSAA_SAMPLE_PATTERN_MAX, SWR_INPUT_COVERAGE_MAX>(gBackendPixelRateTable);
     InitBackendSampleFuncTable<SWR_NUM_RENDERTARGETS, SWR_MULTISAMPLE_TYPE_MAX, SWR_INPUT_COVERAGE_MAX>(gBackendSampleRateTable);
 }

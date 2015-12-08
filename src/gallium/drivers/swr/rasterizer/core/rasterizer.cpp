@@ -972,29 +972,29 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
 {
     const API_STATE& state = GetApiState(pDC);
     SWR_CONTEXT *pContext = pDC->pContext;
-    const SWR_DEPTH_STENCIL_STATE *pDSState = &state.depthStencilState;
-    const uint32_t MaxRT = state.psState.maxRTSlotUsed;
 
     uint32_t mx, my;
     MacroTileMgr::getTileIndices(macroID, mx, my);
     tileX -= KNOB_MACROTILE_X_DIM_IN_TILES * mx;
     tileY -= KNOB_MACROTILE_Y_DIM_IN_TILES * my;
 
-    if(state.psState.pfnPixelShader != NULL)
+    // compute tile offset for active hottile buffers
+    const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8;
+    uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);
+    offset*=numSamples;
+
+    unsigned long rtSlot = 0;
+    uint32_t colorHottileEnableMask = state.colorHottileEnable;
+    while(_BitScanForward(&rtSlot, colorHottileEnableMask))
     {
-        // compute tile offset for active hottile buffers
-        const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8;
-        uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);
-        offset*=numSamples;
-        for(uint32_t rt = 0; rt <= MaxRT; ++rt)
-        {
-            HOTTILE *pColor = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rt), true, 
-                numSamples, renderTargetArrayIndex);
-            pColor->state = HOTTILE_DIRTY;
-            renderBuffers.pColor[rt] = pColor->pBuffer + offset;
-        }
+        HOTTILE *pColor = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroID, (SWR_RENDERTARGET_ATTACHMENT)(SWR_ATTACHMENT_COLOR0 + rtSlot), true, 
+            numSamples, renderTargetArrayIndex);
+        pColor->state = HOTTILE_DIRTY;
+        renderBuffers.pColor[rtSlot] = pColor->pBuffer + offset;
+        
+        colorHottileEnableMask &= ~(1 << rtSlot);
     }
-    if(pDSState->depthTestEnable || pDSState->depthWriteEnable)
+    if(state.depthHottileEnable)
     {
         const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp / 8;
         uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);
@@ -1005,7 +1005,7 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
         SWR_ASSERT(pDepth->pBuffer != nullptr);
         renderBuffers.pDepth = pDepth->pBuffer + offset;
     }
-    if(pDSState->stencilTestEnable)
+    if(state.stencilHottileEnable)
     {
         const uint32_t pitch = KNOB_MACROTILE_X_DIM * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp / 8;
         uint32_t offset = ComputeTileOffset2D<TilingTraits<SWR_TILE_SWRZ, FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp> >(pitch, tileX, tileY);

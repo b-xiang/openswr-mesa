@@ -263,6 +263,7 @@ struct SWR_HS_CONTEXT
 {
     simdvertex vert[MAX_NUM_VERTS_PER_PRIM]; // IN: (SIMD) input primitive data
     simdscalari PrimitiveID;    // IN: (SIMD) primitive ID generated from the draw call
+    simdscalari mask;           // IN: Active mask for shader
     ScalarPatch* pCPout;        // OUT: Output control point patch
                                 // SIMD-sized-array of SCALAR patches
 };
@@ -279,6 +280,7 @@ struct SWR_DS_CONTEXT
     ScalarPatch*    pCpIn;          // IN: (SCALAR) Control patch
     simdscalar*     pDomainU;       // IN: (SIMD) Domain Point U coords
     simdscalar*     pDomainV;       // IN: (SIMD) Domain Point V coords
+    simdscalari     mask;           // IN: Active mask for shader
     simdscalar*     pOutputData;    // OUT: (SIMD) Vertex Attributes (2D array of vectors, one row per attribute-component)
 };
 
@@ -291,6 +293,7 @@ struct SWR_GS_CONTEXT
     simdvertex vert[MAX_NUM_VERTS_PER_PRIM]; // IN: input primitive data for SIMD prims
     simdscalari PrimitiveID;    // IN: input primitive ID generated from the draw call
     uint32_t InstanceID;        // IN: input instance ID
+    simdscalari mask;           // IN: Active mask for shader
     uint8_t* pStream[4];        // OUT: output streams
     uint8_t* pCutBuffer;        // OUT: cut buffer
     simdscalari vertexCount;    // OUT: num vertices emitted per SIMD lane
@@ -800,10 +803,11 @@ enum SWR_MULTISAMPLE_COUNT
     SWR_MULTISAMPLE_TYPE_MAX
 };
 
+
 enum SWR_MSAA_SAMPLE_PATTERN
 {
-    SWR_MSAA_CENTER_PATTERN = 0,
-    SWR_MSAA_STANDARD_PATTERN = 2,
+    SWR_MSAA_CENTER_PATTERN,
+    SWR_MSAA_STANDARD_PATTERN,
     SWR_MSAA_SAMPLE_PATTERN_MAX
 };
 
@@ -925,7 +929,7 @@ struct SWR_PS_STATE
 
     // dword 2
     uint32_t killsPixel     : 1;    // pixel shader can kill pixels
-	uint32_t inputCoverage  : 2;    // type of input coverage PS uses
+	uint32_t inputCoverage  : 1;    // type of input coverage PS uses
     uint32_t writesODepth   : 1;    // pixel shader writes to depth
     uint32_t usesSourceDepth: 1;    // pixel shader reads depth
     uint32_t maxRTSlotUsed  : 3;    // maximum render target slot pixel shader writes to [0..7]

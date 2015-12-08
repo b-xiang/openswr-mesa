@@ -93,9 +93,9 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
     auto    argitr = fetch->getArgumentList().begin();
 
     // Fetch shader arguments
-    Value*    fetchInfo = argitr; ++argitr;
+    Value*    fetchInfo = &*argitr; ++argitr;
     fetchInfo->setName("fetchInfo");
-    Value*    pVtxOut = argitr;
+    Value*    pVtxOut = &*argitr;
     pVtxOut->setName("vtxOutput");
     // this is just shorthand to tell LLVM to get a pointer to the base address of simdvertex
     // index 0(just the pointer to the simdvertex structure
