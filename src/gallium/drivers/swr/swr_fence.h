@@ -22,11 +22,8 @@
 #ifndef SWR_FENCE_H
 #define SWR_FENCE_H
 
-
-#include "os/os_thread.h"
 #include "pipe/p_state.h"
 #include "util/u_inlines.h"
-
 
 struct pipe_screen;
 

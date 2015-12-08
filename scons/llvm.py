@@ -117,7 +117,8 @@ def generate(env):
                 'LLVMX86Info', 'LLVMX86AsmPrinter', 'LLVMX86Utils',
                 'LLVMMCJIT', 'LLVMTarget', 'LLVMExecutionEngine',
                 'LLVMRuntimeDyld', 'LLVMObject', 'LLVMMCParser',
-                'LLVMBitReader', 'LLVMMC', 'LLVMCore', 'LLVMSupport'
+                'LLVMBitReader', 'LLVMMC', 'LLVMCore', 'LLVMSupport',
+                'LLVMIRReader', 'LLVMAsmParser', 'LLVMX86AsmParser'
             ])
         elif llvm_version >= distutils.version.LooseVersion('3.5'):
             env.Prepend(LIBS = [

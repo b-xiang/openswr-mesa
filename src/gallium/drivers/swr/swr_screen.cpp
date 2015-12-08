@@ -45,6 +45,11 @@ extern "C" {
 
 #include <stdio.h>
 
+#if defined(PIPE_CC_MSVC)
+   // portable case instensitive compare 
+   #define strcasecmp lstrcmpiA  
+#endif
+
 static const char *
 swr_get_name(struct pipe_screen *screen)
 {
@@ -523,6 +528,13 @@ swr_resource_create(struct pipe_screen *_screen,
          /* displayable surface */
          if (!swr_displaytarget_layout(screen, res))
             goto fail;
+      
+         // else we go ahead and map the display_target directly to winsys memory
+         struct sw_winsys *winsys = screen->winsys;
+         struct sw_displaytarget *dt = ((struct swr_resource *) res)->display_target;
+         _aligned_free(res->swr.pBaseAddress);
+
+         res->swr.pBaseAddress = (uint8_t*) (winsys->displaytarget_map(winsys, dt, 0));
       }
    }
 
@@ -560,7 +572,9 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       winsys->displaytarget_destroy(winsys, res->display_target);
    }
 
-   _aligned_free(res->swr.pBaseAddress);
+   // this doesn't need to be freed if the winsys already freed it
+   // _aligned_free(res->swr.pBaseAddress);
+
    _aligned_free(res->secondary.pBaseAddress);
 
    FREE(res);
@@ -575,22 +589,22 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
                       void *context_private,
                       struct pipe_box *sub_box)
 {
-   SWR_SURFACE_STATE &colorBuffer = swr_resource(resource)->swr;
+   // SWR_SURFACE_STATE &colorBuffer = swr_resource(resource)->swr;
 
    struct swr_screen *screen = swr_screen(p_screen);
    struct sw_winsys *winsys = screen->winsys;
    struct swr_resource *res = swr_resource(resource);
 
-   /* Ensure fence set at flush is finished, before reading frame buffer */
+   // /* Ensure fence set at flush is finished, before reading frame buffer */
    swr_fence_finish(p_screen, screen->flush_fence, 0);
 
    SwrEndFrame(swr_context((pipe_context *)res->bound_to_context));
 
-   void *map = winsys->displaytarget_map(
-      winsys, res->display_target, PIPE_TRANSFER_WRITE);
-   memcpy(
-      map, colorBuffer.pBaseAddress, colorBuffer.pitch * colorBuffer.height);
-   winsys->displaytarget_unmap(winsys, res->display_target);
+   // void *map = winsys->displaytarget_map(
+   //    winsys, res->display_target, PIPE_TRANSFER_WRITE);
+   // memcpy(
+   //    map, colorBuffer.pBaseAddress, colorBuffer.pitch * colorBuffer.height);
+   // winsys->displaytarget_unmap(winsys, res->display_target);
 
    assert(res->display_target);
    if (res->display_target)
@@ -665,4 +679,16 @@ swr_create_screen(struct sw_winsys *winsys)
    swr_fence_init(&screen->base);
 
    return &screen->base;
+}
+
+struct sw_winsys *
+swr_get_winsys(struct pipe_screen *pipe)
+{
+   return ((struct swr_screen *)pipe)->winsys;
+}
+
+struct sw_displaytarget *
+swr_get_displaytarget(struct pipe_resource *resource)
+{
+   return ((struct swr_resource *)resource)->display_target;
 }

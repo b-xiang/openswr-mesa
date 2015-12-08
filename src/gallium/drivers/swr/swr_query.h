@@ -26,8 +26,6 @@
 
 
 #include <limits.h>
-#include "os/os_thread.h"
-
 
 struct swr_query {
    unsigned type; /* PIPE_QUERY_* */

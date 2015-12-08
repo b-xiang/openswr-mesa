@@ -160,8 +160,9 @@ BuilderSWR::CompileVS(struct pipe_context *ctx, swr_vertex_shader *swr_vs)
    hPrivateData->setName("hPrivateData");
    Value *pVsCtx = &*argitr++;
    pVsCtx->setName("vsCtx");
+   
+   Value *consts_ptr = GEP(hPrivateData, {C(0), C(swr_draw_context_constantVS)});
 
-   Value *consts_ptr = GEP(hPrivateData, {0, swr_draw_context_constantVS});
    consts_ptr->setName("vs_constants");
    Value *const_sizes_ptr =
       GEP(hPrivateData, {0, swr_draw_context_num_constantsVS});

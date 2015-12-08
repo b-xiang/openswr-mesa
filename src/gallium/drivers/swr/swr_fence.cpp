@@ -29,7 +29,9 @@
 #include "swr_screen.h"
 #include "swr_fence.h"
 
-
+#if defined(PIPE_CC_MSVC) // portable thread yield
+   #define sched_yield SwitchToThread  
+#endif
 /*
  * Fence callback, called by back-end thread on completion of all rendering up
  * to SwrSync call.

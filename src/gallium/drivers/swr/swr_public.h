@@ -26,12 +26,18 @@
 
 struct pipe_screen;
 struct sw_winsys;
+struct sw_displaytarget;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct pipe_screen *swr_create_screen(struct sw_winsys *winsys);
+
+struct sw_winsys *swr_get_winsys(struct pipe_screen *pipe);
+
+struct sw_displaytarget *swr_get_displaytarget(struct pipe_resource *resource);
+
 
 #ifdef __cplusplus
 }
