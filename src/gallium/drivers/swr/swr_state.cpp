@@ -966,10 +966,8 @@ swr_update_derived(struct swr_context *ctx,
       psState.inputCoverage = SWR_INPUT_COVERAGE_NORMAL;
       psState.writesODepth = ctx->fs->info.base.writes_z;
       psState.usesSourceDepth = ctx->fs->info.base.reads_z;
-      psState.maxRTSlotUsed =
-         (ctx->framebuffer.nr_cbufs != 0) ?
-         (ctx->framebuffer.nr_cbufs - 1) :
-         0;
+      psState.shadingRate = SWR_SHADING_RATE_PIXEL; // XXX
+      psState.numRenderTargets = ctx->framebuffer.nr_cbufs;
       SwrSetPixelShaderState(ctx->swrContext, &psState);
    }
 
