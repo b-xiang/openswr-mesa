@@ -740,6 +740,7 @@ swr_update_derived(struct swr_context *ctx,
       rastState->msaaRastEnable = false;
       rastState->rastMode = SWR_MSAA_RASTMODE_OFF_PIXEL;
       rastState->sampleCount = SWR_MULTISAMPLE_1X;
+      rastState->bForcedSampleCount = false;
 
       bool do_offset = false;
       switch (ctx->rasterizer->fill_front) {
@@ -1173,6 +1174,10 @@ swr_update_derived(struct swr_context *ctx,
       blendState.constantColor[3] = ctx->blend_color.color[3];
       blendState.alphaTestReference =
          *((uint32_t*)&ctx->depth_stencil->alpha.ref_value);
+
+      // XXX MSAA
+      blendState.sampleMask = 0;
+      blendState.sampleCount = SWR_MULTISAMPLE_1X;
 
       /* If there are no color buffers bound, disable writes on RT0
        * and skip loop */
