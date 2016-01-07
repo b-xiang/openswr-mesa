@@ -946,7 +946,7 @@ swr_update_derived(struct swr_context *ctx,
 
    /* VertexShader */
    if (ctx->dirty & SWR_NEW_VS) {
-      SwrSetVertexFunc(ctx->swrContext, ctx->vs->func);
+      SwrSetVertexFunc(ctx->swrContext, ctx->vs->func, nullptr);
    }
 
    swr_jit_key key;
@@ -1001,7 +1001,7 @@ swr_update_derived(struct swr_context *ctx,
       psState.barycentricsMask = barycentricsMask;
       psState.usesUAV = false; // XXX
       psState.forceEarlyZ = false;
-      SwrSetPixelShaderState(ctx->swrContext, &psState);
+      SwrSetPixelShaderState(ctx->swrContext, &psState, nullptr);
    }
 
    /* JIT sampler state */
