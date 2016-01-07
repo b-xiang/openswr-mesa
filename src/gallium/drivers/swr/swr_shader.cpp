@@ -320,18 +320,9 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
 
    // xxx should check for flat shading versus interpolation
 
-   // load i
-   Value *vi = LOAD(pPS, {0, SWR_PS_CONTEXT_vI}, "i");
-
-   // load j
-   Value *vj = LOAD(pPS, {0, SWR_PS_CONTEXT_vJ}, "j");
-
-   // load/compute w
-   Value *vw = FDIV(VIMMED1(1.0f), LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW}));
-   vw->setName("w");
 
    // load *pAttribs, *pPerspAttribs
-   Value *pAttribs = LOAD(pPS, {0, SWR_PS_CONTEXT_pAttribs}, "pAttribs");
+   Value *pRawAttribs = LOAD(pPS, {0, SWR_PS_CONTEXT_pAttribs}, "pRawAttribs");
    Value *pPerspAttribs =
       LOAD(pPS, {0, SWR_PS_CONTEXT_pPerspAttribs}, "pPerspAttribs");
 
@@ -341,9 +332,49 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
    for (int attrib = 0; attrib < PIPE_MAX_SHADER_INPUTS; attrib++) {
       const unsigned mask = swr_fs->info.base.input_usage_mask[attrib];
       const unsigned interpMode = swr_fs->info.base.input_interpolate[attrib];
+      const unsigned interpLoc = swr_fs->info.base.input_interpolate_loc[attrib];
 
       if (!mask)
          continue;
+
+      // load i,j
+      Value *vi, *vj;
+      switch (interpLoc) {
+      case TGSI_INTERPOLATE_LOC_CENTER:
+         vi = LOAD(pPS, {0, SWR_PS_CONTEXT_vI, PixelPositions_center}, "i");
+         vj = LOAD(pPS, {0, SWR_PS_CONTEXT_vJ, PixelPositions_center}, "j");
+         break;
+      case TGSI_INTERPOLATE_LOC_CENTROID:
+         vi = LOAD(pPS, {0, SWR_PS_CONTEXT_vI, PixelPositions_centroid}, "i");
+         vj = LOAD(pPS, {0, SWR_PS_CONTEXT_vJ, PixelPositions_centroid}, "j");
+         break;
+      case TGSI_INTERPOLATE_LOC_SAMPLE:
+         vi = LOAD(pPS, {0, SWR_PS_CONTEXT_vI, PixelPositions_sample}, "i");
+         vj = LOAD(pPS, {0, SWR_PS_CONTEXT_vJ, PixelPositions_sample}, "j");
+         break;
+      }
+
+      // load/compute w
+      Value *vw, *pAttribs;
+      if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE) {
+         pAttribs = pPerspAttribs;
+         switch (interpLoc) {
+         case TGSI_INTERPOLATE_LOC_CENTER:
+            vw = VRCP(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW, PixelPositions_center}));
+            break;
+         case TGSI_INTERPOLATE_LOC_CENTROID:
+            vw = VRCP(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW, PixelPositions_centroid}));
+            break;
+         case TGSI_INTERPOLATE_LOC_SAMPLE:
+            vw = VRCP(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW, PixelPositions_sample}));
+            break;
+         }
+      } else {
+         pAttribs = pRawAttribs;
+         vw = VIMMED1(1.f);
+      }
+
+      vw->setName("w");
 
       ubyte semantic_name = swr_fs->info.base.input_semantic_name[attrib];
       ubyte semantic_idx = swr_fs->info.base.input_semantic_index[attrib];
@@ -360,11 +391,11 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
          inputs[attrib][3] = wrap(VIMMED1(1.0f));
          continue;
       } else if (semantic_name == TGSI_SEMANTIC_POSITION) { // gl_FragCoord
-         inputs[attrib][0] = wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vX}, "vX"));
-         inputs[attrib][1] = wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vY}, "vY"));
+         inputs[attrib][0] = wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vX, PixelPositions_center}, "vX"));
+         inputs[attrib][1] = wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vY, PixelPositions_center}, "vY"));
          inputs[attrib][2] = wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vZ}, "vZ"));
          inputs[attrib][3] =
-            wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW}, "vOneOverW"));
+            wrap(LOAD(pPS, {0, SWR_PS_CONTEXT_vOneOverW, PixelPositions_center}, "vOneOverW"));
          continue;
       } else if (semantic_name == TGSI_SEMANTIC_PRIMID) {
          Value *primID = LOAD(pPS, {0, SWR_PS_CONTEXT_primID}, "primID");
@@ -423,16 +454,9 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
                }
             }
 
-            Value *pAttribPtr = (interpMode == TGSI_INTERPOLATE_PERSPECTIVE)
-               ? pPerspAttribs
-               : pAttribs;
-
-            Value *va =
-               VECTOR_SPLAT(JM()->mVWidth, LOAD(GEP(pAttribPtr, indexA)));
-            Value *vb =
-               VECTOR_SPLAT(JM()->mVWidth, LOAD(GEP(pAttribPtr, indexB)));
-            Value *vc =
-               VECTOR_SPLAT(JM()->mVWidth, LOAD(GEP(pAttribPtr, indexC)));
+            Value *va = VBROADCAST(LOAD(GEP(pAttribs, indexA)));
+            Value *vb = VBROADCAST(LOAD(GEP(pAttribs, indexB)));
+            Value *vc = VBROADCAST(LOAD(GEP(pAttribs, indexC)));
 
             if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
                inputs[attrib][channel] = wrap(va);

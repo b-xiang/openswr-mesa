@@ -737,6 +737,8 @@ swr_update_derived(struct swr_context *ctx,
          ctx->rasterizer->sprite_coord_mode == PIPE_SPRITE_COORD_UPPER_LEFT;
 
       /* XXX TODO: Add multisample */
+      rastState->msaaRastEnable = false;
+      rastState->rastMode = SWR_MSAA_RASTMODE_OFF_PIXEL;
       rastState->sampleCount = SWR_MULTISAMPLE_1X;
 
       bool do_offset = false;
@@ -968,6 +970,35 @@ swr_update_derived(struct swr_context *ctx,
       psState.usesSourceDepth = ctx->fs->info.base.reads_z;
       psState.shadingRate = SWR_SHADING_RATE_PIXEL; // XXX
       psState.numRenderTargets = ctx->framebuffer.nr_cbufs;
+      psState.posOffset = SWR_PS_POSITION_SAMPLE_NONE; // XXX msaa
+      uint32_t barycentricsMask = 0;
+#if 0
+      // when we switch to mesa-master
+      if (ctx->fs->info.base.uses_persp_center ||
+          ctx->fs->info.base.uses_linear_center)
+         barycentricsMask |= SWR_BARYCENTRIC_PER_PIXEL_MASK;
+      if (ctx->fs->info.base.uses_persp_centroid ||
+          ctx->fs->info.base.uses_linear_centroid)
+         barycentricsMask |= SWR_BARYCENTRIC_CENTROID_MASK;
+      if (ctx->fs->info.base.uses_persp_sample ||
+          ctx->fs->info.base.uses_linear_sample)
+         barycentricsMask |= SWR_BARYCENTRIC_PER_SAMPLE_MASK;
+#else
+      for (unsigned i = 0; i < ctx->fs->info.base.num_inputs; i++) {
+         switch (ctx->fs->info.base.input_interpolate_loc[i]) {
+         case TGSI_INTERPOLATE_LOC_CENTER:
+            barycentricsMask |= SWR_BARYCENTRIC_PER_PIXEL_MASK;
+            break;
+         case TGSI_INTERPOLATE_LOC_CENTROID:
+            barycentricsMask |= SWR_BARYCENTRIC_CENTROID_MASK;
+            break;
+         case TGSI_INTERPOLATE_LOC_SAMPLE:
+            barycentricsMask |= SWR_BARYCENTRIC_PER_SAMPLE_MASK;
+            break;
+         }
+      }
+#endif
+      psState.barycentricsMask = barycentricsMask;
       SwrSetPixelShaderState(ctx->swrContext, &psState);
    }
 
