@@ -83,6 +83,48 @@ void swr_update_derived(struct swr_context *,
  * Conversion functions: Convert mesa state defines to SWR.
  */
 
+static INLINE SWR_LOGIC_OP
+swr_convert_logic_op(const UINT op)
+{
+   switch (op) {
+   case PIPE_LOGICOP_CLEAR:
+      return LOGICOP_CLEAR;
+   case PIPE_LOGICOP_NOR:
+      return LOGICOP_NOR;
+   case PIPE_LOGICOP_AND_INVERTED:
+      return LOGICOP_CLEAR;
+   case PIPE_LOGICOP_COPY_INVERTED:
+      return LOGICOP_COPY_INVERTED;
+   case PIPE_LOGICOP_AND_REVERSE:
+      return LOGICOP_AND_REVERSE;
+   case PIPE_LOGICOP_INVERT:
+      return LOGICOP_INVERT;
+   case PIPE_LOGICOP_XOR:
+      return LOGICOP_XOR;
+   case PIPE_LOGICOP_NAND:
+      return LOGICOP_NAND;
+   case PIPE_LOGICOP_AND:
+      return LOGICOP_AND;
+   case PIPE_LOGICOP_EQUIV:
+      return LOGICOP_EQUIV;
+   case PIPE_LOGICOP_NOOP:
+      return LOGICOP_NOOP;
+   case PIPE_LOGICOP_OR_INVERTED:
+      return LOGICOP_OR_INVERTED;
+   case PIPE_LOGICOP_COPY:
+      return LOGICOP_COPY;
+   case PIPE_LOGICOP_OR_REVERSE:
+      return LOGICOP_OR_REVERSE;
+   case PIPE_LOGICOP_OR:
+      return LOGICOP_OR;
+   case PIPE_LOGICOP_SET:
+      return LOGICOP_SET;
+   default:
+      assert(0 && "Unsupported logic op");
+      return LOGICOP_NOOP;
+   }
+}
+
 static INLINE SWR_STENCILOP
 swr_convert_stencil_op(const UINT op)
 {

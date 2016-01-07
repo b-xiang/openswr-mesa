@@ -89,6 +89,11 @@ swr_create_blend_state(struct pipe_context *pipe,
          compileState.alphaBlendFunc =
             swr_convert_blend_func(rt_blend->alpha_func);
       }
+      compileState.logicOpEnable = state->pipe.logicop_enable;
+      if (compileState.logicOpEnable) {
+         compileState.logicOpFunc =
+            swr_convert_logic_op(state->pipe.logicop_func);
+      }
 
       blendState.writeDisableRed =
          (rt_blend->colormask & PIPE_MASK_R) ? 0 : 1;
@@ -1206,7 +1211,8 @@ swr_update_derived(struct swr_context *ctx,
                    &ctx->blend->compileState[target],
                    sizeof(compileState.blendState));
 
-            if (compileState.blendState.blendEnable == false) {
+            if (compileState.blendState.blendEnable == false &&
+                compileState.blendState.logicOpEnable == false) {
                SwrSetBlendFunc(ctx->swrContext, target, NULL);
                continue;
             }
