@@ -999,6 +999,8 @@ swr_update_derived(struct swr_context *ctx,
       }
 #endif
       psState.barycentricsMask = barycentricsMask;
+      psState.usesUAV = false; // XXX
+      psState.forceEarlyZ = false;
       SwrSetPixelShaderState(ctx->swrContext, &psState);
    }
 
