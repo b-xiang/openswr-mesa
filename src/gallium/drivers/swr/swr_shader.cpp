@@ -338,7 +338,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
          continue;
 
       // load i,j
-      Value *vi, *vj;
+      Value *vi = nullptr, *vj = nullptr;
       switch (interpLoc) {
       case TGSI_INTERPOLATE_LOC_CENTER:
          vi = LOAD(pPS, {0, SWR_PS_CONTEXT_vI, PixelPositions_center}, "i");
@@ -355,7 +355,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_key &key)
       }
 
       // load/compute w
-      Value *vw, *pAttribs;
+      Value *vw = nullptr, *pAttribs;
       if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE) {
          pAttribs = pPerspAttribs;
          switch (interpLoc) {
