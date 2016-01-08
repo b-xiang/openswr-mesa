@@ -360,7 +360,6 @@ Value *Builder::MASKLOADD(Value* src,Value* mask)
 /// @param printArgs - initializer list of Value*'s to print to std out
 CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list<Value*> &printArgs)
 {
-#if defined( DEBUG ) || defined( _DEBUG )
     // push the arguments to CallPrint into a vector
     std::vector<Value*> printCallArgs;
     // save room for the format string.  we still need to modify it for vectors
@@ -536,9 +535,6 @@ CallInst *Builder::PRINT(const std::string &printStr,const std::initializer_list
 
     // insert a call to CallPrint
     return CALLA(callPrintFn,printCallArgs);
-#else // #if defined( DEBUG ) || defined( _DEBUG )
-    return nullptr;
-#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1396,7 +1392,6 @@ Value* Builder::POPCNT(Value* a)
 /// output to both stdout and visual studio debug console
 void __cdecl CallPrint(const char* fmt, ...)
 {
-#if defined( DEBUG ) || defined( _DEBUG )
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);
@@ -1406,7 +1401,6 @@ void __cdecl CallPrint(const char* fmt, ...)
     vsnprintf_s(strBuf, _TRUNCATE, fmt, args);
     OutputDebugString(strBuf);
 #endif
-#endif // #if defined( DEBUG ) || defined( _DEBUG )
 }
 
 Value *Builder::VEXTRACTI128(Value* a, Constant* imm8)

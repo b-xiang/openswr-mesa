@@ -465,7 +465,7 @@ public:
         switch (pa.binTopology)
         {
         case TOP_POINT_LIST:
-            pfnBinner = CanUseSimplePoints(pDC) ? BinPoints : BinTriangles;
+            pfnBinner = BinPoints;
             break;
         case TOP_LINE_LIST:
         case TOP_LINE_STRIP:

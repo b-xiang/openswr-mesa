@@ -62,11 +62,6 @@ bool PaLineStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 lineverts[]);
 
-bool PaTriPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
-bool PaTriPoints1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
-void PaTriPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
-void PaTriPointsSingle1(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]); 
-
 bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
@@ -811,101 +806,6 @@ void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128
     }
 }
 
-// each point generates two tris
-// primitive assembly broadcasts each point to the 3 vertices of the 2 tris
-// binner will bloat each point
-//
-// input simd : p0 p1 p2 p3 p4 p5 p6 p7 == 8 points, 16 tris
-// output phase 0:
-//   verts[0] : p0 p0 p1 p1 p2 p2 p3 p3
-//   verts[1] : p0 p0 p1 p1 p2 p2 p3 p3
-//   verts[2] : p0 p0 p1 p1 p2 p2 p3 p3
-//
-// output phase 1:
-//   verts[0] : p4 p4 p5 p5 p6 p6 p7 p7
-//   verts[1] : p4 p4 p5 p5 p6 p6 p7 p7
-//   verts[2] : p4 p4 p5 p5 p6 p6 p7 p7
-
-
-// 0 1 2 3 4 5 6 7
-
-bool PaTriPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
-{
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
-
-    for (uint32_t i = 0; i < 4; ++i)
-    {
-        __m256 vLow128 = _mm256_unpacklo_ps(a.v[i], a.v[i]);                                // 0 0 1 1 4 4 5 5
-        __m256 vHigh128 = _mm256_unpackhi_ps(a.v[i], a.v[i]);                                // 2 2 3 3 6 6 7 7
-        __m256 vCombined = _mm256_permute2f128_ps(vLow128, vHigh128, 0x20);                    // 0 0 1 1 2 2 3 3
-
-        verts[0].v[i] = verts[1].v[i] = verts[2].v[i] = vCombined;
-    }
-
-    SetNextPaState(pa, PaTriPoints1, PaTriPointsSingle0, 1, KNOB_SIMD_WIDTH);
-    return true;
-}
-
-bool PaTriPoints1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
-{
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
-
-    for (uint32_t i = 0; i < 4; ++i)
-    {
-        __m256 vLow128 = _mm256_unpacklo_ps(a.v[i], a.v[i]);                                // 0 0 1 1 4 4 5 5
-        __m256 vHigh128 = _mm256_unpackhi_ps(a.v[i], a.v[i]);                                // 2 2 3 3 6 6 7 7
-        __m256 vCombined = _mm256_permute2f128_ps(vLow128, vHigh128, 0x31);                    // 4 4 5 5 6 6 7 7
-
-        verts[0].v[i] = verts[1].v[i] = verts[2].v[i] = vCombined;
-    }
-
-    SetNextPaState(pa, PaTriPoints0, PaTriPointsSingle1, 0, KNOB_SIMD_WIDTH);
-    return true;
-
-}
-
-void PaTriPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
-{
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
-
-    switch(primIndex)
-    {
-    case 0:
-    case 1: 
-        verts[0] = verts[1] = verts[2] = swizzleLane0(a); break;
-    case 2:
-    case 3:
-        verts[0] = verts[1] = verts[2] = swizzleLane1(a); break;
-    case 4:
-    case 5:
-        verts[0] = verts[1] = verts[2] = swizzleLane2(a); break;
-    case 6:
-    case 7:
-        verts[0] = verts[1] = verts[2] = swizzleLane3(a); break;
-    }
-}
-
-void PaTriPointsSingle1(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
-{
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
-
-    switch(primIndex)
-    {
-    case 0:
-    case 1: 
-        verts[0] = verts[1] = verts[2] = swizzleLane4(a); break;
-    case 2:
-    case 3:
-        verts[0] = verts[1] = verts[2] = swizzleLane5(a); break;
-    case 4:
-    case 5:
-        verts[0] = verts[1] = verts[2] = swizzleLane6(a); break;
-    case 6:
-    case 7:
-        verts[0] = verts[1] = verts[2] = swizzleLane7(a); break;
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////
 /// @brief State 1 for RECT_LIST topology.
 ///        There is not enough to assemble 8 triangles.
@@ -1093,16 +993,8 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
         case TOP_POINT_LIST:
             // use point binner and rasterizer if supported
-            if (CanUseSimplePoints(pDC))
-            {
-                this->pfnPaFunc = PaPoints0;
-                this->numPrims = in_numPrims;
-            }
-            else
-            {
-                this->pfnPaFunc = PaTriPoints0;
-                this->numPrims = in_numPrims * 2; // 1 point generates 2 tris
-            }
+            this->pfnPaFunc = PaPoints0;
+            this->numPrims = in_numPrims;
             break;
         case TOP_RECT_LIST:
             this->pfnPaFunc = PaRectList0;
@@ -1236,16 +1128,8 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             this->primID = id4;
             break;
         case TOP_POINT_LIST:
-            if (CanUseSimplePoints(pDC))
-            {
-                this->primIDIncr = 8;
-                this->primID = id8;
-            }
-            else
-            {
-                this->primIDIncr = 4;
-                this->primID = id4;
-            }
+            this->primIDIncr = 8;
+            this->primID = id8;
             break;
         case TOP_PATCHLIST_1:
         case TOP_PATCHLIST_2:

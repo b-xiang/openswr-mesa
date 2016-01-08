@@ -1369,14 +1369,25 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         1, // bcHeight
         false, // isLuminance
     },
-    // 0x89 (Padding)
+    // X32_TYPELESS_G8X24_UINT (0x89)
     {
-        "UNKNOWN",
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, 0, 0, 0, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1, false    },
+        "X32_TYPELESS_G8X24_UINT",
+        { SWR_TYPE_UINT, SWR_TYPE_UINT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x1 }, // Defaults for missing components
+        { 0, 1, 0, 0 }, // Swizzle
+        { 32, 32, 0, 0 }, // Bits per component
+        64, // Bits per element
+        8, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+        false, // isLuminance
+    },
     // L32A32_FLOAT (0x8a)
     {
         "L32A32_FLOAT",

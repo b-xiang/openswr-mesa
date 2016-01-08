@@ -201,8 +201,6 @@ unsigned int _mm_popcnt_u32(unsigned int v)
 #define OSALIGNLINE(RWORD) OSALIGN(RWORD, 64)
 #if KNOB_SIMD_WIDTH == 8
 #define OSALIGNSIMD(RWORD) OSALIGN(RWORD, 32)
-#else
-#error Unknown SIMD width!
 #endif
 
 #include "common/swr_assert.h"

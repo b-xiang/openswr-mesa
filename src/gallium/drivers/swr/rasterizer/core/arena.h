@@ -37,36 +37,34 @@
 class Arena
 {
 public:
-    Arena() : m_pCurBlock(nullptr), m_pUsedBlocks(nullptr), m_memUsed(0), m_pMutex(nullptr) {}
-    ~Arena();
+                ~Arena();
 
-    void    Init();
+    void        Init();
 
-    void*   AllocAligned(uint32_t  size, uint32_t  align);
-    void*   Alloc(uint32_t  size);
+    void*       AllocAligned(size_t size, size_t  align);
+    void*       Alloc(size_t  size);
 
-    void*   AllocAlignedSync(uint32_t size, uint32_t align);
-    void*   AllocSync(uint32_t size);
+    void*       AllocAlignedSync(size_t size, size_t align);
+    void*       AllocSync(size_t size);
 
-    void    Reset();
+    void        Reset();
+    size_t      Size() { return m_size; }
 
 private:
 
     struct ArenaBlock
     {
-        ArenaBlock() : pMem(nullptr), blockSize(0), pNext(nullptr) {}
-
-        void        *pMem;
-        uint32_t    blockSize;
-        uint32_t    offset;
-        ArenaBlock *pNext;
+        void*       pMem        = nullptr;
+        size_t      blockSize   = 0;
+        size_t      offset      = 0;
+        ArenaBlock* pNext       = nullptr;
     };
 
-    ArenaBlock      *m_pCurBlock;
-    ArenaBlock      *m_pUsedBlocks;
-
-    uint32_t        m_memUsed;      // total bytes allocated since last reset.
+    ArenaBlock*     m_pCurBlock = nullptr;
 
     /// @note Mutex is only used by sync allocation functions.
-    std::mutex*      m_pMutex;
+    std::mutex*     m_pMutex    = nullptr;
+
+    size_t          m_size      = 0;
+
 };

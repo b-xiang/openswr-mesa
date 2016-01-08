@@ -36,12 +36,14 @@
 struct RENDER_TARGET_BLEND_COMPILE_STATE
 {
     bool blendEnable;
+    bool logicOpEnable;
     SWR_BLEND_FACTOR sourceAlphaBlendFactor;
     SWR_BLEND_FACTOR destAlphaBlendFactor;
     SWR_BLEND_FACTOR sourceBlendFactor;
     SWR_BLEND_FACTOR destBlendFactor;
     SWR_BLEND_OP colorBlendFunc;
     SWR_BLEND_OP alphaBlendFunc;
+    SWR_LOGIC_OP logicOpFunc;
 };
 
 enum ALPHA_TEST_FORMAT

@@ -1154,8 +1154,7 @@ struct PA_FACTORY
 #if KNOB_ENABLE_CUT_AWARE_PA == TRUE
         const API_STATE& state = GetApiState(pDC);
         if ((IsIndexedT && (
-            topo == TOP_TRIANGLE_STRIP ||
-            (topo == TOP_POINT_LIST && CanUseSimplePoints(pDC)) ||
+            topo == TOP_TRIANGLE_STRIP || topo == TOP_POINT_LIST ||
             topo == TOP_LINE_LIST || topo == TOP_LINE_STRIP ||
             topo == TOP_TRIANGLE_LIST || topo == TOP_LINE_LIST_ADJ ||
             topo == TOP_LISTSTRIP_ADJ || topo == TOP_TRI_LIST_ADJ ||

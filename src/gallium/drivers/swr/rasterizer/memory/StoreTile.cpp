@@ -1458,7 +1458,7 @@ struct StoreMacroTile
                 pDstSurface);
 
             // Only support generic store-tile if lod surface doesn't start on a page boundary and is non-linear
-            bool bForceGeneric = (pDstSurface->tileMode != SWR_TILE_NONE) && (0 != (dstSurfAddress & 0xfff));
+            bool bForceGeneric = ((pDstSurface->tileMode != SWR_TILE_NONE) && (0 != (dstSurfAddress & 0xfff))) || (pDstSurface->bInterleavedSamples);
 
             pfnStore[sampleNum] = (bForceGeneric || KNOB_USE_GENERIC_STORETILE) ? StoreRasterTile<TTraits, SrcFormat, DstFormat>::Store : OptStoreRasterTile<TTraits, SrcFormat, DstFormat>::Store;
         }
@@ -1522,11 +1522,12 @@ void StoreHotTile(
     }
 
     PFN_STORE_TILES pfnStoreTiles = nullptr;
-    if(renderTargetIndex <= SWR_ATTACHMENT_COLOR7)
+
+    if ((renderTargetIndex <= SWR_ATTACHMENT_COLOR7) && (pDstSurface->tileMode != SWR_TILE_MODE_WMAJOR))
     {
         pfnStoreTiles = sStoreTilesTableColor[pDstSurface->tileMode][pDstSurface->format];
     }
-    else if(renderTargetIndex == SWR_ATTACHMENT_DEPTH)
+    else if (renderTargetIndex == SWR_ATTACHMENT_DEPTH)
     {
         pfnStoreTiles = sStoreTilesTableDepth[pDstSurface->tileMode][pDstSurface->format];
     }

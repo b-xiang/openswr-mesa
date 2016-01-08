@@ -1,4 +1,14 @@
-/******************************************************************************
+<%
+    max_len = 0
+    for knob in knobs:
+        if len(knob[0]) > max_len: max_len = len(knob[0])
+    max_len += len('KNOB_ ')
+    if max_len % 4: max_len += 4 - (max_len % 4)
+
+    def space_knob(knob):
+        knob_len = len('KNOB_' + knob)
+        return ' '*(max_len - knob_len)
+%>/******************************************************************************
 *
 * Copyright 2015
 * Intel Corporation
@@ -28,6 +38,7 @@
 ******************************************************************************/
 %if gen_header:
 #pragma once
+#include <string>
 
 template <typename T>
 struct Knob
@@ -35,17 +46,22 @@ struct Knob
     const   T&  Value() const               { return m_Value; }
     const   T&  Value(const T& newValue)    { m_Value = newValue; return Value(); }
 
+protected:
+    Knob(const T& defaultValue) : m_Value(defaultValue) {}
+
 private:
     T m_Value;
 };
 
-#define DEFINE_KNOB(_name, _type, _default)         \\
+#define DEFINE_KNOB(_name, _type, _default)                     \\
 
-    struct Knob_##_name : Knob<_type>               \\
+    struct Knob_##_name : Knob<_type>                           \\
 
-    {   Knob_##_name() { Value(_default); }         \\
+    {                                                           \\
 
-        const char* Name() const { return "KNOB_" #_name; } \\
+        Knob_##_name() : Knob<_type>(_default) { }              \\
+
+        static const char* Name() { return "KNOB_" #_name; }    \\
 
     } _name;
 
@@ -65,23 +81,14 @@ struct GlobalKnobs
 
     % endfor
     GlobalKnobs();
+    std::string ToString(const char* optPerLinePrefix="");
 };
 extern GlobalKnobs g_GlobalKnobs;
 
-<%
-    max_len = 0
-    for knob in knobs:
-        if len(knob[0]) > max_len: max_len = len(knob[0])
-    max_len += len('KNOB_ ')
-    if max_len % 4: max_len += 4 - (max_len % 4)
-
-    def space_knob(knob):
-        knob_len = len('KNOB_' + knob)
-        return ' '*(max_len - knob_len)
-%>
 % for knob in knobs:
 #define KNOB_${knob[0]}${space_knob(knob[0])}GET_KNOB(${knob[0]})
 % endfor
+
 
 % else:
 % for inc in includes:
@@ -101,6 +108,34 @@ GlobalKnobs::GlobalKnobs()
     % for knob in knobs:
     InitKnob(${knob[0]});
     % endfor
+
 }
+
+//========================================================
+// Knob Display (Convert to String)
+//========================================================
+std::string GlobalKnobs::ToString(const char* optPerLinePrefix)
+{
+    std::basic_stringstream<char> str;
+    str << std::showbase << std::setprecision(1) << std::fixed;
+
+    if (optPerLinePrefix == nullptr) { optPerLinePrefix = ""; }
+
+    % for knob in knobs:
+    str << optPerLinePrefix << "KNOB_${knob[0]}:${space_knob(knob[0])}";
+    % if knob[1]['type'] == 'bool':
+    str << (KNOB_${knob[0]} ? "+\n" : "-\n");
+    % elif knob[1]['type'] != 'float':
+    str << std::hex << std::setw(11) << std::left << KNOB_${knob[0]};
+    str << std::dec << KNOB_${knob[0]} << "\n";
+    % else:
+    str << KNOB_${knob[0]} << "\n";
+    % endif
+    % endfor
+    str << std::ends;
+
+    return str.str();
+}
+
 
 % endif

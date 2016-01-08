@@ -632,6 +632,7 @@ static void GeometryShaderStage(
     gsContext.pStream[0] = (uint8_t*)pGsOut;
     gsContext.pCutBuffer = (uint8_t*)pCutBuffer;
     gsContext.PrimitiveID = primID;
+    gsContext.pImmediateData = (float*)state.pGsImmediateData;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
     simdvector attrib[MAX_ATTRIBUTES];
@@ -876,6 +877,7 @@ static void TessellationStages(
     SWR_HS_CONTEXT& hsContext = gt_pTessellationThreadData->hsContext;
     hsContext.pCPout = gt_pTessellationThreadData->patchData;
     hsContext.PrimitiveID = primID;
+    hsContext.pImmediateData = (float*)state.pHsImmediateData;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, false);
     // Max storage for one attribute for an entire simdprimitive
@@ -948,6 +950,7 @@ static void TessellationStages(
         dsContext.pDomainV = (simdscalar*)tsData.pDomainPointsV;
         dsContext.pOutputData = gt_pTessellationThreadData->pDSOutput;
         dsContext.vectorStride = requiredDSVectorInvocations;
+        dsContext.pImmediateData = (float*)state.pDsImmediateData;
 
         uint32_t dsInvocations = 0;
 
@@ -1090,6 +1093,7 @@ void ProcessDraw(
     fetchInfo.StartVertex = 0;
 
     vsContext.pVin = &vin;
+    vsContext.pImmediateData = (float*)state.pVsImmediateData;
 
     if (IsIndexedT)
     {
@@ -1315,28 +1319,6 @@ template void ProcessDraw<true,  true,  true,  true,  true >(SWR_CONTEXT *pConte
 
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief Expland points to give them area.
-/// @param tri - SOA vertices for triangles.
-static INLINE void ExpandPoint(simdvector tri[3], simdscalar size)
-{
-    const float bloat = 0.5f;
-
-    const __m256 vAdjust0X = _mm256_set_ps(-bloat, -bloat, -bloat, -bloat, -bloat, -bloat, -bloat, -bloat);
-    const __m256 vAdjust0Y = _mm256_set_ps(-bloat, -bloat, -bloat, -bloat, -bloat, -bloat, -bloat, -bloat);
-    const __m256 vAdjust1X = _mm256_set_ps(bloat, -bloat, bloat, -bloat, bloat, -bloat, bloat, -bloat);
-    const __m256 vAdjust1Y = _mm256_set_ps(bloat, bloat, bloat, bloat, bloat, bloat, bloat, bloat);
-    const __m256 vAdjust2X = _mm256_set_ps(bloat, bloat, bloat, bloat, bloat, bloat, bloat, bloat);
-    const __m256 vAdjust2Y = _mm256_set_ps(-bloat, bloat, -bloat, bloat, -bloat, bloat, -bloat, bloat);
-
-    tri[0].x = _simd_fmadd_ps(size, vAdjust0X, tri[0].x);
-    tri[0].y = _simd_fmadd_ps(size, vAdjust0Y, tri[0].y);
-    tri[1].x = _simd_fmadd_ps(size, vAdjust1X, tri[1].x);
-    tri[1].y = _simd_fmadd_ps(size, vAdjust1Y, tri[1].y);
-    tri[2].x = _simd_fmadd_ps(size, vAdjust2X, tri[2].x);
-    tri[2].y = _simd_fmadd_ps(size, vAdjust2Y, tri[2].y);
-}
-
-//////////////////////////////////////////////////////////////////////////
 /// @brief Processes attributes for the backend based on linkage mask and
 ///        linkage map.  Essentially just doing an SOA->AOS conversion and pack.
 /// @param pDC - Draw context
@@ -1357,7 +1339,6 @@ INLINE void ProcessAttributes(
     DWORD slot = 0;
     uint32_t mapIdx = 0;
     LONG constantInterpMask = pDC->pState->state.backendState.constantInterpolationMask;
-    LONG pointSpriteTexCoordMask = pDC->pState->state.backendState.pointSpriteTexCoordMask;
 
     uint32_t provokingVertex = 0;
     if (pa.binTopology == TOP_TRIANGLE_FAN)
@@ -1385,34 +1366,6 @@ INLINE void ProcessAttributes(
         }
         else
         {
-            if (_bittest(&pointSpriteTexCoordMask, mapIdx))
-            {
-                if (!pDC->pState->state.rastState.pointSpriteTopOrigin) {
-                    if (triIndex & 1) {
-                        attrib[0] = _mm_set_ps(1, 0, 1, 0);
-                        attrib[1] = _mm_set_ps(1, 0, 0, 1);
-                        attrib[2] = _mm_set_ps(1, 0, 1, 1);
-                    }
-                    else {
-                        attrib[0] = _mm_set_ps(1, 0, 1, 0);
-                        attrib[1] = _mm_set_ps(1, 0, 0, 0);
-                        attrib[2] = _mm_set_ps(1, 0, 0, 1);
-                    }
-                }
-                else {
-                    if (triIndex & 1) {
-                        attrib[0] = _mm_set_ps(1, 0, 0, 0);
-                        attrib[1] = _mm_set_ps(1, 0, 1, 1);
-                        attrib[2] = _mm_set_ps(1, 0, 0, 1);
-                    }
-                    else {
-                        attrib[0] = _mm_set_ps(1, 0, 0, 0);
-                        attrib[1] = _mm_set_ps(1, 0, 1, 0);
-                        attrib[2] = _mm_set_ps(1, 0, 1, 1);
-                    }
-                }
-            }
-
             for (uint32_t i = 0; i < NumVerts; ++i)
             {
                 _mm_store_ps(pBuffer, attrib[i]);
@@ -1542,21 +1495,6 @@ void BinTriangles(
 
     tri[2].x = _simd_add_ps(tri[2].x, offset);
     tri[2].y = _simd_add_ps(tri[2].y, offset);
-
-    // bloat points to tri
-    if (pa.binTopology == TOP_POINT_LIST)
-    {
-        if (rastState.pointParam)
-        {
-            simdvector size[3];
-            pa.Assemble(VERTEX_POINT_SIZE_SLOT, size);
-            ExpandPoint(tri, size[0].x);
-        } 
-        else 
-        {
-            ExpandPoint(tri, _simd_set1_ps(rastState.pointSize));
-        }
-    }
 
     // convert to fixed point
     simdscalari vXi[3], vYi[3];
@@ -1839,114 +1777,256 @@ void BinPoints(
     vXi = fpToFixedPointVertical(primVerts.x);
     vYi = fpToFixedPointVertical(primVerts.y);
 
-    // adjust for top-left rule
-    vXi = _simd_sub_epi32(vXi, _simd_set1_epi32(1));
-    vYi = _simd_sub_epi32(vYi, _simd_set1_epi32(1));
-
-    // cull points off the top-left edge of the viewport
-    primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vXi));
-    primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vYi));
-
-    // compute macro tile coordinates 
-    simdscalari macroX = _simd_srai_epi32(vXi, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
-    simdscalari macroY = _simd_srai_epi32(vYi, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
-
-    OSALIGNSIMD(uint32_t) aMacroX[KNOB_SIMD_WIDTH], aMacroY[KNOB_SIMD_WIDTH];
-    _simd_store_si((simdscalari*)aMacroX, macroX);
-    _simd_store_si((simdscalari*)aMacroY, macroY);
-
-    // compute raster tile coordinates
-    simdscalari rasterX = _simd_srai_epi32(vXi, KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
-    simdscalari rasterY = _simd_srai_epi32(vYi, KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
-
-    // compute raster tile relative x,y for coverage mask
-    simdscalari tileAlignedX = _simd_slli_epi32(rasterX, KNOB_TILE_X_DIM_SHIFT);
-    simdscalari tileAlignedY = _simd_slli_epi32(rasterY, KNOB_TILE_Y_DIM_SHIFT);
-
-    simdscalari tileRelativeX = _simd_sub_epi32(_simd_srai_epi32(vXi, FIXED_POINT_SHIFT), tileAlignedX);
-    simdscalari tileRelativeY = _simd_sub_epi32(_simd_srai_epi32(vYi, FIXED_POINT_SHIFT), tileAlignedY);
-
-    OSALIGNSIMD(uint32_t) aTileRelativeX[KNOB_SIMD_WIDTH];
-    OSALIGNSIMD(uint32_t) aTileRelativeY[KNOB_SIMD_WIDTH];
-    _simd_store_si((simdscalari*)aTileRelativeX, tileRelativeX);
-    _simd_store_si((simdscalari*)aTileRelativeY, tileRelativeY);
-
-    OSALIGNSIMD(uint32_t) aTileAlignedX[KNOB_SIMD_WIDTH];
-    OSALIGNSIMD(uint32_t) aTileAlignedY[KNOB_SIMD_WIDTH];
-    _simd_store_si((simdscalari*)aTileAlignedX, tileAlignedX);
-    _simd_store_si((simdscalari*)aTileAlignedY, tileAlignedY);
-
-    OSALIGNSIMD(float) aZ[KNOB_SIMD_WIDTH];
-    _simd_store_ps((float*)aZ, primVerts.z);
-
-    // store render target array index
-    OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
-    if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+    if (CanUseSimplePoints(pDC))
     {
-        simdvector vRtai;
-        pa.Assemble(VERTEX_RTAI_SLOT, &vRtai);
-        simdscalari vRtaii = _simd_castps_si(vRtai.x);
-        _simd_store_si((simdscalari*)aRTAI, vRtaii);
+        // adjust for top-left rule
+        vXi = _simd_sub_epi32(vXi, _simd_set1_epi32(1));
+        vYi = _simd_sub_epi32(vYi, _simd_set1_epi32(1));
+
+        // cull points off the top-left edge of the viewport
+        primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vXi));
+        primMask &= ~_simd_movemask_ps(_simd_castsi_ps(vYi));
+
+        // compute macro tile coordinates 
+        simdscalari macroX = _simd_srai_epi32(vXi, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+        simdscalari macroY = _simd_srai_epi32(vYi, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+
+        OSALIGNSIMD(uint32_t) aMacroX[KNOB_SIMD_WIDTH], aMacroY[KNOB_SIMD_WIDTH];
+        _simd_store_si((simdscalari*)aMacroX, macroX);
+        _simd_store_si((simdscalari*)aMacroY, macroY);
+
+        // compute raster tile coordinates
+        simdscalari rasterX = _simd_srai_epi32(vXi, KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
+        simdscalari rasterY = _simd_srai_epi32(vYi, KNOB_TILE_Y_DIM_SHIFT + FIXED_POINT_SHIFT);
+
+        // compute raster tile relative x,y for coverage mask
+        simdscalari tileAlignedX = _simd_slli_epi32(rasterX, KNOB_TILE_X_DIM_SHIFT);
+        simdscalari tileAlignedY = _simd_slli_epi32(rasterY, KNOB_TILE_Y_DIM_SHIFT);
+
+        simdscalari tileRelativeX = _simd_sub_epi32(_simd_srai_epi32(vXi, FIXED_POINT_SHIFT), tileAlignedX);
+        simdscalari tileRelativeY = _simd_sub_epi32(_simd_srai_epi32(vYi, FIXED_POINT_SHIFT), tileAlignedY);
+
+        OSALIGNSIMD(uint32_t) aTileRelativeX[KNOB_SIMD_WIDTH];
+        OSALIGNSIMD(uint32_t) aTileRelativeY[KNOB_SIMD_WIDTH];
+        _simd_store_si((simdscalari*)aTileRelativeX, tileRelativeX);
+        _simd_store_si((simdscalari*)aTileRelativeY, tileRelativeY);
+
+        OSALIGNSIMD(uint32_t) aTileAlignedX[KNOB_SIMD_WIDTH];
+        OSALIGNSIMD(uint32_t) aTileAlignedY[KNOB_SIMD_WIDTH];
+        _simd_store_si((simdscalari*)aTileAlignedX, tileAlignedX);
+        _simd_store_si((simdscalari*)aTileAlignedY, tileAlignedY);
+
+        OSALIGNSIMD(float) aZ[KNOB_SIMD_WIDTH];
+        _simd_store_ps((float*)aZ, primVerts.z);
+
+        // store render target array index
+        OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
+        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        {
+            simdvector vRtai;
+            pa.Assemble(VERTEX_RTAI_SLOT, &vRtai);
+            simdscalari vRtaii = _simd_castps_si(vRtai.x);
+            _simd_store_si((simdscalari*)aRTAI, vRtaii);
+        }
+        else
+        {
+            _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
+        }
+
+        uint32_t *pPrimID = (uint32_t *)&primID;
+        DWORD primIndex = 0;
+        // scan remaining valid triangles and bin each separately
+        while (_BitScanForward(&primIndex, primMask))
+        {
+            uint32_t linkageCount = state.linkageCount;
+            uint32_t linkageMask = state.linkageMask;
+
+            uint32_t numScalarAttribs = linkageCount * 4;
+
+            BE_WORK work;
+            work.type = DRAW;
+
+            TRIANGLE_WORK_DESC &desc = work.desc.tri;
+
+            // points are always front facing
+            desc.triFlags.frontFacing = 1;
+            desc.triFlags.primID = pPrimID[primIndex];
+            desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
+
+            work.pfnWork = RasterizeSimplePoint;
+
+            // store attributes
+            float *pAttribs = (float*)pDC->arena.AllocAligned(3 * numScalarAttribs * sizeof(float), 16);
+            desc.pAttribs = pAttribs;
+            desc.numAttribs = linkageCount;
+
+            ProcessAttributes<1>(pDC, pa, linkageMask, state.linkageMap, primIndex, pAttribs);
+
+            // store raster tile aligned x, y, perspective correct z
+            float *pTriBuffer = (float*)pDC->arena.AllocAligned(4 * sizeof(float), 16);
+            desc.pTriBuffer = pTriBuffer;
+            *(uint32_t*)pTriBuffer++ = aTileAlignedX[primIndex];
+            *(uint32_t*)pTriBuffer++ = aTileAlignedY[primIndex];
+            *pTriBuffer = aZ[primIndex];
+
+            uint32_t tX = aTileRelativeX[primIndex];
+            uint32_t tY = aTileRelativeY[primIndex];
+
+            // pack the relative x,y into the coverageMask, the rasterizer will
+            // generate the true coverage mask from it
+            work.desc.tri.triFlags.coverageMask = tX | (tY << 4);
+
+            // bin it
+            MacroTileMgr *pTileMgr = pDC->pTileMgr;
+#if KNOB_ENABLE_TOSS_POINTS
+            if (!KNOB_TOSS_SETUP_TRIS)
+#endif
+            {
+                pTileMgr->enqueue(aMacroX[primIndex], aMacroY[primIndex], &work);
+            }
+            primMask &= ~(1 << primIndex);
+        }
     }
     else
     {
-        _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
-    }
-
-    uint32_t *pPrimID = (uint32_t *)&primID;
-    DWORD primIndex = 0;
-    // scan remaining valid triangles and bin each separately
-    while (_BitScanForward(&primIndex, primMask))
-    {
-        uint32_t linkageCount = state.linkageCount;
-        uint32_t linkageMask = state.linkageMask;
-
-        uint32_t numScalarAttribs = linkageCount * 4;
-
-        BE_WORK work;
-        work.type = DRAW;
-
-        TRIANGLE_WORK_DESC &desc = work.desc.tri;
-
-        // points are always front facing
-        desc.triFlags.frontFacing = 1;
-        desc.triFlags.primID = pPrimID[primIndex];
-        desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
-
-        work.pfnWork = rastPoint;
-
-        // store attributes
-        float *pAttribs = (float*)pDC->arena.AllocAligned(3 * numScalarAttribs * sizeof(float), 16);
-        desc.pAttribs = pAttribs;
-        desc.numAttribs = linkageCount;
-
-        ProcessAttributes<1>(pDC, pa, linkageMask, state.linkageMap, primIndex, pAttribs);
-
-        // store raster tile aligned x, y, perspective correct z
-        float *pTriBuffer = (float*)pDC->arena.AllocAligned(4 * sizeof(float), 16);
-        desc.pTriBuffer = pTriBuffer;
-        *(uint32_t*)pTriBuffer++ = aTileAlignedX[primIndex];
-        *(uint32_t*)pTriBuffer++ = aTileAlignedY[primIndex];
-        *pTriBuffer = aZ[primIndex];
-
-        uint32_t tX = aTileRelativeX[primIndex];
-        uint32_t tY = aTileRelativeY[primIndex];
-
-        // pack the relative x,y into the coverageMask, the rasterizer will
-        // generate the true coverage mask from it
-        work.desc.tri.triFlags.coverageMask = tX | (tY << 4);
-
-        // bin it
-        MacroTileMgr *pTileMgr = pDC->pTileMgr;
-#if KNOB_ENABLE_TOSS_POINTS
-        if (!KNOB_TOSS_SETUP_TRIS)
-#endif
+        // non simple points need to be potentially binned to multiple macro tiles
+        simdscalar vPointSize;
+        if (rastState.pointParam)
         {
-            pTileMgr->enqueue(aMacroX[primIndex], aMacroY[primIndex], &work);
+            simdvector size[3];
+            pa.Assemble(VERTEX_POINT_SIZE_SLOT, size);
+            vPointSize = size[0].x;
         }
-        primMask &= ~(1 << primIndex);
+        else
+        {
+            vPointSize = _simd_set1_ps(rastState.pointSize);
+        }
+
+        // bloat point to bbox
+        simdBBox bbox;
+        bbox.left = bbox.right = vXi;
+        bbox.top = bbox.bottom = vYi;
+
+        simdscalar vHalfWidth = _simd_mul_ps(vPointSize, _simd_set1_ps(0.5f));
+        simdscalari vHalfWidthi = fpToFixedPointVertical(vHalfWidth);
+        bbox.left = _simd_sub_epi32(bbox.left, vHalfWidthi);
+        bbox.right = _simd_add_epi32(bbox.right, vHalfWidthi);
+        bbox.top = _simd_sub_epi32(bbox.top, vHalfWidthi);
+        bbox.bottom = _simd_add_epi32(bbox.bottom, vHalfWidthi);
+
+        // Intersect with scissor/viewport. Subtract 1 ULP in x.8 fixed point since right/bottom edge is exclusive.
+        bbox.left = _simd_max_epi32(bbox.left, _simd_set1_epi32(state.scissorInFixedPoint.left));
+        bbox.top = _simd_max_epi32(bbox.top, _simd_set1_epi32(state.scissorInFixedPoint.top));
+        bbox.right = _simd_min_epi32(_simd_sub_epi32(bbox.right, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.right));
+        bbox.bottom = _simd_min_epi32(_simd_sub_epi32(bbox.bottom, _simd_set1_epi32(1)), _simd_set1_epi32(state.scissorInFixedPoint.bottom));
+
+        // Cull bloated points completely outside scissor
+        simdscalari maskOutsideScissorX = _simd_cmpgt_epi32(bbox.left, bbox.right);
+        simdscalari maskOutsideScissorY = _simd_cmpgt_epi32(bbox.top, bbox.bottom);
+        simdscalari maskOutsideScissorXY = _simd_or_si(maskOutsideScissorX, maskOutsideScissorY);
+        uint32_t maskOutsideScissor = _simd_movemask_ps(_simd_castsi_ps(maskOutsideScissorXY));
+        primMask = primMask & ~maskOutsideScissor;
+
+        // Convert bbox to macrotile units.
+        bbox.left = _simd_srai_epi32(bbox.left, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+        bbox.top = _simd_srai_epi32(bbox.top, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+        bbox.right = _simd_srai_epi32(bbox.right, KNOB_MACROTILE_X_DIM_FIXED_SHIFT);
+        bbox.bottom = _simd_srai_epi32(bbox.bottom, KNOB_MACROTILE_Y_DIM_FIXED_SHIFT);
+
+        OSALIGNSIMD(uint32_t) aMTLeft[KNOB_SIMD_WIDTH], aMTRight[KNOB_SIMD_WIDTH], aMTTop[KNOB_SIMD_WIDTH], aMTBottom[KNOB_SIMD_WIDTH];
+        _simd_store_si((simdscalari*)aMTLeft, bbox.left);
+        _simd_store_si((simdscalari*)aMTRight, bbox.right);
+        _simd_store_si((simdscalari*)aMTTop, bbox.top);
+        _simd_store_si((simdscalari*)aMTBottom, bbox.bottom);
+
+        // store render target array index
+        OSALIGNSIMD(uint32_t) aRTAI[KNOB_SIMD_WIDTH];
+        if (gsState.gsEnable && gsState.emitsRenderTargetArrayIndex)
+        {
+            simdvector vRtai[2];
+            pa.Assemble(VERTEX_RTAI_SLOT, vRtai);
+            simdscalari vRtaii = _simd_castps_si(vRtai[0].x);
+            _simd_store_si((simdscalari*)aRTAI, vRtaii);
+        }
+        else
+        {
+            _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
+        }
+
+        OSALIGNSIMD(float) aPointSize[KNOB_SIMD_WIDTH];
+        _simd_store_ps((float*)aPointSize, vPointSize);
+
+        uint32_t *pPrimID = (uint32_t *)&primID;
+
+        OSALIGNSIMD(float) aPrimVertsX[KNOB_SIMD_WIDTH];
+        OSALIGNSIMD(float) aPrimVertsY[KNOB_SIMD_WIDTH];
+        OSALIGNSIMD(float) aPrimVertsZ[KNOB_SIMD_WIDTH];
+
+        _simd_store_ps((float*)aPrimVertsX, primVerts.x);
+        _simd_store_ps((float*)aPrimVertsY, primVerts.y);
+        _simd_store_ps((float*)aPrimVertsZ, primVerts.z);
+
+        // scan remaining valid prims and bin each separately
+        DWORD primIndex;
+        while (_BitScanForward(&primIndex, primMask))
+        {
+            uint32_t linkageCount = state.linkageCount;
+            uint32_t linkageMask = state.linkageMask;
+            uint32_t numScalarAttribs = linkageCount * 4;
+
+            BE_WORK work;
+            work.type = DRAW;
+
+            TRIANGLE_WORK_DESC &desc = work.desc.tri;
+
+            desc.triFlags.frontFacing = 1;
+            desc.triFlags.primID = pPrimID[primIndex];
+            desc.triFlags.pointSize = aPointSize[primIndex];
+            desc.triFlags.renderTargetArrayIndex = aRTAI[primIndex];
+
+            work.pfnWork = RasterizeTriPoint;
+
+            // store active attribs
+            desc.pAttribs = (float*)pDC->arena.AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
+            desc.numAttribs = linkageCount;
+            ProcessAttributes<1>(pDC, pa, linkageMask, state.linkageMap, primIndex, desc.pAttribs);
+
+            // store point vertex data
+            float *pTriBuffer = (float*)pDC->arena.AllocAligned(4 * sizeof(float), 16);
+            desc.pTriBuffer = pTriBuffer;
+            *pTriBuffer++ = aPrimVertsX[primIndex];
+            *pTriBuffer++ = aPrimVertsY[primIndex];
+            *pTriBuffer = aPrimVertsZ[primIndex];
+
+            // store user clip distances
+            if (rastState.clipDistanceMask)
+            {
+                uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
+                desc.pUserClipBuffer = (float*)pDC->arena.Alloc(numClipDist * 2 * sizeof(float));
+                ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
+            }
+
+            MacroTileMgr *pTileMgr = pDC->pTileMgr;
+            for (uint32_t y = aMTTop[primIndex]; y <= aMTBottom[primIndex]; ++y)
+            {
+                for (uint32_t x = aMTLeft[primIndex]; x <= aMTRight[primIndex]; ++x)
+                {
+#if KNOB_ENABLE_TOSS_POINTS
+                    if (!KNOB_TOSS_SETUP_TRIS)
+#endif
+                    {
+                        pTileMgr->enqueue(x, y, &work);
+                    }
+                }
+            }
+
+            primMask &= ~(1 << primIndex);
+        }
     }
 
+
+
+    
     RDTSC_STOP(FEBinPoints, 1, 0);
 }
 

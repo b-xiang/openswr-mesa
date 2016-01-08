@@ -59,6 +59,7 @@ struct TRI_FLAGS
     uint32_t yMajor : 1;
     uint32_t coverageMask : (SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM);
     uint32_t reserved : 32 - 1 - 1 - (SIMD_TILE_X_DIM * SIMD_TILE_Y_DIM);
+    float pointSize;
     uint32_t primID;
     uint32_t renderTargetArrayIndex;
 };
@@ -74,6 +75,7 @@ struct SWR_TRIANGLE_DESC
     float OneOverW[3];
     float recipDet;
 
+    float *pRecipW;
     float *pAttribs;
     float *pPerspAttribs;
     float *pSamplePos;
@@ -120,6 +122,7 @@ struct SYNC_DESC
     PFN_CALLBACK_FUNC pfnCallbackFunc;
     uint64_t userData;
     uint64_t userData2;
+    uint64_t userData3;
 };
 
 struct QUERY_DESC
@@ -229,9 +232,15 @@ OSALIGNLINE(struct) API_STATE
     // VS - Vertex Shader State
     PFN_VERTEX_FUNC         pfnVertexFunc;
 
+    // VS - Immediate Data
+    void*                   pVsImmediateData;
+
     // GS - Geometry Shader State
     PFN_GS_FUNC             pfnGsFunc;
     SWR_GS_STATE            gsState;
+
+    // GS - Immediate Data
+    void*                   pGsImmediateData;
 
     // CS - Compute Shader
     PFN_CS_FUNC             pfnCsFunc;
@@ -250,6 +259,8 @@ OSALIGNLINE(struct) API_STATE
     // Tessellation State
     PFN_HS_FUNC             pfnHsFunc;
     PFN_DS_FUNC             pfnDsFunc;
+    void*                   pHsImmediateData;
+    void*                   pDsImmediateData;
     SWR_TS_STATE            tsState;
 
     // Specifies which VS outputs are sent to PS.
@@ -283,6 +294,7 @@ OSALIGNLINE(struct) API_STATE
 
     // PS - Pixel shader state
     SWR_PS_STATE            psState;
+    void*                   pPsImmediateData;
 
     SWR_DEPTH_STENCIL_STATE depthStencilState;
 
@@ -311,8 +323,45 @@ struct RenderOutputBuffers
     uint8_t* pStencil;
 };
 
+// Plane equation A/B/C coeffs used to evaluate I/J barycentric coords
+struct BarycentricCoeffs
+{
+    simdscalar vIa;
+    simdscalar vIb;
+    simdscalar vIc;
+
+    simdscalar vJa;
+    simdscalar vJb;
+    simdscalar vJc;
+
+    simdscalar vZa;
+    simdscalar vZb;
+    simdscalar vZc;
+
+    simdscalar vRecipDet;
+
+    simdscalar vAOneOverW;
+    simdscalar vBOneOverW;
+    simdscalar vCOneOverW;
+};
+
 // pipeline function pointer types
 typedef void(*PFN_BACKEND_FUNC)(DRAW_CONTEXT*, uint32_t, uint32_t, uint32_t, SWR_TRIANGLE_DESC&, RenderOutputBuffers&);
+typedef void(*PFN_OUTPUT_MERGER)(SWR_PS_CONTEXT &, uint8_t* (&)[SWR_NUM_RENDERTARGETS], uint32_t, const SWR_BLEND_STATE*,
+                                 const PFN_BLEND_JIT_FUNC (&)[SWR_NUM_RENDERTARGETS], simdscalar&, simdscalar);
+typedef void(*PFN_CALC_PIXEL_BARYCENTRICS)(const BarycentricCoeffs&, SWR_PS_CONTEXT &);
+typedef void(*PFN_CALC_SAMPLE_BARYCENTRICS)(const BarycentricCoeffs&, SWR_PS_CONTEXT&);
+typedef void(*PFN_CALC_CENTROID_BARYCENTRICS)(const BarycentricCoeffs&, SWR_PS_CONTEXT &, const uint64_t *const, const uint32_t,
+                                              const simdscalar, const simdscalar);
+
+struct BACKEND_FUNCS
+{
+    PFN_BACKEND_FUNC pfnBackend;
+    PFN_CALC_PIXEL_BARYCENTRICS pfnCalcPixelBarycentrics;
+    PFN_CALC_SAMPLE_BARYCENTRICS pfnCalcSampleBarycentrics;
+    PFN_CALC_CENTROID_BARYCENTRICS pfnCalcCentroidBarycentrics;
+    PFN_OUTPUT_MERGER pfnOutputMerger;
+};
 
 // Draw State
 struct DRAW_STATE
@@ -322,7 +371,7 @@ struct DRAW_STATE
     void* pPrivateState;  // Its required the driver sets this up for each draw.
 
     // pipeline function pointers, filled in by API thread when setting up the draw
-    PFN_BACKEND_FUNC pfnBackend;
+    BACKEND_FUNCS backendFuncs;
     PFN_PROCESS_PRIMS pfnProcessPrims;
 
     Arena    arena;     // This should only be used by API thread.
@@ -407,6 +456,10 @@ struct SWR_CONTEXT
     DRAW_STATE*   dsRing;
 
     uint32_t curStateId;               // Current index to the next available entry in the DS ring.
+
+    DRAW_STATE*   subCtxSave;          // Save area for inactive contexts.
+    uint32_t      curSubCtxId;         // Current index for active state subcontext.
+    uint32_t      numSubContexts;      // Number of available subcontexts
 
     uint32_t NumWorkerThreads;
 

@@ -69,7 +69,7 @@ def main(args=sys.argv[1:]):
         write_template_to_file(template_file, f,
                 filename='gen_knobs',
                 knobs=knob_defs.KNOBS,
-                includes=['core/knobs_init.h'],
+                includes=['core/knobs_init.h', 'common/os.h', 'sstream', 'iomanip'],
                 gen_header=True if f == output_header else False)
 
     return 0

@@ -204,6 +204,10 @@ void LoadHotTile(
         case SWR_TILE_MODE_XMAJOR:
             pfnLoadTiles = sLoadTilesColorTable_SWR_TILE_MODE_XMAJOR[pSrcSurface->format];
             break;
+        case SWR_TILE_MODE_WMAJOR:
+            SWR_ASSERT(pSrcSurface->format == R8_UINT);
+            pfnLoadTiles = LoadMacroTile<TilingTraits<SWR_TILE_MODE_WMAJOR, 8>, R8_UINT, R8_UINT>::Load;
+            break;
         default:
             SWR_ASSERT(0, "Unsupported tiling mode");
             break;

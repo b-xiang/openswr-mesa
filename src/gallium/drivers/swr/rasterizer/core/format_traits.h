@@ -511,6 +511,50 @@ template<> struct FormatTraits<R32_FLOAT_X8X24_TYPELESS> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<X32_TYPELESS_G8X24_UINT> - Format traits specialization for X32_TYPELESS_G8X24_UINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<X32_TYPELESS_G8X24_UINT> :
+    ComponentTraits<SWR_TYPE_UINT, 32, SWR_TYPE_UNUSED, 32>,
+    FormatSwizzle<0, 1>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32 TransposeT;
+    typedef Format2<32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L32A32_FLOAT> - Format traits specialization for L32A32_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L32A32_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 32, SWR_TYPE_FLOAT, 32>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32 TransposeT;
+    typedef Format2<32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R16G16B16X16_UNORM> - Format traits specialization for R16G16B16X16_UNORM
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R16G16B16X16_UNORM> :
@@ -552,6 +596,50 @@ template<> struct FormatTraits<R16G16B16X16_FLOAT> :
 
     typedef Transpose16_16_16_16 TransposeT;
     typedef Format4<16, 16, 16, 16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L32X32_FLOAT> - Format traits specialization for L32X32_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L32X32_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 32, SWR_TYPE_FLOAT, 32>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32 TransposeT;
+    typedef Format2<32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I32X32_FLOAT> - Format traits specialization for I32X32_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I32X32_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 32, SWR_TYPE_FLOAT, 32>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32 TransposeT;
+    typedef Format2<32, 32> FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1171,6 +1259,116 @@ template<> struct FormatTraits<R24_UNORM_X8_TYPELESS_LD> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L16A16_UNORM> - Format traits specialization for L16A16_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L16A16_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 16, SWR_TYPE_UNORM, 16>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose16_16 TransposeT;
+    typedef Format2<16, 16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I24X8_UNORM> - Format traits specialization for I24X8_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I24X8_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 24, SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose24_8 TransposeT;
+    typedef Format2<24, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L24X8_UNORM> - Format traits specialization for L24X8_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L24X8_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 24, SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose24_8 TransposeT;
+    typedef Format2<24, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I32_FLOAT> - Format traits specialization for I32_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I32_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 32>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<32> TransposeT;
+    typedef Format1<32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L32_FLOAT> - Format traits specialization for L32_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L32_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 32>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<32> TransposeT;
+    typedef Format1<32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<A32_FLOAT> - Format traits specialization for A32_FLOAT
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<A32_FLOAT> :
@@ -1322,6 +1520,28 @@ template<> struct FormatTraits<B10G10R10X2_UNORM> :
 
     typedef Transpose10_10_10_2 TransposeT;
     typedef Format4<10, 10, 10, 2> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L16A16_FLOAT> - Format traits specialization for L16A16_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L16A16_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 16, SWR_TYPE_FLOAT, 16>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose16_16 TransposeT;
+    typedef Format2<16, 16> FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1809,6 +2029,50 @@ template<> struct FormatTraits<R16_FLOAT> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I16_UNORM> - Format traits specialization for I16_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I16_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 16>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<16> TransposeT;
+    typedef Format1<16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L16_UNORM> - Format traits specialization for L16_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L16_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 16>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<16> TransposeT;
+    typedef Format1<16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<A16_UNORM> - Format traits specialization for A16_UNORM
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<A16_UNORM> :
@@ -1819,6 +2083,72 @@ template<> struct FormatTraits<A16_UNORM> :
     static const uint32_t bpp{ 16 };
     static const uint32_t numComps{ 1 };
     static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<16> TransposeT;
+    typedef Format1<16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8A8_UNORM> - Format traits specialization for L8A8_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8A8_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 8, SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose8_8 TransposeT;
+    typedef Format2<8, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I16_FLOAT> - Format traits specialization for I16_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I16_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 16>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<16> TransposeT;
+    typedef Format1<16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L16_FLOAT> - Format traits specialization for L16_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L16_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 16>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
     static const uint32_t alphaComp{ 0 };
     static const bool isSRGB{ false };
     static const bool isBC{ false };
@@ -1850,6 +2180,28 @@ template<> struct FormatTraits<A16_FLOAT> :
 
     typedef TransposeSingleComponent<16> TransposeT;
     typedef Format1<16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8A8_UNORM_SRGB> - Format traits specialization for L8A8_UNORM_SRGB
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8A8_UNORM_SRGB> :
+    ComponentTraits<SWR_TYPE_UNORM, 8, SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ true };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose8_8 TransposeT;
+    typedef Format2<8, 8> FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -1985,6 +2337,50 @@ template<> struct FormatTraits<R16_USCALED> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8A8_UINT> - Format traits specialization for L8A8_UINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8A8_UINT> :
+    ComponentTraits<SWR_TYPE_UINT, 8, SWR_TYPE_UINT, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose8_8 TransposeT;
+    typedef Format2<8, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8A8_SINT> - Format traits specialization for L8A8_SINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8A8_SINT> :
+    ComponentTraits<SWR_TYPE_SINT, 8, SWR_TYPE_SINT, 8>,
+    FormatSwizzle<0, 3>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 16 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 1 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose8_8 TransposeT;
+    typedef Format2<8, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R8_UNORM> - Format traits specialization for R8_UNORM
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R8_UNORM> :
@@ -2095,6 +2491,50 @@ template<> struct FormatTraits<A8_UNORM> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I8_UNORM> - Format traits specialization for I8_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I8_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8_UNORM> - Format traits specialization for L8_UNORM
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8_UNORM> :
+    ComponentTraits<SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R8_SSCALED> - Format traits specialization for R8_SSCALED
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R8_SSCALED> :
@@ -2123,6 +2563,116 @@ template<> struct FormatTraits<R8_USCALED> :
     ComponentTraits<SWR_TYPE_USCALED, 8>,
     FormatSwizzle<0>,
     Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8_UNORM_SRGB> - Format traits specialization for L8_UNORM_SRGB
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8_UNORM_SRGB> :
+    ComponentTraits<SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ true };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8_UINT> - Format traits specialization for L8_UINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8_UINT> :
+    ComponentTraits<SWR_TYPE_UINT, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<L8_SINT> - Format traits specialization for L8_SINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<L8_SINT> :
+    ComponentTraits<SWR_TYPE_SINT, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I8_UINT> - Format traits specialization for I8_UINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I8_UINT> :
+    ComponentTraits<SWR_TYPE_UINT, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x1>
+{
+    static const uint32_t bpp{ 8 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<8> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<I8_SINT> - Format traits specialization for I8_SINT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<I8_SINT> :
+    ComponentTraits<SWR_TYPE_SINT, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x1>
 {
     static const uint32_t bpp{ 8 };
     static const uint32_t numComps{ 1 };
@@ -2601,6 +3151,28 @@ template<> struct FormatTraits<R16G16B16_USCALED> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<BC6H_SF16> - Format traits specialization for BC6H_SF16
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<BC6H_SF16> :
+    ComponentTraits<SWR_TYPE_SNORM, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 128 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ true };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 4 };
+    static const uint32_t bcHeight{ 4 };
+
+    typedef TransposeSingleComponent<128> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<BC7_UNORM> - Format traits specialization for BC7_UNORM
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<BC7_UNORM> :
@@ -2635,6 +3207,28 @@ template<> struct FormatTraits<BC7_UNORM_SRGB> :
     static const bool hasAlpha{ true };
     static const uint32_t alphaComp{ 3 };
     static const bool isSRGB{ true };
+    static const bool isBC{ true };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 4 };
+    static const uint32_t bcHeight{ 4 };
+
+    typedef TransposeSingleComponent<128> TransposeT;
+    typedef Format1<8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<BC6H_UF16> - Format traits specialization for BC6H_UF16
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<BC6H_UF16> :
+    ComponentTraits<SWR_TYPE_UNORM, 8>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 128 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
     static const bool isBC{ true };
     static const bool isSubsampled{ false };
     static const uint32_t bcWidth{ 4 };

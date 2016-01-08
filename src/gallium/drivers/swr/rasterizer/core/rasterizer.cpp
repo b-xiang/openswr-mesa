@@ -437,6 +437,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     RDTSC_START(BETriangleSetup);
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
+    const BACKEND_FUNCS& backendFuncs = pDC->pState->backendFuncs;
 
     OSALIGN(SWR_TRIANGLE_DESC, 16) triDesc;
     triDesc.pUserClipBuffer = workDesc.pUserClipBuffer;
@@ -513,6 +514,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     triDesc.pPerspAttribs = pPerspAttribs;
     triDesc.pAttribs = pAttribs;
     float *pRecipW = workDesc.pTriBuffer + 12;
+    triDesc.pRecipW = pRecipW;
     __m128 vOneOverWV0 = _mm_broadcast_ss(pRecipW);
     __m128 vOneOverWV1 = _mm_broadcast_ss(pRecipW+=1);
     __m128 vOneOverWV2 = _mm_broadcast_ss(pRecipW+=1);
@@ -878,7 +880,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             if(anyCoveredSamples)
             {
                 RDTSC_START(BEPixelBackend);
-                pDC->pState->pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);
+                backendFuncs.pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);
                 RDTSC_STOP(BEPixelBackend, 0, 0);
             }
 
@@ -887,7 +889,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
             {
                 vEdgeFix16[e] = _mm256_add_pd(vEdgeFix16[e], _mm256_set1_pd(rastEdges[e].stepRasterTileX));
             }
-            StepRasterTileX(state.psState.maxRTSlotUsed, renderBuffers, colorRasterTileStep, depthRasterTileStep, stencilRasterTileStep);
+            StepRasterTileX(state.psState.numRenderTargets, renderBuffers, colorRasterTileStep, depthRasterTileStep, stencilRasterTileStep);
         }
 
         // step to the next tile in Y
@@ -895,13 +897,148 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         {
             vEdgeFix16[e] = _mm256_add_pd(vStartOfRowEdge[e], _mm256_set1_pd(rastEdges[e].stepRasterTileY));
         }
-        StepRasterTileY(state.psState.maxRTSlotUsed, renderBuffers, currentRenderBufferRow, colorRasterTileRowStep, depthRasterTileRowStep, stencilRasterTileRowStep);
+        StepRasterTileY(state.psState.numRenderTargets, renderBuffers, currentRenderBufferRow, colorRasterTileRowStep, depthRasterTileRowStep, stencilRasterTileRowStep);
     }
 
     RDTSC_STOP(BERasterizeTriangle, 1, 0);
 }
 
-void RasterizePoint(DRAW_CONTEXT *pDC, uint32_t workerId, const TRIANGLE_WORK_DESC &workDesc, uint32_t macroTile)
+void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
+{
+    const TRIANGLE_WORK_DESC& workDesc = *(const TRIANGLE_WORK_DESC*)pData;
+    const SWR_RASTSTATE& rastState = pDC->pState->state.rastState;
+    const SWR_BACKEND_STATE& backendState = pDC->pState->state.backendState;
+
+    bool isPointSpriteTexCoordEnabled = backendState.pointSpriteTexCoordMask != 0;
+
+    // load point vertex
+    float x = *workDesc.pTriBuffer;
+    float y = *(workDesc.pTriBuffer + 1);
+    float z = *(workDesc.pTriBuffer + 2);
+
+    // create a copy of the triangle buffer to write our adjusted vertices to
+    OSALIGNSIMD(float) newTriBuffer[4 * 4];
+    TRIANGLE_WORK_DESC newWorkDesc = workDesc;
+    newWorkDesc.pTriBuffer = &newTriBuffer[0];
+
+    // create a copy of the attrib buffer to write our adjusted attribs to
+    OSALIGNSIMD(float) newAttribBuffer[4 * 3 * KNOB_NUM_ATTRIBUTES];
+    newWorkDesc.pAttribs = &newAttribBuffer[0];
+
+    newWorkDesc.pUserClipBuffer = workDesc.pUserClipBuffer;
+    newWorkDesc.numAttribs = workDesc.numAttribs;
+    newWorkDesc.triFlags = workDesc.triFlags;
+
+    // construct two tris by bloating point by point size
+    float halfPointSize = workDesc.triFlags.pointSize * 0.5f;
+    float lowerX = x - halfPointSize;
+    float upperX = x + halfPointSize;
+    float lowerY = y - halfPointSize;
+    float upperY = y + halfPointSize;
+
+    // tri 0
+    float *pBuf = &newTriBuffer[0];
+    *pBuf++ = lowerX;
+    *pBuf++ = lowerX;
+    *pBuf++ = upperX;
+    pBuf++;
+    *pBuf++ = lowerY;
+    *pBuf++ = upperY;
+    *pBuf++ = upperY;
+    pBuf++;
+    _mm_store_ps(pBuf, _mm_set1_ps(z));
+    _mm_store_ps(pBuf+=4, _mm_set1_ps(1.0f));
+
+    // setup triangle rasterizer function
+    PFN_WORK_FUNC pfnTriRast;
+    if (rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN)
+    {
+        pfnTriRast = gRasterizerTable[rastState.scissorEnable][rastState.sampleCount];
+    }
+    else
+    {
+        // for center sample pattern, all samples are at pixel center; calculate coverage
+        // once at center and broadcast the results in the backend
+        pfnTriRast = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
+    }
+
+    // overwrite texcoords for point sprites
+    if (isPointSpriteTexCoordEnabled)
+    {
+        // copy original attribs
+        memcpy(&newAttribBuffer[0], workDesc.pAttribs, 4 * 3 * workDesc.numAttribs * sizeof(float));
+        newWorkDesc.pAttribs = &newAttribBuffer[0];
+
+        // overwrite texcoord for point sprites
+        uint32_t texCoordMask = backendState.pointSpriteTexCoordMask;
+        DWORD texCoordAttrib = 0;
+
+        while (_BitScanForward(&texCoordAttrib, texCoordMask))
+        {
+            texCoordMask &= ~(1 << texCoordAttrib);
+            __m128* pTexAttrib = (__m128*)&newAttribBuffer[0] + 3 * texCoordAttrib;
+            if (rastState.pointSpriteTopOrigin)
+            {
+                pTexAttrib[0] = _mm_set_ps(1, 0, 0, 0);
+                pTexAttrib[1] = _mm_set_ps(1, 0, 1, 0);
+                pTexAttrib[2] = _mm_set_ps(1, 0, 1, 1);
+            }
+            else
+            {
+                pTexAttrib[0] = _mm_set_ps(1, 0, 1, 0);
+                pTexAttrib[1] = _mm_set_ps(1, 0, 0, 0);
+                pTexAttrib[2] = _mm_set_ps(1, 0, 0, 1);
+            }
+        }
+    }
+    else
+    {
+        // no texcoord overwrite, can reuse the attrib buffer from frontend
+        newWorkDesc.pAttribs = workDesc.pAttribs;
+    }
+
+    pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
+
+    // tri 1
+    pBuf = &newTriBuffer[0];
+    *pBuf++ = lowerX;
+    *pBuf++ = upperX;
+    *pBuf++ = upperX;
+    pBuf++;
+    *pBuf++ = lowerY;
+    *pBuf++ = upperY;
+    *pBuf++ = lowerY;
+    // z, w unchanged
+
+    if (isPointSpriteTexCoordEnabled)
+    {
+        uint32_t texCoordMask = backendState.pointSpriteTexCoordMask;
+        DWORD texCoordAttrib = 0;
+
+        while (_BitScanForward(&texCoordAttrib, texCoordMask))
+        {
+            texCoordMask &= ~(1 << texCoordAttrib);
+            __m128* pTexAttrib = (__m128*)&newAttribBuffer[0] + 3 * texCoordAttrib;
+            if (rastState.pointSpriteTopOrigin)
+            {
+                pTexAttrib[0] = _mm_set_ps(1, 0, 0, 0);
+                pTexAttrib[1] = _mm_set_ps(1, 0, 1, 1);
+                pTexAttrib[2] = _mm_set_ps(1, 0, 0, 1);
+
+            }
+            else
+            {
+                pTexAttrib[0] = _mm_set_ps(1, 0, 1, 0);
+                pTexAttrib[1] = _mm_set_ps(1, 0, 0, 1);
+                pTexAttrib[2] = _mm_set_ps(1, 0, 1, 1);
+            }
+        }
+    }
+
+    pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
+}
+
+void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
 {
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
@@ -909,6 +1046,9 @@ void RasterizePoint(DRAW_CONTEXT *pDC, uint32_t workerId, const TRIANGLE_WORK_DE
         return;
     }
 #endif
+
+    const TRIANGLE_WORK_DESC& workDesc = *(const TRIANGLE_WORK_DESC*)pData;
+    const BACKEND_FUNCS& backendFuncs = pDC->pState->backendFuncs;
 
     // map x,y relative offsets from start of raster tile to bit position in 
     // coverage mask for the point
@@ -956,16 +1096,10 @@ void RasterizePoint(DRAW_CONTEXT *pDC, uint32_t workerId, const TRIANGLE_WORK_DE
         renderBuffers, 1, triDesc.triFlags.renderTargetArrayIndex);
 
     RDTSC_START(BEPixelBackend);
-    pDC->pState->pfnBackend(pDC, workerId, tileAlignedX, tileAlignedY, triDesc, renderBuffers);
+    backendFuncs.pfnBackend(pDC, workerId, tileAlignedX, tileAlignedY, triDesc, renderBuffers);
     RDTSC_STOP(BEPixelBackend, 0, 0);
 }
 
-void rastPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
-{
-    TRIANGLE_WORK_DESC *pDesc = (TRIANGLE_WORK_DESC*)pData;
-    RasterizePoint(pDC, workerId, *pDesc, macroTile);
-
-}
 // Get pointers to hot tile memory for color RT, depth, stencil
 void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint32_t tileY, RenderOutputBuffers &renderBuffers, 
     uint32_t numSamples, uint32_t renderTargetArrayIndex)
@@ -1019,9 +1153,9 @@ void GetRenderHotTiles(DRAW_CONTEXT *pDC, uint32_t macroID, uint32_t tileX, uint
 }
 
 INLINE
-void StepRasterTileX(uint32_t MaxRT, RenderOutputBuffers &buffers, uint32_t colorTileStep, uint32_t depthTileStep, uint32_t stencilTileStep)
+void StepRasterTileX(uint32_t NumRT, RenderOutputBuffers &buffers, uint32_t colorTileStep, uint32_t depthTileStep, uint32_t stencilTileStep)
 {
-    for(uint32_t rt = 0; rt <= MaxRT; ++rt)
+    for(uint32_t rt = 0; rt < NumRT; ++rt)
     {
         buffers.pColor[rt] += colorTileStep;
     }
@@ -1031,9 +1165,9 @@ void StepRasterTileX(uint32_t MaxRT, RenderOutputBuffers &buffers, uint32_t colo
 }
 
 INLINE
-void StepRasterTileY(uint32_t MaxRT, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow, uint32_t colorRowStep, uint32_t depthRowStep, uint32_t stencilRowStep)
+void StepRasterTileY(uint32_t NumRT, RenderOutputBuffers &buffers, RenderOutputBuffers &startBufferRow, uint32_t colorRowStep, uint32_t depthRowStep, uint32_t stencilRowStep)
 {
-    for(uint32_t rt = 0; rt <= MaxRT; ++rt)
+    for(uint32_t rt = 0; rt < NumRT; ++rt)
     {
         startBufferRow.pColor[rt] += colorRowStep;
         buffers.pColor[rt] = startBufferRow.pColor[rt];

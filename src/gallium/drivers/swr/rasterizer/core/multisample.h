@@ -61,11 +61,14 @@ struct MultisampleTraits
     INLINE static __m128i vYi(uint32_t sampleNum) = delete;
     INLINE static simdscalar vX(uint32_t sampleNum) = delete;
     INLINE static simdscalar vY(uint32_t sampleNum) = delete;
+    INLINE static float X(uint32_t sampleNum) = delete;
+    INLINE static float Y(uint32_t sampleNum) = delete;
     INLINE static __m128i TileSampleOffsetsX() = delete;
     INLINE static __m128i TileSampleOffsetsY() = delete;
     INLINE static uint32_t RasterTileColorOffset(uint32_t sampleNum) = delete;
     INLINE static uint32_t RasterTileDepthOffset(uint32_t sampleNum) = delete;
     INLINE static uint32_t RasterTileStencilOffset(uint32_t sampleNum) = delete;
+    INLINE static simdscalari FullSampleMask() = delete;
 
     static const uint32_t numSamples = 0;
 };
@@ -75,13 +78,13 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X>
 {
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
-        static const __m128i X = _mm_set1_epi32(samplePosX);
+        static const __m128i X = _mm_set1_epi32(samplePosXi);
         return X;
     }
 
     INLINE static __m128i vYi(uint32_t sampleNum)
     {
-        static const __m128i Y = _mm_set1_epi32(samplePosY);
+        static const __m128i Y = _mm_set1_epi32(samplePosYi);
         return Y;
     }
 
@@ -96,6 +99,9 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X>
         static const simdscalar Y = _simd_set1_ps(0.5f);
         return Y;
     }
+
+    INLINE static float X(uint32_t sampleNum) {return samplePosX;};
+    INLINE static float Y(uint32_t sampleNum) {return samplePosY;};
 
     INLINE static __m128i TileSampleOffsetsX()
     {
@@ -130,8 +136,12 @@ struct MultisampleTraits<SWR_MULTISAMPLE_1X>
         return 0;
     }
 
-    static const uint32_t samplePosX {0x80};
-    static const uint32_t samplePosY {0x80};
+    INLINE static simdscalari FullSampleMask(){return _simd_set1_epi32(0x1);};
+
+    static const uint32_t samplePosXi {0x80};
+    static const uint32_t samplePosYi {0x80};
+    static const float samplePosX;
+    static const float samplePosY;
     static const uint32_t numSamples = 1;
 };
 
@@ -141,14 +151,14 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X>
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
         SWR_ASSERT(sampleNum < numSamples);
-        static const __m128i X[numSamples] {_mm_set1_epi32(samplePosX[0]), _mm_set1_epi32(samplePosX[1])};
+        static const __m128i X[numSamples] {_mm_set1_epi32(samplePosXi[0]), _mm_set1_epi32(samplePosXi[1])};
         return X[sampleNum];
     }
 
     INLINE static __m128i vYi(uint32_t sampleNum)
     {
         SWR_ASSERT(sampleNum < numSamples);
-        static const __m128i Y[numSamples] {_mm_set1_epi32(samplePosY[0]), _mm_set1_epi32(samplePosY[1])};
+        static const __m128i Y[numSamples] {_mm_set1_epi32(samplePosYi[0]), _mm_set1_epi32(samplePosYi[1])};
         return Y[sampleNum];
     }
 
@@ -165,6 +175,9 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X>
         assert(sampleNum < numSamples);
         return Y[sampleNum];
     }
+
+    INLINE static float X(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosX[sampleNum]; };
+    INLINE static float Y(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosY[sampleNum]; };
 
     INLINE static __m128i TileSampleOffsetsX()
     {
@@ -214,8 +227,16 @@ struct MultisampleTraits<SWR_MULTISAMPLE_2X>
         return RasterTileStencilOffsets[sampleNum];
     }
 
-    static const uint32_t samplePosX[2];
-    static const uint32_t samplePosY[2];
+    INLINE static simdscalari FullSampleMask()
+    {
+         static const simdscalari mask =_simd_set1_epi32(0x3);
+         return mask;
+    }
+
+    static const uint32_t samplePosXi[2];
+    static const uint32_t samplePosYi[2];
+    static const float samplePosX[2];
+    static const float samplePosY[2];
     static const uint32_t numSamples = 2;
 };
 
@@ -225,7 +246,7 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
         static const __m128i X[numSamples]
-        {_mm_set1_epi32(samplePosX[0]), _mm_set1_epi32(samplePosX[1]), _mm_set1_epi32(samplePosX[2]), _mm_set1_epi32(samplePosX[3])};
+        {_mm_set1_epi32(samplePosXi[0]), _mm_set1_epi32(samplePosXi[1]), _mm_set1_epi32(samplePosXi[2]), _mm_set1_epi32(samplePosXi[3])};
         SWR_ASSERT(sampleNum < numSamples);
         return X[sampleNum];
     }
@@ -233,7 +254,7 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
     INLINE static __m128i vYi(uint32_t sampleNum)
     {
         static const __m128i Y[numSamples]
-        {_mm_set1_epi32(samplePosY[0]), _mm_set1_epi32(samplePosY[1]), _mm_set1_epi32(samplePosY[2]), _mm_set1_epi32(samplePosY[3])};
+        {_mm_set1_epi32(samplePosYi[0]), _mm_set1_epi32(samplePosYi[1]), _mm_set1_epi32(samplePosYi[2]), _mm_set1_epi32(samplePosYi[3])};
         SWR_ASSERT(sampleNum < numSamples);
         return Y[sampleNum];
     }
@@ -253,6 +274,9 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
         assert(sampleNum < numSamples);
         return Y[sampleNum];
     }
+    
+    INLINE static float X(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosX[sampleNum]; };
+    INLINE static float Y(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosY[sampleNum]; };
 
     INLINE static __m128i TileSampleOffsetsX()
     {
@@ -308,8 +332,16 @@ struct MultisampleTraits<SWR_MULTISAMPLE_4X>
         return RasterTileStencilOffsets[sampleNum];
     }
 
-    static const uint32_t samplePosX[4];
-    static const uint32_t samplePosY[4];
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xF);
+        return mask;
+    }
+
+    static const uint32_t samplePosXi[4];
+    static const uint32_t samplePosYi[4];
+    static const float samplePosX[4];
+    static const float samplePosY[4];
     static const uint32_t numSamples = 4;
 };
 
@@ -319,8 +351,8 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
         static const __m128i X[numSamples]
-        {_mm_set1_epi32(samplePosX[0]), _mm_set1_epi32(samplePosX[1]), _mm_set1_epi32(samplePosX[2]), _mm_set1_epi32(samplePosX[3]), 
-         _mm_set1_epi32(samplePosX[4]), _mm_set1_epi32(samplePosX[5]), _mm_set1_epi32(samplePosX[6]), _mm_set1_epi32(samplePosX[7])};
+        {_mm_set1_epi32(samplePosXi[0]), _mm_set1_epi32(samplePosXi[1]), _mm_set1_epi32(samplePosXi[2]), _mm_set1_epi32(samplePosXi[3]), 
+         _mm_set1_epi32(samplePosXi[4]), _mm_set1_epi32(samplePosXi[5]), _mm_set1_epi32(samplePosXi[6]), _mm_set1_epi32(samplePosXi[7])};
         SWR_ASSERT(sampleNum < numSamples);
         return X[sampleNum];
     }
@@ -328,8 +360,8 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
     INLINE static __m128i vYi(uint32_t sampleNum)
     {
         static const __m128i Y[numSamples]
-        {_mm_set1_epi32(samplePosY[0]), _mm_set1_epi32(samplePosY[1]), _mm_set1_epi32(samplePosY[2]), _mm_set1_epi32(samplePosY[3]), 
-         _mm_set1_epi32(samplePosY[4]), _mm_set1_epi32(samplePosY[5]), _mm_set1_epi32(samplePosY[6]), _mm_set1_epi32(samplePosY[7])};
+        {_mm_set1_epi32(samplePosYi[0]), _mm_set1_epi32(samplePosYi[1]), _mm_set1_epi32(samplePosYi[2]), _mm_set1_epi32(samplePosYi[3]), 
+         _mm_set1_epi32(samplePosYi[4]), _mm_set1_epi32(samplePosYi[5]), _mm_set1_epi32(samplePosYi[6]), _mm_set1_epi32(samplePosYi[7])};
         SWR_ASSERT(sampleNum < numSamples);
         return Y[sampleNum];
     }
@@ -351,6 +383,9 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
         assert(sampleNum < numSamples);
         return Y[sampleNum];
     }
+
+    INLINE static float X(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosX[sampleNum]; };
+    INLINE static float Y(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosY[sampleNum]; };
 
     INLINE static __m128i TileSampleOffsetsX()
     {
@@ -418,8 +453,16 @@ struct MultisampleTraits<SWR_MULTISAMPLE_8X>
         return RasterTileStencilOffsets[sampleNum];
     }
 
-    static const uint32_t samplePosX[8];
-    static const uint32_t samplePosY[8];
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xFF);
+        return mask;
+    }
+
+    static const uint32_t samplePosXi[8];
+    static const uint32_t samplePosYi[8];
+    static const float samplePosX[8];
+    static const float samplePosY[8];
     static const uint32_t numSamples = 8;
 };
 
@@ -429,10 +472,10 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
     INLINE static __m128i vXi(uint32_t sampleNum)
     {
         static const __m128i X[numSamples]
-        {_mm_set1_epi32(samplePosX[0]), _mm_set1_epi32(samplePosX[1]), _mm_set1_epi32(samplePosX[2]), _mm_set1_epi32(samplePosX[3]), 
-         _mm_set1_epi32(samplePosX[4]), _mm_set1_epi32(samplePosX[5]), _mm_set1_epi32(samplePosX[6]), _mm_set1_epi32(samplePosX[7]), 
-         _mm_set1_epi32(samplePosX[8]), _mm_set1_epi32(samplePosX[9]), _mm_set1_epi32(samplePosX[10]), _mm_set1_epi32(samplePosX[11]), 
-         _mm_set1_epi32(samplePosX[12]), _mm_set1_epi32(samplePosX[13]), _mm_set1_epi32(samplePosX[14]), _mm_set1_epi32(samplePosX[15])};
+        {_mm_set1_epi32(samplePosXi[0]), _mm_set1_epi32(samplePosXi[1]), _mm_set1_epi32(samplePosXi[2]), _mm_set1_epi32(samplePosXi[3]), 
+         _mm_set1_epi32(samplePosXi[4]), _mm_set1_epi32(samplePosXi[5]), _mm_set1_epi32(samplePosXi[6]), _mm_set1_epi32(samplePosXi[7]), 
+         _mm_set1_epi32(samplePosXi[8]), _mm_set1_epi32(samplePosXi[9]), _mm_set1_epi32(samplePosXi[10]), _mm_set1_epi32(samplePosXi[11]), 
+         _mm_set1_epi32(samplePosXi[12]), _mm_set1_epi32(samplePosXi[13]), _mm_set1_epi32(samplePosXi[14]), _mm_set1_epi32(samplePosXi[15])};
         SWR_ASSERT(sampleNum < numSamples);
         return X[sampleNum];
     }
@@ -440,10 +483,10 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
     INLINE static __m128i vYi(uint32_t sampleNum)
     {
         static const __m128i Y[numSamples]
-        {_mm_set1_epi32(samplePosY[0]), _mm_set1_epi32(samplePosY[1]), _mm_set1_epi32(samplePosY[2]), _mm_set1_epi32(samplePosY[3]), 
-         _mm_set1_epi32(samplePosY[4]), _mm_set1_epi32(samplePosY[5]), _mm_set1_epi32(samplePosY[6]), _mm_set1_epi32(samplePosY[7]), 
-         _mm_set1_epi32(samplePosY[8]), _mm_set1_epi32(samplePosY[9]), _mm_set1_epi32(samplePosY[10]), _mm_set1_epi32(samplePosY[11]), 
-         _mm_set1_epi32(samplePosY[12]), _mm_set1_epi32(samplePosY[13]), _mm_set1_epi32(samplePosY[14]), _mm_set1_epi32(samplePosY[15])};
+        {_mm_set1_epi32(samplePosYi[0]), _mm_set1_epi32(samplePosYi[1]), _mm_set1_epi32(samplePosYi[2]), _mm_set1_epi32(samplePosYi[3]), 
+         _mm_set1_epi32(samplePosYi[4]), _mm_set1_epi32(samplePosYi[5]), _mm_set1_epi32(samplePosYi[6]), _mm_set1_epi32(samplePosYi[7]), 
+         _mm_set1_epi32(samplePosYi[8]), _mm_set1_epi32(samplePosYi[9]), _mm_set1_epi32(samplePosYi[10]), _mm_set1_epi32(samplePosYi[11]), 
+         _mm_set1_epi32(samplePosYi[12]), _mm_set1_epi32(samplePosYi[13]), _mm_set1_epi32(samplePosYi[14]), _mm_set1_epi32(samplePosYi[15])};
         SWR_ASSERT(sampleNum < numSamples);
         return Y[sampleNum];
     }
@@ -469,6 +512,9 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
         assert(sampleNum < numSamples);
         return Y[sampleNum];
     }
+
+    INLINE static float X(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosX[sampleNum]; };
+    INLINE static float Y(uint32_t sampleNum) { SWR_ASSERT(sampleNum < numSamples); return samplePosY[sampleNum]; };
 
     INLINE static __m128i TileSampleOffsetsX()
     {
@@ -560,7 +606,15 @@ struct MultisampleTraits<SWR_MULTISAMPLE_16X>
         return RasterTileStencilOffsets[sampleNum];
     }
 
-    static const uint32_t samplePosX[16];
-    static const uint32_t samplePosY[16];
+    INLINE static simdscalari FullSampleMask()
+    {
+        static const simdscalari mask = _simd_set1_epi32(0xFFFF);
+        return mask;
+    }
+
+    static const uint32_t samplePosXi[16];
+    static const uint32_t samplePosYi[16];
+    static const float samplePosX[16];
+    static const float samplePosY[16];
     static const uint32_t numSamples = 16;
 };

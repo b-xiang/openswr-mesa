@@ -67,6 +67,13 @@ HANDLE SwrCreateContext(
     pContext->dsRing = (DRAW_STATE*)_aligned_malloc(sizeof(DRAW_STATE)*KNOB_MAX_DRAWS_IN_FLIGHT, 64);
     memset(pContext->dsRing, 0, sizeof(DRAW_STATE)*KNOB_MAX_DRAWS_IN_FLIGHT);
 
+    pContext->numSubContexts = pCreateInfo->maxSubContexts;
+    if (pContext->numSubContexts > 1)
+    {
+        pContext->subCtxSave = (DRAW_STATE*)_aligned_malloc(sizeof(DRAW_STATE) * pContext->numSubContexts, 64);
+        memset(pContext->subCtxSave, 0, sizeof(DRAW_STATE) * pContext->numSubContexts);
+    }
+
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
         pContext->dcRing[dc].arena.Init();
@@ -152,11 +159,17 @@ void SwrDestroyContext(HANDLE hContext)
 
     _aligned_free(pContext->dcRing);
     _aligned_free(pContext->dsRing);
+    _aligned_free(pContext->subCtxSave);
 
     delete(pContext->pHotTileMgr);
 
     pContext->~SWR_CONTEXT();
     _aligned_free((SWR_CONTEXT*)hContext);
+}
+
+void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
+{
+    memcpy(&dst.state, &src.state, sizeof(API_STATE));
 }
 
 void WakeAllThreads(SWR_CONTEXT *pContext)
@@ -234,11 +247,6 @@ void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId)
             _mm_pause();
         }
     }
-}
-
-void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
-{
-    memcpy(&dst.state, &src.state, sizeof(API_STATE));
 }
 
 void QueueDraw(SWR_CONTEXT *pContext)
@@ -392,6 +400,32 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
     return pContext->pCurDrawContext;
 }
 
+void SWR_API SwrSetActiveSubContext(
+    HANDLE hContext,
+    uint32_t subContextIndex)
+{
+    SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
+    if (subContextIndex >= pContext->numSubContexts)
+    {
+        return;
+    }
+
+    if (subContextIndex != pContext->curSubCtxId)
+    {
+        // Save and restore draw state
+        DRAW_CONTEXT* pDC = GetDrawContext(pContext);
+        CopyState(
+            pContext->subCtxSave[pContext->curSubCtxId],
+            *(pDC->pState));
+
+        CopyState(
+            *(pDC->pState),
+            pContext->subCtxSave[subContextIndex]);
+
+        pContext->curSubCtxId = subContextIndex;
+    }
+}
+
 API_STATE* GetDrawState(SWR_CONTEXT *pContext)
 {
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
@@ -413,7 +447,7 @@ static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
     return (SWR_CONTEXT*)hContext;
 }
 
-void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2)
+void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2, uint64_t userData3)
 {
     RDTSC_START(APISync);
 
@@ -429,6 +463,7 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     pDC->FeWork.desc.sync.pfnCallbackFunc = pfnFunc;
     pDC->FeWork.desc.sync.userData = userData;
     pDC->FeWork.desc.sync.userData2 = userData2;
+    pDC->FeWork.desc.sync.userData3 = userData3;
 
     // cannot execute until all previous draws have completed
     pDC->dependency = pDC->drawId - 1;
@@ -517,11 +552,13 @@ void SwrSetSoBuffers(
 
 void SwrSetVertexFunc(
     HANDLE hContext,
-    PFN_VERTEX_FUNC pfnVertexFunc)
+    PFN_VERTEX_FUNC pfnVertexFunc,
+    void* pImmediateData)
 {
     API_STATE* pState = GetDrawState(GetContext(hContext));
 
     pState->pfnVertexFunc = pfnVertexFunc;
+    pState->pVsImmediateData = pImmediateData;
 }
 
 void SwrSetFrontendState(
@@ -542,10 +579,12 @@ void SwrSetGsState(
 
 void SwrSetGsFunc(
     HANDLE hContext,
-    PFN_GS_FUNC pfnGsFunc)
+    PFN_GS_FUNC pfnGsFunc,
+    void* pImmediateData)
 {
     API_STATE* pState = GetDrawState(GetContext(hContext));
     pState->pfnGsFunc = pfnGsFunc;
+    pState->pGsImmediateData = pImmediateData;
 }
 
 void SwrSetCsFunc(
@@ -568,18 +607,22 @@ void SwrSetTsState(
 
 void SwrSetHsFunc(
     HANDLE hContext,
-    PFN_HS_FUNC pfnFunc)
+    PFN_HS_FUNC pfnFunc,
+    void* pImmediateData)
 {
     API_STATE* pApiState = GetDrawState(GetContext(hContext));
     pApiState->pfnHsFunc = pfnFunc;
+    pApiState->pHsImmediateData = pImmediateData;
 }
 
 void SwrSetDsFunc(
     HANDLE hContext,
-    PFN_DS_FUNC pfnFunc)
+    PFN_DS_FUNC pfnFunc,
+    void* pImmediateData)
 {
     API_STATE* pApiState = GetDrawState(GetContext(hContext));
     pApiState->pfnDsFunc = pfnFunc;
+    pApiState->pDsImmediateData = pImmediateData;
 }
 
 void SwrSetDepthStencilState(
@@ -602,10 +645,12 @@ void SwrSetBackendState(
 
 void SwrSetPixelShaderState(
     HANDLE hContext,
-    SWR_PS_STATE *pPSState)
+    SWR_PS_STATE *pPSState,
+    void* pImmediateData)
 {
     API_STATE *pState = GetDrawState(GetContext(hContext));
     pState->psState = *pPSState;
+    pState->pPsImmediateData = pImmediateData;
 }
 
 void SwrSetBlendState(
@@ -767,59 +812,77 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
     DRAW_STATE* pState = pDC->pState;
+    const SWR_RASTSTATE &rastState = pState->state.rastState;
+    BACKEND_FUNCS& backendFuncs = pState->backendFuncs;
+    const uint32_t forcedSampleCount = (rastState.bForcedSampleCount) ? 1 : 0;
 
     // setup backend
     if (pState->state.psState.pfnPixelShader == nullptr)
     {
-        pState->pfnBackend = &BackendNullPS;
+        backendFuncs.pfnBackend = gBackendNullPs[pState->state.rastState.sampleCount];
+        // always need to generate I & J per sample for Z interpolation
+        backendFuncs.pfnCalcSampleBarycentrics = gSampleBarycentricTable[1];
     }
     else
     {
-        bool bMultisampleEnable = (pState->state.rastState.sampleCount > SWR_MULTISAMPLE_1X) ? 1 : 0;
+        const bool bMultisampleEnable = ((rastState.sampleCount > SWR_MULTISAMPLE_1X) || rastState.bForcedSampleCount) ? 1 : 0;
+        const uint32_t centroid = ((pState->state.psState.barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0) ? 1 : 0;
 
         // currently only support 'normal' input coverage
         SWR_ASSERT(pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NORMAL ||
                    pState->state.psState.inputCoverage == SWR_INPUT_COVERAGE_NONE);
+     
+        SWR_BARYCENTRICS_MASK barycentricsMask = (SWR_BARYCENTRICS_MASK)pState->state.psState.barycentricsMask;
+        
         // select backend function
         switch(pState->state.psState.shadingRate)
         {
         case SWR_SHADING_RATE_PIXEL:
             if(bMultisampleEnable)
             {
-                pState->pfnBackend = gBackendPixelRateTable[pState->state.psState.maxRTSlotUsed][pState->state.rastState.sampleCount]
-                                                           [pState->state.rastState.samplePattern][pState->state.psState.inputCoverage];
+                // always need to generate I & J per sample for Z interpolation
+                barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
+                backendFuncs.pfnBackend = gBackendPixelRateTable[rastState.sampleCount][rastState.samplePattern][pState->state.psState.inputCoverage][centroid][forcedSampleCount];
+                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][pState->state.blendState.sampleCount];
             }
             else
             {
-                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][SWR_MULTISAMPLE_1X][pState->state.psState.inputCoverage];
+                // always need to generate I & J per pixel for Z interpolation
+                barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_PIXEL_MASK);
+                backendFuncs.pfnBackend = gBackendSingleSample[pState->state.psState.inputCoverage][centroid];
+                backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][SWR_MULTISAMPLE_1X];
             }
             break;
         case SWR_SHADING_RATE_SAMPLE:
-            SWR_ASSERT(pState->state.rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
-            if (!bMultisampleEnable)
-            {
-                // If PS is set at per sample rate and multisampling is disabled, set to per pixel and single sample backend
-                pState->state.psState.shadingRate = SWR_SHADING_RATE_PIXEL;
-                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][SWR_MULTISAMPLE_1X][pState->state.psState.inputCoverage];
-            }
-            else
-            {
-                pState->pfnBackend = gBackendSampleRateTable[pState->state.psState.maxRTSlotUsed][pState->state.rastState.sampleCount][pState->state.psState.inputCoverage];
-            }
+            SWR_ASSERT(rastState.samplePattern == SWR_MSAA_STANDARD_PATTERN);
+            // always need to generate I & J per sample for Z interpolation
+            barycentricsMask = (SWR_BARYCENTRICS_MASK)(barycentricsMask | SWR_BARYCENTRIC_PER_SAMPLE_MASK);
+            backendFuncs.pfnBackend = gBackendSampleRateTable[rastState.sampleCount][pState->state.psState.inputCoverage][centroid];
+            backendFuncs.pfnOutputMerger = gBackendOutputMergerTable[pState->state.psState.numRenderTargets][pState->state.blendState.sampleCount];
             break;
         case SWR_SHADING_RATE_COARSE:
         default:
             SWR_ASSERT(0 && "Invalid shading rate");
             break;
         }
-    }
 
+        // setup pointer to function that generates necessary barycentrics required by the PS
+        bool bBarycentrics = (barycentricsMask & SWR_BARYCENTRIC_PER_PIXEL_MASK) > 0 ? 1 : 0;
+        backendFuncs.pfnCalcPixelBarycentrics = gPixelBarycentricTable[bBarycentrics];
+
+        bBarycentrics = (barycentricsMask & SWR_BARYCENTRIC_PER_SAMPLE_MASK) > 0 ? 1 : 0;
+        backendFuncs.pfnCalcSampleBarycentrics = gSampleBarycentricTable[bBarycentrics];
+
+        bBarycentrics = (barycentricsMask & SWR_BARYCENTRIC_CENTROID_MASK) > 0 ? 1 : 0;
+        backendFuncs.pfnCalcCentroidBarycentrics = gCentroidBarycentricTable[rastState.sampleCount][bBarycentrics][rastState.samplePattern][forcedSampleCount];
+    }
+    
     PFN_PROCESS_PRIMS pfnBinner;
     switch (pState->state.topology)
     {
     case TOP_POINT_LIST:
-        pState->pfnProcessPrims = CanUseSimplePoints(pDC) ? ClipPoints : ClipTriangles;
-        pfnBinner = CanUseSimplePoints(pDC) ? BinPoints : BinTriangles;
+        pState->pfnProcessPrims = ClipPoints;
+        pfnBinner = BinPoints;
         break;
     case TOP_LINE_LIST:
     case TOP_LINE_STRIP:
@@ -886,11 +949,11 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
                                           (pState->state.depthStencilState.stencilTestEnable  ||
                                            pState->state.depthStencilState.stencilWriteEnable)) ? true : false;
 
-    uint32_t numRTs = pState->state.psState.maxRTSlotUsed;
+    uint32_t numRTs = pState->state.psState.numRenderTargets;
     pState->state.colorHottileEnable = 0;
     if(pState->state.psState.pfnPixelShader != nullptr)
     {
-        for (uint32_t rt = 0; rt <= numRTs; ++rt)
+        for (uint32_t rt = 0; rt < numRTs; ++rt)
         {
             pState->state.colorHottileEnable |=  
                 (!pState->state.blendState.renderTarget[rt].writeDisableAlpha ||

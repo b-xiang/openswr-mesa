@@ -40,71 +40,71 @@ Arena::~Arena()
 {
     Reset();        // Reset just in case to avoid leaking memory.
 
+    if (m_pCurBlock)
+    {
+        _aligned_free(m_pCurBlock->pMem);
+        delete m_pCurBlock;
+    }
+
     delete m_pMutex;
 }
 
 void Arena::Init()
 {
-    m_memUsed = 0;
+    m_size = 0;
     m_pCurBlock = nullptr;
-    m_pUsedBlocks = nullptr;
 
     m_pMutex = new std::mutex();
 }
 
-void* Arena::AllocAligned(uint32_t size, uint32_t align)
+void* Arena::AllocAligned(size_t size, size_t align)
 {
     if (m_pCurBlock)
     {
         ArenaBlock* pCurBlock = m_pCurBlock;
         pCurBlock->offset = AlignUp(pCurBlock->offset, align);
 
-        if ((pCurBlock->offset + size) < pCurBlock->blockSize)
+        if ((pCurBlock->offset + size) <= pCurBlock->blockSize)
         {
-            BYTE* pMem = (BYTE*)pCurBlock->pMem + pCurBlock->offset;
+            void* pMem = PtrAdd(pCurBlock->pMem, pCurBlock->offset);
             pCurBlock->offset += size;
+            m_size += size;
             return pMem;
         }
 
-        // Not enough memory in this arena so lets move to a new block.
-        pCurBlock->pNext = m_pUsedBlocks;
-        m_pUsedBlocks = pCurBlock;
-        m_pCurBlock = nullptr;
+        // Not enough memory in this block, fall through to allocate
+        // a new block
     }
 
-    static const uint32_t ArenaBlockSize = 1024*1024;
-    uint32_t defaultBlockSize = ArenaBlockSize;
-    if (m_pUsedBlocks == nullptr)
-    {
-        m_memUsed = 0;
-    }
-
-    uint32_t blockSize = std::max(size, defaultBlockSize);
+    static const size_t ArenaBlockSize = 1024*1024;
+    size_t blockSize = std::max(m_size, std::max(size, ArenaBlockSize));
     blockSize = AlignUp(blockSize, KNOB_SIMD_WIDTH*4);
 
     void *pMem = _aligned_malloc(blockSize, KNOB_SIMD_WIDTH*4);    // Arena blocks are always simd byte aligned.
     SWR_ASSERT(pMem != nullptr);
 
-    m_pCurBlock = (ArenaBlock*)malloc(sizeof(ArenaBlock));
-    SWR_ASSERT(m_pCurBlock != nullptr);
+    ArenaBlock* pNewBlock = new (std::nothrow) ArenaBlock();
+    SWR_ASSERT(pNewBlock != nullptr);
 
-    if (m_pCurBlock != nullptr)
+    if (pNewBlock != nullptr)
     {
-        m_pCurBlock->pMem = pMem;
-        m_pCurBlock->blockSize = blockSize;
-        m_pCurBlock->offset = size;
-        m_memUsed += blockSize;
+        pNewBlock->pNext        = m_pCurBlock;
+
+        m_pCurBlock             = pNewBlock;
+        m_pCurBlock->pMem       = pMem;
+        m_pCurBlock->blockSize  = blockSize;
+
     }
 
-    return pMem;
+    return AllocAligned(size, align);
 }
 
-void* Arena::Alloc(uint32_t size)
+void* Arena::Alloc(size_t size)
 {
     return AllocAligned(size, 1);
 }
 
-void* Arena::AllocAlignedSync(uint32_t size, uint32_t align)
+void* Arena::AllocAlignedSync(size_t size, size_t align)
 {
     void* pAlloc = nullptr;
 
@@ -117,7 +117,7 @@ void* Arena::AllocAlignedSync(uint32_t size, uint32_t align)
     return pAlloc;
 }
 
-void* Arena::AllocSync(uint32_t size)
+void* Arena::AllocSync(size_t size)
 {
     void* pAlloc = nullptr;
 
@@ -136,23 +136,17 @@ void Arena::Reset()
     {
         m_pCurBlock->offset = 0;
 
-        // If we needed to allocate used blocks then reset current.
-        // The next time we allocate we'll grow the current block
-        // to match all the memory allocated this for this frame.
-        if (m_pUsedBlocks)
+        ArenaBlock *pUsedBlocks = m_pCurBlock->pNext;
+        m_pCurBlock->pNext = nullptr;
+        while(pUsedBlocks)
         {
-            m_pCurBlock->pNext = m_pUsedBlocks;
-            m_pUsedBlocks = m_pCurBlock;
-            m_pCurBlock = nullptr;
+            ArenaBlock* pBlock = pUsedBlocks;
+            pUsedBlocks = pBlock->pNext;
+
+            _aligned_free(pBlock->pMem);
+            delete pBlock;
         }
     }
 
-    while(m_pUsedBlocks)
-    {
-        ArenaBlock* pBlock = m_pUsedBlocks;
-        m_pUsedBlocks = pBlock->pNext;
-
-        _aligned_free(pBlock->pMem);
-        free(pBlock);
-    }
+    m_size = 0;
 }

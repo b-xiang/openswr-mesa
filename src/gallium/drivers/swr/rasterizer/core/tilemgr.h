@@ -327,7 +327,8 @@ public:
                 // tile should be either uninitialized or resolved if we're deleting and switching to a 
                 // new sample count
                 assert((hotTile.state == HOTTILE_INVALID) ||
-                       (hotTile.state == HOTTILE_RESOLVED));
+                       (hotTile.state == HOTTILE_RESOLVED) || 
+                       (hotTile.state == HOTTILE_CLEAR));
                 _aligned_free(hotTile.pBuffer);
 
                 uint32_t size = numSamples * mHotTileSize[attachment];

@@ -297,12 +297,80 @@ INLINE void ComputeSurfaceOffset1D(
 /// @param pState - surface state
 /// @param array - array slice index
 /// @param sampleNum - requested sample
-INLINE uint32_t AdjustArrayIndexForMSAA(const SWR_SURFACE_STATE *pState, uint32_t arrayIndex, uint32_t sampleNum)
+INLINE void AdjustCoordsForMSAA(const SWR_SURFACE_STATE *pState, uint32_t& x, uint32_t& y, uint32_t& arrayIndex, uint32_t sampleNum)
 {
-    uint32_t sampleSlice;
     /// @todo: might want to templatize adjusting for sample slices when we support tileYS/tileYF.
-    if(pState->tileMode == SWR_TILE_MODE_YMAJOR ||
-       pState->tileMode == SWR_TILE_NONE)
+    if((pState->tileMode == SWR_TILE_MODE_YMAJOR ||
+        pState->tileMode == SWR_TILE_MODE_WMAJOR) && 
+       pState->bInterleavedSamples)
+    {
+        uint32_t newX, newY, newSampleX, newSampleY;
+        switch(pState->numSamples)
+        {
+        case 1:
+            newX = x;
+            newY = y;
+            newSampleX = newSampleY = 0;
+            break;
+        case 2:
+        {
+            assert(pState->type == SURFACE_2D);
+            static const uint32_t xMask = 0xFFFFFFFD;
+            static const uint32_t sampleMaskX = 0x1;
+            newX = pdep_u32(x, xMask);
+            newY = y;
+            newSampleX = pext_u32(sampleNum, sampleMaskX);
+            newSampleY = 0;
+        }
+            break;
+        case 4:
+        {
+            assert(pState->type == SURFACE_2D);
+            static const uint32_t mask = 0xFFFFFFFD;
+            static const uint32_t sampleMaskX = 0x1;
+            static const uint32_t sampleMaskY = 0x2;
+            newX = pdep_u32(x, mask);
+            newY = pdep_u32(y, mask);
+            newSampleX = pext_u32(sampleNum, sampleMaskX);
+            newSampleY = pext_u32(sampleNum, sampleMaskY);
+        }
+            break;
+        case 8:
+        {
+            assert(pState->type == SURFACE_2D);
+            static const uint32_t xMask = 0xFFFFFFF9;
+            static const uint32_t yMask = 0xFFFFFFFD;
+            static const uint32_t sampleMaskX = 0x5;
+            static const uint32_t sampleMaskY = 0x2;
+            newX = pdep_u32(x, xMask);
+            newY = pdep_u32(y, yMask);
+            newSampleX = pext_u32(sampleNum, sampleMaskX);
+            newSampleY = pext_u32(sampleNum, sampleMaskY);
+        }
+            break;
+        case 16:
+        {
+            assert(pState->type == SURFACE_2D);
+            static const uint32_t mask = 0xFFFFFFF9;
+            static const uint32_t sampleMaskX = 0x5;
+            static const uint32_t sampleMaskY = 0xA;
+            newX = pdep_u32(x, mask);
+            newY = pdep_u32(y, mask);
+            newSampleX = pext_u32(sampleNum, sampleMaskX);
+            newSampleY = pext_u32(sampleNum, sampleMaskY);
+        }
+            break;
+        default:
+            assert(0 && "Unsupported sample count");
+            newX = newY = 0;
+            newSampleX = newSampleY = 0;
+            break;
+        }
+        x = newX | (newSampleX << 1);
+        y = newY | (newSampleY << 1);
+    }
+    else if(pState->tileMode == SWR_TILE_MODE_YMAJOR ||
+            pState->tileMode == SWR_TILE_NONE)
     {
         uint32_t sampleShift;
         switch(pState->numSamples)
@@ -332,13 +400,8 @@ INLINE uint32_t AdjustArrayIndexForMSAA(const SWR_SURFACE_STATE *pState, uint32_
             sampleShift = 0;
             break;
         }
-        sampleSlice = (arrayIndex << sampleShift) | sampleNum;
+        arrayIndex = (arrayIndex << sampleShift) | sampleNum;
     }
-    else
-    {
-        sampleSlice = arrayIndex;
-    }
-    return sampleSlice;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -367,9 +430,9 @@ INLINE void ComputeSurfaceOffset2D(uint32_t x, uint32_t y, uint32_t array, uint3
         ComputeLODOffsetY(info, pState->height, pState->valign, lod, lodOffsetY);
     }
 
-    uint32_t arrayIndex = AdjustArrayIndexForMSAA(pState, array, sampleNum);
+    AdjustCoordsForMSAA(pState, x, y, array, sampleNum);
     xOffsetBytes = (x + lodOffsetX) * info.Bpp;
-    yOffsetRows = (arrayIndex * pState->qpitch) + lodOffsetY + y;
+    yOffsetRows = (array * pState->qpitch) + lodOffsetY + y;
 }
 
 //////////////////////////////////////////////////////////////////////////

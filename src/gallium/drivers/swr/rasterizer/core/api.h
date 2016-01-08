@@ -41,7 +41,7 @@
 
 ///@todo place all the API functions into the 'swr' namespace.
 
-typedef void(SWR_API *PFN_CALLBACK_FUNC)(uint64_t data, uint64_t data2);
+typedef void(SWR_API *PFN_CALLBACK_FUNC)(uint64_t data, uint64_t data2, uint64_t data3);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Function signature for load hot tiles
@@ -88,6 +88,9 @@ struct SWR_CREATECONTEXT_INFO
     // Use SwrGetPrivateContextState() to access private state.
     uint32_t privateStateSize;
 
+    // Each SWR context can have multiple sets of active state
+    uint32_t maxSubContexts;
+
     // tile manipulation functions
     PFN_LOAD_TILE pfnLoadTile;
     PFN_STORE_TILE pfnStoreTile;
@@ -118,6 +121,14 @@ void SWR_API SwrDestroyContext(
     HANDLE hContext);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Set currently active state context
+/// @param subContextIndex - value from 0 to
+///     SWR_CREATECONTEXT_INFO.maxSubContexts.  Defaults to 0.
+void SWR_API SwrSetActiveSubContext(
+    HANDLE hContext,
+    uint32_t subContextIndex);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Sync cmd. Executes the callback func when all rendering up to this sync
 ///        has been completed
 /// @param hContext - Handle passed back from SwrCreateContext
@@ -127,7 +138,8 @@ void SWR_API SwrSync(
     HANDLE hContext,
     PFN_CALLBACK_FUNC pfnFunc,
     uint64_t userData,
-    uint64_t userData2);
+    uint64_t userData2,
+    uint64_t userData3 = 0);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Blocks until all rendering has been completed.
@@ -195,7 +207,8 @@ void SWR_API SwrSetSoBuffers(
 /// @param pfnVertexFunc - Pointer to shader.
 void SWR_API SwrSetVertexFunc(
     HANDLE hContext,
-    PFN_VERTEX_FUNC pfnVertexFunc);
+    PFN_VERTEX_FUNC pfnVertexFunc,
+    void* pImmediateData);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set frontend state.
@@ -219,7 +232,8 @@ void SWR_API SwrSetGsState(
 /// @param pState - Pointer to geometry shader function
 void SWR_API SwrSetGsFunc(
     HANDLE hContext,
-    PFN_GS_FUNC pfnGsFunc);
+    PFN_GS_FUNC pfnGsFunc,
+    void* pImmediateData);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set compute shader
@@ -245,7 +259,8 @@ void SWR_API SwrSetTsState(
 /// @param pfnFunc - Pointer to shader function
 void SWR_API SwrSetHsFunc(
     HANDLE hContext,
-    PFN_HS_FUNC pfnFunc);
+    PFN_HS_FUNC pfnFunc,
+    void* pImmediateData);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set domain shader
@@ -253,7 +268,8 @@ void SWR_API SwrSetHsFunc(
 /// @param pfnFunc - Pointer to shader function
 void SWR_API SwrSetDsFunc(
     HANDLE hContext,
-    PFN_DS_FUNC pfnFunc);
+    PFN_DS_FUNC pfnFunc,
+    void* pImmediateData);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set depth stencil state
@@ -277,7 +293,8 @@ void SWR_API SwrSetBackendState(
 /// @param pState - Pointer to state.
 void SWR_API SwrSetPixelShaderState(
     HANDLE hContext,
-    SWR_PS_STATE *pState);
+    SWR_PS_STATE *pState,
+    void* pImmediateData);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set blend state

@@ -304,6 +304,144 @@ struct BlendJit : public Builder
         }
     }
 
+    void LogicOpFunc(SWR_LOGIC_OP logicOp, Value* src[4], Value* dst[4], Value* result[4])
+    {
+        // Op: (s == PS output, d = RT contents)
+        switch(logicOp)
+        {
+        case LOGICOP_CLEAR:
+            result[0] = VIMMED1(0);
+            result[1] = VIMMED1(0);
+            result[2] = VIMMED1(0);
+            result[3] = VIMMED1(0);
+            break;
+
+        case LOGICOP_NOR:
+            // ~(s | d)
+            result[0] = XOR(OR(src[0], dst[0]), VIMMED1(0xFFFFFFFF));
+            result[1] = XOR(OR(src[1], dst[1]), VIMMED1(0xFFFFFFFF));
+            result[2] = XOR(OR(src[2], dst[2]), VIMMED1(0xFFFFFFFF));
+            result[3] = XOR(OR(src[3], dst[3]), VIMMED1(0xFFFFFFFF));
+            break;
+
+        case LOGICOP_AND_INVERTED:
+            // ~s & d
+            // todo: use avx andnot instr when I can find the intrinsic to call
+            result[0] = AND(XOR(src[0], VIMMED1(0xFFFFFFFF)), dst[0]);
+            result[1] = AND(XOR(src[1], VIMMED1(0xFFFFFFFF)), dst[1]);
+            result[2] = AND(XOR(src[2], VIMMED1(0xFFFFFFFF)), dst[2]);
+            result[3] = AND(XOR(src[3], VIMMED1(0xFFFFFFFF)), dst[3]);
+            break;
+
+        case LOGICOP_COPY_INVERTED:
+            // ~s
+            result[0] = XOR(src[0], VIMMED1(0xFFFFFFFF));
+            result[1] = XOR(src[1], VIMMED1(0xFFFFFFFF));
+            result[2] = XOR(src[2], VIMMED1(0xFFFFFFFF));
+            result[3] = XOR(src[3], VIMMED1(0xFFFFFFFF));
+            break;
+
+        case LOGICOP_AND_REVERSE:
+            // s & ~d
+            // todo: use avx andnot instr when I can find the intrinsic to call
+            result[0] = AND(XOR(dst[0], VIMMED1(0xFFFFFFFF)), src[0]);
+            result[1] = AND(XOR(dst[1], VIMMED1(0xFFFFFFFF)), src[1]);
+            result[2] = AND(XOR(dst[2], VIMMED1(0xFFFFFFFF)), src[2]);
+            result[3] = AND(XOR(dst[3], VIMMED1(0xFFFFFFFF)), src[3]);
+            break;
+
+        case LOGICOP_INVERT:
+            // ~d
+            result[0] = XOR(dst[0], VIMMED1(0xFFFFFFFF));
+            result[1] = XOR(dst[1], VIMMED1(0xFFFFFFFF));
+            result[2] = XOR(dst[2], VIMMED1(0xFFFFFFFF));
+            result[3] = XOR(dst[3], VIMMED1(0xFFFFFFFF));
+            break;
+
+        case LOGICOP_XOR:
+            // s ^ d
+            result[0] = XOR(src[0], dst[0]);
+            result[1] = XOR(src[1], dst[1]);
+            result[2] = XOR(src[2], dst[2]);
+            result[3] = XOR(src[3], dst[3]);
+            break;
+
+        case LOGICOP_NAND:
+            // ~(s & d)
+            result[0] = XOR(AND(src[0], dst[0]), VIMMED1(0xFFFFFFFF));
+            result[1] = XOR(AND(src[1], dst[1]), VIMMED1(0xFFFFFFFF));
+            result[2] = XOR(AND(src[2], dst[2]), VIMMED1(0xFFFFFFFF));
+            result[3] = XOR(AND(src[3], dst[3]), VIMMED1(0xFFFFFFFF));
+            break;
+
+        case LOGICOP_AND:
+            // s & d
+            result[0] = AND(src[0], dst[0]);
+            result[1] = AND(src[1], dst[1]);
+            result[2] = AND(src[2], dst[2]);
+            result[3] = AND(src[3], dst[3]);
+            break;
+
+        case LOGICOP_EQUIV:
+            // ~(s ^ d)
+            result[0] = XOR(XOR(src[0], dst[0]), VIMMED1(0xFFFFFFFF));
+            result[1] = XOR(XOR(src[1], dst[1]), VIMMED1(0xFFFFFFFF));
+            result[2] = XOR(XOR(src[2], dst[2]), VIMMED1(0xFFFFFFFF));
+            result[3] = XOR(XOR(src[3], dst[3]), VIMMED1(0xFFFFFFFF));
+            break;
+
+        case LOGICOP_NOOP:
+            result[0] = dst[0];
+            result[1] = dst[1];
+            result[2] = dst[2];
+            result[3] = dst[3];
+            break;
+
+        case LOGICOP_OR_INVERTED:
+            // ~s | d
+            result[0] = OR(XOR(src[0], VIMMED1(0xFFFFFFFF)), dst[0]);
+            result[1] = OR(XOR(src[1], VIMMED1(0xFFFFFFFF)), dst[1]);
+            result[2] = OR(XOR(src[2], VIMMED1(0xFFFFFFFF)), dst[2]);
+            result[3] = OR(XOR(src[3], VIMMED1(0xFFFFFFFF)), dst[3]);
+            break;
+
+        case LOGICOP_COPY:
+            result[0] = src[0];
+            result[1] = src[1];
+            result[2] = src[2];
+            result[3] = src[3];
+            break;
+
+        case LOGICOP_OR_REVERSE:
+            // s | ~d
+            result[0] = OR(XOR(dst[0], VIMMED1(0xFFFFFFFF)), src[0]);
+            result[1] = OR(XOR(dst[1], VIMMED1(0xFFFFFFFF)), src[1]);
+            result[2] = OR(XOR(dst[2], VIMMED1(0xFFFFFFFF)), src[2]);
+            result[3] = OR(XOR(dst[3], VIMMED1(0xFFFFFFFF)), src[3]);
+            break;
+
+        case LOGICOP_OR:
+            // s | d
+            result[0] = OR(src[0], dst[0]);
+            result[1] = OR(src[1], dst[1]);
+            result[2] = OR(src[2], dst[2]);
+            result[3] = OR(src[3], dst[3]);
+            break;
+
+        case LOGICOP_SET:
+            result[0] = VIMMED1(0xFFFFFFFF);
+            result[1] = VIMMED1(0xFFFFFFFF);
+            result[2] = VIMMED1(0xFFFFFFFF);
+            result[3] = VIMMED1(0xFFFFFFFF);
+            break;
+
+        default:
+            SWR_ASSERT(false, "Unsupported logic operation: %d", logicOp);
+            result[0] = result[1] = result[2] = result[3] = VIMMED1(0.0f);
+            break;
+        }
+    }
+
     void AlphaTest(const BLEND_COMPILE_STATE& state, Value* pBlendState, Value* pAlpha, Value* ppMask)
     {
         // load uint32_t reference
@@ -501,6 +639,46 @@ struct BlendJit : public Builder
             for (uint32_t i = 0; i < 4; ++i)
             {
                 STORE(result[i], pResult, { i });
+            }
+        }
+        
+        if(state.blendState.logicOpEnable)
+        {
+            const SWR_FORMAT_INFO& info = GetFormatInfo(state.format);
+            SWR_ASSERT(info.type[0] == SWR_TYPE_UINT);
+            Value* vMask[4];
+            for(uint32_t i = 0; i < 4; i++)
+            {
+                switch(info.bpc[i])
+                {
+                case 0: vMask[i] = VIMMED1(0x00000000); break;
+                case 2: vMask[i] = VIMMED1(0x00000003); break;
+                case 5: vMask[i] = VIMMED1(0x0000001F); break;
+                case 6: vMask[i] = VIMMED1(0x0000003F); break;
+                case 8: vMask[i] = VIMMED1(0x000000FF); break;
+                case 10: vMask[i] = VIMMED1(0x000003FF); break;
+                case 11: vMask[i] = VIMMED1(0x000007FF); break;
+                case 16: vMask[i] = VIMMED1(0x0000FFFF); break;
+                case 24: vMask[i] = VIMMED1(0x00FFFFFF); break;
+                case 32: vMask[i] = VIMMED1(0xFFFFFFFF); break;
+                default:
+                    vMask[i] = VIMMED1(0x0);
+                    SWR_ASSERT(0, "Unsupported bpc for logic op\n");
+                    break;
+                }
+                src[i] = BITCAST(src[i], mSimdInt32Ty);//, vMask[i]);
+                dst[i] = BITCAST(dst[i], mSimdInt32Ty);
+            }
+
+            LogicOpFunc(state.blendState.logicOpFunc, src, dst, result);
+
+            // store results out
+            for(uint32_t i = 0; i < 4; ++i)
+            {
+                // clear upper bits from PS output not in RT format after doing logic op
+                result[i] = AND(result[i], vMask[i]);
+
+                STORE(BITCAST(result[i], mSimdFP32Ty), pResult, {i});
             }
         }
 

@@ -163,6 +163,30 @@ UINT pdep_u32(UINT a, UINT mask)
 #endif
 }
 
+INLINE
+UINT pext_u32(UINT a, UINT mask)
+{
+#if KNOB_ARCH==KNOB_ARCH_AVX2
+    return _pext_u32(a, mask);
+#else
+    UINT result = 0;
+    DWORD maskIndex;
+    uint32_t currentBit = 0;
+    while (_BitScanForward(&maskIndex, mask))
+    {
+        // 1. isolate lowest set bit of mask
+        const UINT lowest = 1 << maskIndex;
+
+        // 2. copy bit from mask
+        result |= ((a & lowest) > 0) << currentBit++;
+
+        // 3. clear lowest bit
+        mask &= ~lowest;
+    }
+    return result;
+#endif
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Computes the tileID for 2D tiled surfaces
 /// @param pitch - surface pitch in bytes
