@@ -76,7 +76,8 @@ ast_type_qualifier::has_layout() const
           || this->flags.q.explicit_location
           || this->flags.q.explicit_index
           || this->flags.q.explicit_binding
-          || this->flags.q.explicit_offset;
+          || this->flags.q.explicit_offset
+          || this->flags.q.explicit_stream;
 }
 
 bool
@@ -206,11 +207,6 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
             /* Assign default global stream value */
             this->flags.q.stream = 1;
             this->stream = state->out_qualifier->stream;
-         }
-      } else {
-         if (q.flags.q.explicit_stream) {
-            _mesa_glsl_error(loc, state,
-                             "duplicate layout `stream' qualifier");
          }
       }
    }
