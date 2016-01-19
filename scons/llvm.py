@@ -98,6 +98,7 @@ def generate(env):
             print 'scons: LLVM version %s found, but %s is required' % (llvm_version, required_llvm_version)
             return
 
+        env['llvm_includedir'] = os.path.join(llvm_dir, 'include')
         env.Prepend(CPPPATH = [os.path.join(llvm_dir, 'include')])
         env.AppendUnique(CPPDEFINES = [
             '__STDC_LIMIT_MACROS', 
@@ -128,7 +129,8 @@ def generate(env):
                 'LLVMX86Info', 'LLVMX86AsmPrinter', 'LLVMX86Utils',
                 'LLVMMCJIT', 'LLVMTarget', 'LLVMExecutionEngine',
                 'LLVMRuntimeDyld', 'LLVMObject', 'LLVMMCParser',
-                'LLVMBitReader', 'LLVMMC', 'LLVMCore', 'LLVMSupport'
+                'LLVMBitReader', 'LLVMMC', 'LLVMCore', 'LLVMSupport',
+                'LLVMIRReader', 'LLVMAsmParser', 'LLVMX86AsmParser'
             ])
         elif llvm_version >= distutils.version.LooseVersion('3.5'):
             env.Prepend(LIBS = [
@@ -198,12 +200,14 @@ def generate(env):
                 pass
             env.MergeFlags(cppflags)
 
+            env['llvm_includedir'] = env.backtick('llvm-config --includedir').rstrip()
+
             # Match llvm --fno-rtti flag
             cxxflags = env.backtick('llvm-config --cxxflags').split()
             if '-fno-rtti' in cxxflags:
                 env.Append(CXXFLAGS = ['-fno-rtti'])
 
-            components = ['engine', 'mcjit', 'bitwriter', 'x86asmprinter', 'mcdisassembler']
+            components = ['engine', 'mcjit', 'bitwriter', 'x86asmprinter', 'mcdisassembler', 'irreader']
 
             env.ParseConfig('llvm-config --libs ' + ' '.join(components))
             env.ParseConfig('llvm-config --ldflags')
