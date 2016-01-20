@@ -57,9 +57,7 @@ struct swr_fragment_shader {
 struct swr_vertex_element_state {
    FETCH_COMPILE_STATE fsState;
    PFN_FETCH_FUNC fsFunc;
-#if 1 //BMCDEBUG
    uint32_t stream_pitch[PIPE_MAX_ATTRIBS];
-#endif
 };
 
 struct swr_blend_state {

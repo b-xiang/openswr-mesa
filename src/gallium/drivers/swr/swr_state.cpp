@@ -791,42 +791,24 @@ swr_update_derived(struct swr_context *ctx,
       SWR_VIEWPORT *vp = &ctx->current.vp;
       SWR_VIEWPORT_MATRIX *vpm = &ctx->current.vpm;
 
-      const float scale_x = fabs(state->scale[0]);
-      const float scale_y = fabs(state->scale[1]);
-      const float scale_z = fabs(state->scale[2]);
-
-      vp->x = state->translate[0] - scale_x;
-      vp->width = state->translate[0] + scale_x;
-      vp->y = state->translate[1] - scale_y;
-      vp->height = state->translate[1] + scale_y;
+      vp->x = state->translate[0] - state->scale[0];
+      vp->width = state->translate[0] + state->scale[0];
+      vp->y = state->translate[1] - fabs(state->scale[1]);
+      vp->height = state->translate[1] + fabs(state->scale[1]);
       if (ctx->rasterizer->clip_halfz == 0) {
-         vp->minZ = state->translate[2] - scale_z;
-         vp->maxZ = state->translate[2] + scale_z;
+         vp->minZ = state->translate[2] - state->scale[2];
+         vp->maxZ = state->translate[2] + state->scale[2];
       } else {
          vp->minZ = state->translate[2];
-         vp->maxZ = state->translate[2] + scale_z;
+         vp->maxZ = state->translate[2] + state->scale[2];
       }
 
-      /* Flip viewport for all targets except samplable textures. */
-      /* XXX This may not be sufficient for multiple rendertargets */
-      struct pipe_surface *cb = ctx->framebuffer.cbufs[0];
-      if (cb &&
-          !(swr_resource(cb->texture)->base.bind & PIPE_BIND_SAMPLER_VIEW)) {
-         /* Flip y and y-translate in the viewport matrix. */
-         vpm->m00 = (vp->width - vp->x) / 2.0f;
-         vpm->m11 = (vp->y - vp->height) / 2.0f;
-         vpm->m22 = (vp->maxZ - vp->minZ) / 2.0f;
-         vpm->m30 = vp->x + vpm->m00;
-         vpm->m31 = vp->height + vpm->m11;
-         vpm->m32 = vp->minZ + vpm->m22;
-      } else {
-         vpm->m00 = (vp->width - vp->x) / 2.0f;
-         vpm->m11 = (vp->height - vp->y) / 2.0f;
-         vpm->m22 = (vp->maxZ - vp->minZ) / 2.0f;
-         vpm->m30 = vp->x + vpm->m00;
-         vpm->m31 = vp->y + vpm->m11;
-         vpm->m32 = vp->minZ + vpm->m22;
-      }
+      vpm->m00 = state->scale[0];
+      vpm->m11 = state->scale[1];
+      vpm->m22 = state->scale[2];
+      vpm->m30 = state->translate[0];
+      vpm->m31 = state->translate[1];
+      vpm->m32 = state->translate[2];
 
       /* Now that the matrix is calculated, clip the view coords to screen
        * size.  OpenGL allows for -ve x,y in the viewport.
