@@ -581,14 +581,16 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
          ctx->swrContext); // BMCDEBUG, don't SwrWaitForIdle!!! Use a fence.
    }
 
+   /*
+    * Free resource primary surface.  If resource is display target, winsys
+    * manages the buffer and will free it on displaytarget_destroy.
+    */
    if (res->display_target) {
       /* display target */
       struct sw_winsys *winsys = screen->winsys;
       winsys->displaytarget_destroy(winsys, res->display_target);
-   }
-
-   // this doesn't need to be freed if the winsys already freed it
-   // _aligned_free(res->swr.pBaseAddress);
+   } else
+      _aligned_free(res->swr.pBaseAddress);
 
    _aligned_free(res->secondary.pBaseAddress);
 
@@ -604,22 +606,14 @@ swr_flush_frontbuffer(struct pipe_screen *p_screen,
                       void *context_private,
                       struct pipe_box *sub_box)
 {
-   // SWR_SURFACE_STATE &colorBuffer = swr_resource(resource)->swr;
-
    struct swr_screen *screen = swr_screen(p_screen);
    struct sw_winsys *winsys = screen->winsys;
    struct swr_resource *res = swr_resource(resource);
 
-   // /* Ensure fence set at flush is finished, before reading frame buffer */
+   /* Ensure fence set at flush is finished, before reading frame buffer */
    swr_fence_finish(p_screen, screen->flush_fence, 0);
 
    SwrEndFrame(swr_context((pipe_context *)res->bound_to_context));
-
-   // void *map = winsys->displaytarget_map(
-   //    winsys, res->display_target, PIPE_TRANSFER_WRITE);
-   // memcpy(
-   //    map, colorBuffer.pBaseAddress, colorBuffer.pitch * colorBuffer.height);
-   // winsys->displaytarget_unmap(winsys, res->display_target);
 
    assert(res->display_target);
    if (res->display_target)
