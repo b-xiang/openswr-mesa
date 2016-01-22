@@ -59,6 +59,39 @@ template <> struct hash<BLEND_COMPILE_STATE> {
 };
 };
 
+struct swr_jit_texture {
+   uint32_t width; // same as number of elements
+   uint32_t height;
+   uint32_t depth; // doubles as array size
+   uint32_t first_level;
+   uint32_t last_level;
+   const void *base_ptr;
+   uint32_t row_stride[PIPE_MAX_TEXTURE_LEVELS];
+   uint32_t img_stride[PIPE_MAX_TEXTURE_LEVELS];
+   uint32_t mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
+};
+
+struct swr_jit_sampler {
+   float min_lod;
+   float max_lod;
+   float lod_bias;
+   float border_color[4];
+};
+
+struct swr_draw_context {
+   const float *constantVS[PIPE_MAX_CONSTANT_BUFFERS];
+   unsigned num_constantsVS[PIPE_MAX_CONSTANT_BUFFERS];
+   const float *constantFS[PIPE_MAX_CONSTANT_BUFFERS];
+   unsigned num_constantsFS[PIPE_MAX_CONSTANT_BUFFERS];
+
+   swr_jit_texture texturesVS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
+   swr_jit_sampler samplersVS[PIPE_MAX_SAMPLERS];
+   swr_jit_texture texturesFS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
+   swr_jit_sampler samplersFS[PIPE_MAX_SAMPLERS];
+
+   SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
+};
+
 struct swr_context {
    struct pipe_context pipe; /**< base class */
 
@@ -117,42 +150,11 @@ struct swr_context {
    /* Shadows of current SWR API DrawState */
    struct swr_shadow_state current;
 
+   /* SWR private state - draw context */
+   struct swr_draw_context swrDC;
+
    unsigned dirty; /**< Mask of SWR_NEW_x flags */
 };
-
-struct swr_jit_texture {
-   uint32_t width; // same as number of elements
-   uint32_t height;
-   uint32_t depth; // doubles as array size
-   uint32_t first_level;
-   uint32_t last_level;
-   const void *base_ptr;
-   uint32_t row_stride[PIPE_MAX_TEXTURE_LEVELS];
-   uint32_t img_stride[PIPE_MAX_TEXTURE_LEVELS];
-   uint32_t mip_offsets[PIPE_MAX_TEXTURE_LEVELS];
-};
-
-struct swr_jit_sampler {
-   float min_lod;
-   float max_lod;
-   float lod_bias;
-   float border_color[4];
-};
-
-struct swr_draw_context {
-   const float *constantVS[PIPE_MAX_CONSTANT_BUFFERS];
-   unsigned num_constantsVS[PIPE_MAX_CONSTANT_BUFFERS];
-   const float *constantFS[PIPE_MAX_CONSTANT_BUFFERS];
-   unsigned num_constantsFS[PIPE_MAX_CONSTANT_BUFFERS];
-
-   swr_jit_texture texturesVS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
-   swr_jit_sampler samplersVS[PIPE_MAX_SAMPLERS];
-   swr_jit_texture texturesFS[PIPE_MAX_SHADER_SAMPLER_VIEWS];
-   swr_jit_sampler samplersFS[PIPE_MAX_SAMPLERS];
-
-   SWR_SURFACE_STATE renderTargets[SWR_NUM_ATTACHMENTS];
-};
-
 
 static INLINE struct swr_context *
 swr_context(struct pipe_context *pipe)

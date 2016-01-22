@@ -93,6 +93,10 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    if (ctx->dirty)
       swr_update_derived(ctx, info);
 
+   swr_draw_context *pDC =
+      (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+   memcpy(pDC, &ctx->swrDC, sizeof(swr_draw_context));
+
    if (ctx->vs->pipe.stream_output.num_outputs) {
       if (!ctx->vs->soFunc[info->mode]) {
          STREAMOUT_COMPILE_STATE state = {0};
@@ -222,8 +226,7 @@ swr_store_render_target(struct swr_context *ctx,
                         enum SWR_TILE_STATE post_tile_state,
                         struct SWR_SURFACE_STATE *surface)
 {
-   struct swr_draw_context *pDC =
-      (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+   struct swr_draw_context *pDC = &ctx->swrDC;
    struct SWR_SURFACE_STATE *renderTarget = &pDC->renderTargets[attachment];
 
    /* If the passed in surface isn't already attached, it will be attached and
@@ -251,6 +254,10 @@ swr_store_render_target(struct swr_context *ctx,
          ctx->current.rastState.scissorEnable = FALSE;
          SwrSetRastState(ctx->swrContext, &ctx->current.rastState);
       }
+
+      swr_draw_context *pPrivateDC =
+         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      memcpy(pPrivateDC, pDC, sizeof(swr_draw_context));
 
       SwrStoreTiles(ctx->swrContext,
                     (enum SWR_RENDERTARGET_ATTACHMENT)attachment,

@@ -697,8 +697,7 @@ swr_update_derived(struct swr_context *ctx,
       if (changed) {
          /* Update actual SWR core attachments, or clear those no longer
           * attached */
-         swr_draw_context *pDC =
-            (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+         swr_draw_context *pDC = &ctx->swrDC;
          SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
          for (i = 0; i < SWR_NUM_ATTACHMENTS; i++) {
             if ((uintptr_t)ctx->current.attachment[i]
@@ -994,8 +993,7 @@ swr_update_derived(struct swr_context *ctx,
 
    /* JIT sampler state */
    if (ctx->dirty & SWR_NEW_SAMPLER) {
-      swr_draw_context *pDC =
-         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      swr_draw_context *pDC = &ctx->swrDC;
 
       for (unsigned i = 0; i < key.nr_samplers; i++) {
          const struct pipe_sampler_state *sampler =
@@ -1012,8 +1010,7 @@ swr_update_derived(struct swr_context *ctx,
 
    /* JIT sampler view state */
    if (ctx->dirty & SWR_NEW_SAMPLER_VIEW) {
-      swr_draw_context *pDC =
-         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      swr_draw_context *pDC = &ctx->swrDC;
 
       for (unsigned i = 0; i < key.nr_sampler_views; i++) {
          struct pipe_sampler_view *view =
@@ -1044,8 +1041,7 @@ swr_update_derived(struct swr_context *ctx,
 
    /* VertexShader Constants */
    if (ctx->dirty & SWR_NEW_VSCONSTANTS) {
-      swr_draw_context *pDC =
-         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      swr_draw_context *pDC = &ctx->swrDC;
 
       for (UINT i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
          const pipe_constant_buffer *cb =
@@ -1070,8 +1066,7 @@ swr_update_derived(struct swr_context *ctx,
 
    /* FragmentShader Constants */
    if (ctx->dirty & SWR_NEW_FSCONSTANTS) {
-      swr_draw_context *pDC =
-         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+      swr_draw_context *pDC = &ctx->swrDC;
 
       for (UINT i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
          const pipe_constant_buffer *cb =
