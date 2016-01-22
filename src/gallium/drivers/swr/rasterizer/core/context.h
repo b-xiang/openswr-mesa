@@ -33,6 +33,7 @@
 
 #include <condition_variable>
 #include <algorithm>
+#include <atomic>
 
 #include "core/api.h"
 #include "core/utils.h"
@@ -374,7 +375,7 @@ struct DRAW_STATE
     BACKEND_FUNCS backendFuncs;
     PFN_PROCESS_PRIMS pfnProcessPrims;
 
-    Arena    arena;     // This should only be used by API thread.
+    Arena*    pArena;     // This should only be used by API thread.
 };
 
 // Draw Context
@@ -393,6 +394,10 @@ struct DRAW_CONTEXT
     volatile OSALIGNLINE(bool) inUse;
     volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
 
+    // Have all worker threads moved past draw in DC ring?
+    OSALIGNLINE(std::atomic<uint32_t>) threadsDoneFE;
+    OSALIGNLINE(std::atomic<uint32_t>) threadsDoneBE;
+
     uint64_t dependency;
 
     MacroTileMgr* pTileMgr;
@@ -402,7 +407,7 @@ struct DRAW_CONTEXT
     DispatchQueue* pDispatch;               // Queue for thread groups. (isCompute)
 
     DRAW_STATE* pState;
-    Arena    arena;
+    Arena*    pArena;
 
     uint8_t* pSpillFill[KNOB_MAX_NUM_THREADS];  // Scratch space used for spill fills.
 };
@@ -471,16 +476,9 @@ struct SWR_CONTEXT
     // Draw Contexts will get a unique drawId generated from this
     uint64_t nextDrawId;
 
-    // Last retired drawId. Read/written only be API thread
-    uint64_t LastRetiredId;
-
     // most recent draw id enqueued by the API thread
     // written by api thread, read by multiple workers
     OSALIGNLINE(volatile uint64_t) DrawEnqueued;
-
-    // Current FE status of each worker.
-    OSALIGNLINE(volatile uint64_t) WorkerFE[KNOB_MAX_NUM_THREADS];
-    OSALIGNLINE(volatile uint64_t) WorkerBE[KNOB_MAX_NUM_THREADS];
 
     DRIVER_TYPE driverType;
 

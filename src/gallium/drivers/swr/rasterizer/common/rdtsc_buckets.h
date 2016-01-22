@@ -32,6 +32,7 @@
 #include "os.h"
 #include <vector>
 #include <mutex>
+#include <sstream>
 
 #include "rdtsc_buckets_shared.h"
 
@@ -46,7 +47,17 @@ extern THREAD UINT tlsThreadId;
 class BucketManager
 {
 public:
-    BucketManager(bool enableThreadViz) : mThreadViz(enableThreadViz) {}
+    BucketManager(bool enableThreadViz) : mThreadViz(enableThreadViz)
+    {
+        if (mThreadViz)
+        {
+            uint32_t pid = GetCurrentProcessId();
+            std::stringstream str;
+            str << "threadviz." << pid;
+            mThreadVizDir = str.str();
+            CreateDirectory(mThreadVizDir.c_str(), NULL);
+        }
+    }
 
     // removes all registered thread data
     void ClearThreads()
@@ -214,4 +225,5 @@ private:
 
     // enable threadviz
     bool mThreadViz{ false };
+    std::string mThreadVizDir;
 };

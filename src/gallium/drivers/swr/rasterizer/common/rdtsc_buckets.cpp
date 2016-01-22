@@ -51,9 +51,9 @@ void BucketManager::RegisterThread(const std::string& name)
     // open threadviz file if enabled
     if (mThreadViz)
     {
-        char fileName[255];
-        sprintf(fileName, "threadviz_thread.%d.dat", newThread.id);
-        newThread.vizFile = fopen(fileName, "wb");
+        std::stringstream ss;
+        ss << mThreadVizDir << "\\threadviz_thread." << newThread.id << ".dat";
+        newThread.vizFile = fopen(ss.str().c_str(), "wb");
     }
 
     // store new thread
@@ -154,7 +154,10 @@ void BucketManager::DumpThreadViz()
     mThreadMutex.unlock();
 
     // dump bucket descriptions
-    FILE* f = fopen("threadviz_buckets.dat", "wb");
+    std::stringstream ss;
+    ss << mThreadVizDir << "\\threadviz_buckets.dat";
+
+    FILE* f = fopen(ss.str().c_str(), "wb");
     for (auto& bucket : mBuckets)
     {
         Serialize(f, bucket);

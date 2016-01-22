@@ -76,12 +76,12 @@ HANDLE SwrCreateContext(
 
     for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
     {
-        pContext->dcRing[dc].arena.Init();
+        pContext->dcRing[dc].pArena = new Arena();
         pContext->dcRing[dc].inUse = false;
-        pContext->dcRing[dc].pTileMgr = new MacroTileMgr(pContext->dcRing[dc].arena);
+        pContext->dcRing[dc].pTileMgr = new MacroTileMgr(*(pContext->dcRing[dc].pArena));
         pContext->dcRing[dc].pDispatch = new DispatchQueue(); /// @todo Could lazily allocate this if Dispatch seen.
 
-        pContext->dsRing[dc].arena.Init();
+        pContext->dsRing[dc].pArena = new Arena();
     }
 
     if (!KNOB_SINGLE_THREADED)
@@ -108,16 +108,7 @@ HANDLE SwrCreateContext(
         pContext->pScratch[i] = (uint8_t*)_aligned_malloc((32 * 1024), KNOB_SIMD_WIDTH * 4);
     }
 
-    pContext->LastRetiredId = 0;
     pContext->nextDrawId = 1;
-
-    // workers start at draw 1
-    for (uint32_t i = 0; i < KNOB_MAX_NUM_THREADS; ++i)
-    {
-        pContext->WorkerFE[i] = 1;
-        pContext->WorkerBE[i] = 1;
-    }
-
     pContext->DrawEnqueued = 1;
 
     // State setup AFTER context is fully initialized
@@ -145,8 +136,8 @@ void SwrDestroyContext(HANDLE hContext)
     // free the fifos
     for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
     {
-        pContext->dcRing[i].arena.Reset();
-        pContext->dsRing[i].arena.Reset();
+        delete pContext->dcRing[i].pArena;
+        delete pContext->dsRing[i].pArena;
         delete(pContext->dcRing[i].pTileMgr);
         delete(pContext->dcRing[i].pDispatch);
     }
@@ -195,17 +186,14 @@ bool StillDrawing(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC)
     if (pDC->doneFE == true)
     {
         // ensure workers have all moved passed this draw
-        for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
+        if (pDC->threadsDoneFE != pContext->NumWorkerThreads)
         {
-            if (pContext->WorkerFE[i] <= pDC->drawId)
-            {
-                return true;
-            }
+            return true;
+        }
 
-            if (pContext->WorkerBE[i] <= pDC->drawId)
-            {
-                return true;
-            }
+        if (pDC->threadsDoneBE != pContext->NumWorkerThreads)
+        {
+            return true;
         }
 
         pDC->inUse = false;    // all work is done.
@@ -214,47 +202,15 @@ bool StillDrawing(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC)
     return pDC->inUse;
 }
 
-void UpdateLastRetiredId(SWR_CONTEXT *pContext)
-{
-    uint64_t head = pContext->LastRetiredId + 1;
-    uint64_t tail = pContext->DrawEnqueued;
-
-    // There's no guarantee the DRAW_CONTEXT associated with (LastRetiredId+1) is still valid.
-    // This is because the update to LastRetiredId can fall behind causing the range from LastRetiredId
-    // to DrawEnqueued to exceed the size of the DRAW_CONTEXT ring. Check for this and manually increment 
-    // the head to the oldest entry of the DRAW_CONTEXT ring
-    if ((tail - head) > KNOB_MAX_DRAWS_IN_FLIGHT - 1)
-    {
-        head = tail - KNOB_MAX_DRAWS_IN_FLIGHT + 1;
-    }
-
-    DRAW_CONTEXT *pDC = &pContext->dcRing[head % KNOB_MAX_DRAWS_IN_FLIGHT];
-    while ((head < tail) && !StillDrawing(pContext, pDC))
-    {
-        pContext->LastRetiredId = pDC->drawId;
-        head++;
-        pDC = &pContext->dcRing[head % KNOB_MAX_DRAWS_IN_FLIGHT];
-    }
-}
-
-void WaitForDependencies(SWR_CONTEXT *pContext, uint64_t drawId)
-{
-    if (!KNOB_SINGLE_THREADED)
-    {
-        while (drawId > pContext->LastRetiredId)
-        {
-            UpdateLastRetiredId(pContext);
-            _mm_pause();
-        }
-    }
-}
-
 void QueueDraw(SWR_CONTEXT *pContext)
 {
+    SWR_ASSERT(pContext->pCurDrawContext->inUse == false);
+    pContext->pCurDrawContext->inUse = true;
+
     _ReadWriteBarrier();
     {
         std::unique_lock<std::mutex> lock(pContext->WaitLock);
-        pContext->DrawEnqueued ++;
+        pContext->DrawEnqueued++;
     }
 
     if (KNOB_SINGLE_THREADED)
@@ -264,8 +220,9 @@ void QueueDraw(SWR_CONTEXT *pContext)
         _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
 
         std::unordered_set<uint32_t> lockedTiles;
-        WorkOnFifoFE(pContext, 0, pContext->WorkerFE[0], 0);
-        WorkOnFifoBE(pContext, 0, pContext->WorkerBE[0], lockedTiles);
+        uint64_t curDraw[2] = { pContext->pCurDrawContext->drawId, pContext->pCurDrawContext->drawId };
+        WorkOnFifoFE(pContext, 0, curDraw[0], 0);
+        WorkOnFifoBE(pContext, 0, curDraw[1], lockedTiles);
 
         // restore csr
         _mm_setcsr(mxcsr);
@@ -285,6 +242,9 @@ void QueueDraw(SWR_CONTEXT *pContext)
 ///@todo Combine this with QueueDraw
 void QueueDispatch(SWR_CONTEXT *pContext)
 {
+    SWR_ASSERT(pContext->pCurDrawContext->inUse == false);
+    pContext->pCurDrawContext->inUse = true;
+
     _ReadWriteBarrier();
     {
         std::unique_lock<std::mutex> lock(pContext->WaitLock);
@@ -297,7 +257,8 @@ void QueueDispatch(SWR_CONTEXT *pContext)
         uint32_t mxcsr = _mm_getcsr();
         _mm_setcsr(mxcsr | _MM_FLUSH_ZERO_ON | _MM_DENORMALS_ZERO_ON);
 
-        WorkOnCompute(pContext, 0, pContext->WorkerBE[0]);
+        uint64_t curDispatch = pContext->pCurDrawContext->drawId;
+        WorkOnCompute(pContext, 0, curDispatch);
 
         // restore csr
         _mm_setcsr(mxcsr);
@@ -325,9 +286,6 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         DRAW_CONTEXT* pCurDrawContext = &pContext->dcRing[dcIndex];
         pContext->pCurDrawContext = pCurDrawContext;
 
-        // Update LastRetiredId
-        UpdateLastRetiredId(pContext);
-
         // Need to wait until this draw context is available to use.
         while (StillDrawing(pContext, pCurDrawContext))
         {
@@ -338,7 +296,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         uint32_t dsIndex = pContext->curStateId % KNOB_MAX_DRAWS_IN_FLIGHT;
         pCurDrawContext->pState = &pContext->dsRing[dsIndex];
 
-        Arena& stateArena = pCurDrawContext->pState->arena;
+        Arena& stateArena = *(pCurDrawContext->pState->pArena);
 
         // Copy previous state to current state.
         if (pContext->pPrevDrawContext)
@@ -352,14 +310,8 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
             {
                 CopyState(*pCurDrawContext->pState, *pPrevDrawContext->pState);
 
-                stateArena.Reset();    // Reset memory.
-
-                // Copy private state to new context.
-                if (pPrevDrawContext->pState->pPrivateState != nullptr)
-                {
-                    pCurDrawContext->pState->pPrivateState = stateArena.AllocAligned(pContext->privateStateSize, KNOB_SIMD_WIDTH*sizeof(float));
-                    memcpy(pCurDrawContext->pState->pPrivateState, pPrevDrawContext->pState->pPrivateState, pContext->privateStateSize);
-                }
+                stateArena.Reset(true);    // Reset memory.
+                pCurDrawContext->pState->pPrivateState = nullptr;
 
                 pContext->curStateId++;  // Progress state ring index forward.
             }
@@ -377,7 +329,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         }
 
         pCurDrawContext->dependency = 0;
-        pCurDrawContext->arena.Reset();
+        pCurDrawContext->pArena->Reset();
         pCurDrawContext->pContext = pContext;
         pCurDrawContext->isCompute = false; // Dispatch has to set this to true.
         pCurDrawContext->inUse = false;
@@ -385,6 +337,8 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->doneCompute = false;
         pCurDrawContext->doneFE = false;
         pCurDrawContext->FeLock = 0;
+        pCurDrawContext->threadsDoneFE = 0;
+        pCurDrawContext->threadsDoneBE = 0;
 
         pCurDrawContext->pTileMgr->initialize();
 
@@ -456,8 +410,6 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    pDC->inUse = true;
-
     pDC->FeWork.type = SYNC;
     pDC->FeWork.pfnWork = ProcessSync;
     pDC->FeWork.desc.sync.pfnCallbackFunc = pfnFunc;
@@ -479,9 +431,16 @@ void SwrWaitForIdle(HANDLE hContext)
     SWR_CONTEXT *pContext = GetContext(hContext);
 
     RDTSC_START(APIWaitForIdle);
-    // Wait on the previous DrawContext's drawId, as this function doesn't queue anything.
-    if (pContext->pPrevDrawContext)
-        WaitForDependencies(pContext, pContext->pPrevDrawContext->drawId);
+    // Wait for all work to complete.
+    for (uint32_t dc = 0; dc < KNOB_MAX_DRAWS_IN_FLIGHT; ++dc)
+    {
+        DRAW_CONTEXT *pDC = &pContext->dcRing[dc];
+
+        while (StillDrawing(pContext, pDC))
+        {
+            _mm_pause();
+        }
+    }
     RDTSC_STOP(APIWaitForIdle, 1, 0);
 }
 
@@ -977,8 +936,6 @@ void InitDraw(
         SetupMacroTileScissors(pDC);
         SetupPipeline(pDC);
     }
-
-    pDC->inUse = true;    // We are using this one now.
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1349,7 +1306,6 @@ void SwrInvalidateTiles(
 {
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
-    pDC->inUse = true;
 
     // Queue a load to the hottile
     pDC->FeWork.type = INVALIDATETILES;
@@ -1377,12 +1333,11 @@ void SwrDispatch(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     pDC->isCompute = true;      // This is a compute context.
-    pDC->inUse = true;
 
     // Ensure spill fill pointers are initialized to nullptr.
     memset(pDC->pSpillFill, 0, sizeof(pDC->pSpillFill));
 
-    COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->arena.AllocAligned(sizeof(COMPUTE_DESC), 64);
+    COMPUTE_DESC* pTaskData = (COMPUTE_DESC*)pDC->pArena->AllocAligned(sizeof(COMPUTE_DESC), 64);
 
     pTaskData->threadGroupCountX = threadGroupCountX;
     pTaskData->threadGroupCountY = threadGroupCountY;
@@ -1406,7 +1361,6 @@ void SwrStoreTiles(
 
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
-    pDC->inUse = true;
 
     SetupMacroTileScissors(pDC);
 
@@ -1435,8 +1389,6 @@ void SwrClearRenderTarget(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
     SetupMacroTileScissors(pDC);
-
-    pDC->inUse = true;
 
     CLEAR_FLAGS flags;
     flags.mask = clearMask;
@@ -1472,7 +1424,7 @@ VOID* SwrGetPrivateContextState(
 
     if (pState->pPrivateState == nullptr)
     {
-        pState->pPrivateState = pState->arena.AllocAligned(pContext->privateStateSize, KNOB_SIMD_WIDTH*sizeof(float));
+        pState->pPrivateState = pState->pArena->AllocAligned(pContext->privateStateSize, KNOB_SIMD_WIDTH*sizeof(float));
     }
 
     return pState->pPrivateState;
@@ -1494,7 +1446,7 @@ VOID* SwrAllocDrawContextMemory(
     SWR_CONTEXT* pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    return pDC->pState->arena.AllocAligned(size, align);
+    return pDC->pState->pArena->AllocAligned(size, align);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1512,8 +1464,6 @@ void SwrGetStats(
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
-
-    pDC->inUse = true;
 
     pDC->FeWork.type = QUERYSTATS;
     pDC->FeWork.pfnWork = ProcessQueryStats;

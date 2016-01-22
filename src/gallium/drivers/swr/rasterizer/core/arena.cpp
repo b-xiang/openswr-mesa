@@ -36,6 +36,12 @@
 
 #include <cmath>
 
+Arena::Arena()
+    : m_pCurBlock(nullptr), m_size(0)
+{
+    m_pMutex = new std::mutex();
+}
+
 Arena::~Arena()
 {
     Reset();        // Reset just in case to avoid leaking memory.
@@ -49,6 +55,7 @@ Arena::~Arena()
     delete m_pMutex;
 }
 
+///@todo Remove this when all users have stopped using this.
 void Arena::Init()
 {
     m_size = 0;
@@ -77,7 +84,7 @@ void* Arena::AllocAligned(size_t size, size_t align)
     }
 
     static const size_t ArenaBlockSize = 1024*1024;
-    size_t blockSize = std::max(m_size, std::max(size, ArenaBlockSize));
+    size_t blockSize = std::max(m_size + ArenaBlockSize, std::max(size, ArenaBlockSize));
     blockSize = AlignUp(blockSize, KNOB_SIMD_WIDTH*4);
 
     void *pMem = _aligned_malloc(blockSize, KNOB_SIMD_WIDTH*4);    // Arena blocks are always simd byte aligned.
@@ -130,7 +137,7 @@ void* Arena::AllocSync(size_t size)
     return pAlloc;
 }
 
-void Arena::Reset()
+void Arena::Reset(bool removeAll)
 {
     if (m_pCurBlock)
     {
@@ -145,6 +152,13 @@ void Arena::Reset()
 
             _aligned_free(pBlock->pMem);
             delete pBlock;
+        }
+
+        if (removeAll)
+        {
+            _aligned_free(m_pCurBlock->pMem);
+            delete m_pCurBlock;
+            m_pCurBlock = nullptr;
         }
     }
 

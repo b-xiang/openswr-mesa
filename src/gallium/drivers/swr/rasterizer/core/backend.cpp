@@ -83,7 +83,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     if (pDC->pSpillFill[workerId] == nullptr)
     {
         ///@todo Add state which indicates the spill fill size.
-        pDC->pSpillFill[workerId] = (uint8_t*)pDC->arena.AllocAlignedSync(4096 * 1024, sizeof(float) * 8);
+        pDC->pSpillFill[workerId] = (uint8_t*)pDC->pArena->AllocAlignedSync(4096 * 1024, sizeof(float) * 8);
     }
 
     const API_STATE& state = GetApiState(pDC);
@@ -878,10 +878,14 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
     psContext.pRecipW = work.pRecipW;
+    psContext.pSamplePosX = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosX;
+    psContext.pSamplePosY = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosY;
     psContext.pImmediateData = (float*)state.pPsImmediateData;
 
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
+        // UL pixel corner
+        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
         // pixel center
         psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
 
@@ -895,6 +899,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
             if(coverageMask & MASK)
             {
                 RDTSC_START(BEBarycentric);
+                psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
                 // pixel center
                 psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
 
@@ -1067,19 +1072,20 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     psContext.I = work.I;
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
-    psContext.pSamplePos = work.pSamplePos;
+    psContext.pSamplePosX = (const float*)&MultisampleTraits<sampleCount>::samplePosX;
+    psContext.pSamplePosY = (const float*)&MultisampleTraits<sampleCount>::samplePosY;
     const uint32_t numSamples = MultisampleTraits<sampleCount>::numSamples;
 
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         // UL pixel corner
-        simdscalar vYSamplePosUL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
         // pixel center
         psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
         
         for (uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
-            simdscalar vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+            psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
             // pixel center
             psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
 
@@ -1096,7 +1102,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, vXSamplePosUL, vYSamplePosUL);
+                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
@@ -1107,8 +1113,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                     RDTSC_START(BEBarycentric);
 
                     // calculate per sample positions
-                    psContext.vX.sample = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
-                    psContext.vY.sample = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
+                    psContext.vX.sample = _simd_add_ps(psContext.vX.UL, MultisampleTraits<sampleCount>::vX(sample));
+                    psContext.vY.sample = _simd_add_ps(psContext.vY.UL, MultisampleTraits<sampleCount>::vY(sample));
                     
                     simdmask coverageMask = work.coverageMask[sample] & MASK;
                     simdscalar vCoverageMask = vMask(coverageMask);
@@ -1277,7 +1283,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.I = work.I;
     psContext.J = work.J;
     psContext.recipDet = work.recipDet;
-    psContext.pSamplePos = work.pSamplePos;
+    psContext.pSamplePosX = (const float*)&MultisampleTraits<sampleCount>::samplePosX;
+    psContext.pSamplePosY = (const float*)&MultisampleTraits<sampleCount>::samplePosY;
     psContext.sampleIndex = 0;
 
     uint32_t numCoverageSamples;
@@ -1309,12 +1316,12 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
-        simdscalar vYSamplePosUL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
+        psContext.vY.UL = _simd_add_ps(vQuadULOffsetsY, _simd_set1_ps((float)yy));
         psContext.vY.center = _simd_add_ps(vQuadCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
             simdscalar vZ[MultisampleTraits<sampleCount>::numSamples];
-            simdscalar vXSamplePosUL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
+            psContext.vX.UL = _simd_add_ps(vQuadULOffsetsX, _simd_set1_ps((float)xx));
             // set pixel center positions
             psContext.vX.center = _simd_add_ps(vQuadCenterOffsetsX, _simd_set1_ps((float)xx));
 
@@ -1327,7 +1334,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             {
                 ///@ todo: don't need to genererate input coverage 2x if input coverage and centroid
                 RDTSC_START(BEBarycentric);
-                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, vXSamplePosUL, vYSamplePosUL);
+                backendFuncs.pfnCalcCentroidBarycentrics(coeffs, psContext, &work.coverageMask[0], pBlendState->sampleMask, psContext.vX.UL, psContext.vY.UL);
                 RDTSC_STOP(BEBarycentric, 0, 0);
             }
 
@@ -1389,8 +1396,8 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                     if(bIsStandardPattern)
                     {
                         // calculate per sample positions
-                        psContext.vX.sample = _simd_add_ps(vXSamplePosUL, MultisampleTraits<sampleCount>::vX(sample));
-                        psContext.vY.sample = _simd_add_ps(vYSamplePosUL, MultisampleTraits<sampleCount>::vY(sample));
+                        psContext.vX.sample = _simd_add_ps(psContext.vX.UL, MultisampleTraits<sampleCount>::vX(sample));
+                        psContext.vY.sample = _simd_add_ps(psContext.vY.UL, MultisampleTraits<sampleCount>::vY(sample));
                     }
                     else
                     {

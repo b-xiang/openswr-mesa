@@ -426,7 +426,7 @@ void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macro
     }
 }
 
-INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, volatile uint64_t& curDrawBE)
+INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE)
 {
     // increment our current draw id to the first incomplete draw
     uint64_t drawEnqueued = GetEnqueuedDraw(pContext);
@@ -443,6 +443,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, volatile uint64_t& cu
         if (isWorkComplete)
         {
             curDrawBE++;
+            pDC->threadsDoneBE++;
         }
         else
         {
@@ -471,7 +472,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, volatile uint64_t& cu
 void WorkOnFifoBE(
     SWR_CONTEXT *pContext,
     uint32_t workerId,
-    volatile uint64_t &curDrawBE,
+    uint64_t &curDrawBE,
     std::unordered_set<uint32_t>& lockedTiles)
 {
     // Find the first incomplete draw that has pending work. If no such draw is found then
@@ -500,7 +501,7 @@ void WorkOnFifoBE(
         // First wait for FE to be finished with this draw. This keeps threading model simple
         // but if there are lots of bubbles between draws then serializing FE and BE may
         // need to be revisited.
-        if (!pDC->doneFE) break;
+        if (!pDC->doneFE) return;
         
         // If this draw is dependent on a previous draw then we need to bail.
         if (CheckDependency(pContext, pDC, lastRetiredDraw))
@@ -555,6 +556,8 @@ void WorkOnFifoBE(
                         {
                             // We can increment the current BE and safely move to next draw since we know this draw is complete.
                             curDrawBE++;
+                            pDC->threadsDoneBE++;
+
                             lastRetiredDraw++;
 
                             lockedTiles.clear();
@@ -572,7 +575,7 @@ void WorkOnFifoBE(
     }
 }
 
-void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, volatile uint64_t &curDrawFE, UCHAR numaNode)
+void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE, UCHAR numaNode)
 {
     // Try to grab the next DC from the ring
     uint64_t drawEnqueued = GetEnqueuedDraw(pContext);
@@ -583,6 +586,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, volatile uint64_t &c
         if (pDC->isCompute || pDC->doneFE || pDC->FeLock)
         {
             curDrawFE++;
+            pDC->threadsDoneFE++;
         }
         else
         {
@@ -603,6 +607,9 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, volatile uint64_t &c
             {
                 // successfully grabbed the DC, now run the FE
                 pDC->FeWork.pfnWork(pContext, pDC, workerId, &pDC->FeWork.desc);
+
+                _ReadWriteBarrier();
+                pDC->doneFE = true;
             }
         }
         curDraw++;
@@ -619,7 +626,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, volatile uint64_t &c
 void WorkOnCompute(
     SWR_CONTEXT *pContext,
     uint32_t workerId,
-    volatile uint64_t& curDrawBE)
+    uint64_t& curDrawBE)
 {
     if (FindFirstIncompleteDraw(pContext, curDrawBE) == false)
     {
@@ -702,22 +709,25 @@ DWORD workerThread(LPVOID pData)
     //    the worker can safely increment its oldestDraw counter and move on to the next draw.
     std::unique_lock<std::mutex> lock(pContext->WaitLock, std::defer_lock);
 
-    auto threadHasWork = [&]() { return pContext->WorkerBE[workerId] != pContext->DrawEnqueued; };
+    auto threadHasWork = [&](uint64_t curDraw) { return curDraw != pContext->DrawEnqueued; };
+
+    uint64_t curDrawBE = 1;
+    uint64_t curDrawFE = 1;
 
     while (pContext->threadPool.inThreadShutdown == false)
     {
         uint32_t loop = 0;
-        while (loop++ < KNOB_WORKER_SPIN_LOOP_COUNT && !threadHasWork())
+        while (loop++ < KNOB_WORKER_SPIN_LOOP_COUNT && !threadHasWork(curDrawBE))
         {
             _mm_pause();
         }
 
-        if (!threadHasWork())
+        if (!threadHasWork(curDrawBE))
         {
             lock.lock();
 
             // check for thread idle condition again under lock
-            if (threadHasWork())
+            if (threadHasWork(curDrawBE))
             {
                 lock.unlock();
                 continue;
@@ -743,12 +753,12 @@ DWORD workerThread(LPVOID pData)
         }
 
         RDTSC_START(WorkerWorkOnFifoBE);
-        WorkOnFifoBE(pContext, workerId, pContext->WorkerBE[workerId], lockedTiles);
+        WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles);
         RDTSC_STOP(WorkerWorkOnFifoBE, 0, 0);
 
-        WorkOnCompute(pContext, workerId, pContext->WorkerBE[workerId]);
+        WorkOnCompute(pContext, workerId, curDrawBE);
 
-        WorkOnFifoFE(pContext, workerId, pContext->WorkerFE[workerId], numaNode);
+        WorkOnFifoFE(pContext, workerId, curDrawFE, numaNode);
     }
 
     return 0;

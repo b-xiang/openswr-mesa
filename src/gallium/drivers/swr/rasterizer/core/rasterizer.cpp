@@ -731,8 +731,6 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     uint32_t maxY = maxTileY;
     uint32_t maxX = maxTileX;
 
-    triDesc.pSamplePos = pDC->pState->state.samplePos;
-
     // compute steps between raster tiles for render output buffers
     static const uint32_t colorRasterTileStep{(KNOB_TILE_X_DIM * KNOB_TILE_Y_DIM * (FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp / 8)) * MultisampleTraits<sampleCount>::numSamples};
     static const uint32_t colorRasterTileRowStep{(KNOB_MACROTILE_X_DIM / KNOB_TILE_X_DIM) * colorRasterTileStep};

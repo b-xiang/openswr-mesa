@@ -299,7 +299,7 @@ struct SWR_GS_CONTEXT
     simdscalari PrimitiveID;    // IN: input primitive ID generated from the draw call
     uint32_t InstanceID;        // IN: input instance ID
     simdscalari mask;           // IN: Active mask for shader
-    uint8_t* pStream[4];        // OUT: output streams
+    uint8_t* pStream;           // OUT: output stream (contains vertices for all output streams)
     uint8_t* pCutBuffer;        // OUT: cut buffer
     simdscalari vertexCount;    // OUT: num vertices emitted per SIMD lane
 
@@ -308,6 +308,7 @@ struct SWR_GS_CONTEXT
 
 struct PixelPositions
 {
+    simdscalar UL;
     simdscalar center;
     simdscalar sample;
     simdscalar centroid;
@@ -336,7 +337,8 @@ struct SWR_PS_CONTEXT
     const float *I;             // IN: Barycentric A, B, and C coefs used to compute I
     const float *J;             // IN: Barycentric A, B, and C coefs used to compute J
     float recipDet;             // IN: 1/Det, used when barycentric interpolating attributes
-    const float* pSamplePos;    // IN: array of sample positions
+    const float* pSamplePosX;   // IN: array of sample positions
+    const float* pSamplePosY;   // IN: array of sample positions
     simdvector shaded[SWR_NUM_RENDERTARGETS];
                                 // OUT: result color per rendertarget
 
@@ -504,6 +506,8 @@ struct SWR_SURFACE_STATE
     bool bInterleavedSamples;   // are MSAA samples stored interleaved or planar
     uint32_t halign;
     uint32_t valign;
+    uint32_t xOffset;
+    uint32_t yOffset;
 
     uint32_t lodOffsets[2][15]; // lod offsets for sampled surfaces
 
@@ -677,6 +681,15 @@ struct SWR_GS_STATE
 
     // geometry shader emits PrimitiveID
     bool emitsPrimitiveID;
+
+    // if true, geometry shader emits a single stream, with separate cut buffer.
+    // if false, geometry shader emits vertices for multiple streams to the stream buffer, with a separate StreamID buffer
+    // to map vertices to streams
+    bool isSingleStream;
+
+    // when single stream is enabled, singleStreamID dictates which stream is being output.
+    // field ignored if isSingleStream is false
+    uint32_t singleStreamID;
 };
 
 

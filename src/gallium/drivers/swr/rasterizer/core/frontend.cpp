@@ -78,9 +78,6 @@ void ProcessSync(
 
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
     pTileMgr->enqueue(0, 0, &work);
-
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -104,9 +101,6 @@ void ProcessQueryStats(
 
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
     pTileMgr->enqueue(0, 0, &work);
-
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -146,9 +140,6 @@ void ProcessClear(
             pTileMgr->enqueue(x, y, &work);
         }
     }
-
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -191,9 +182,6 @@ void ProcessStoreTiles(
             pTileMgr->enqueue(x, y, &work);
         }
     }
-
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
 
     RDTSC_STOP(FEProcessStoreTiles, 0, pDC->drawId);
 }
@@ -238,9 +226,6 @@ void ProcessInvalidateTiles(
             pTileMgr->enqueue(x, y, &work);
         }
     }
-
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
 
     RDTSC_STOP(FEProcessInvalidateTiles, 0, pDC->drawId);
 }
@@ -507,7 +492,8 @@ static void StreamOut(
     DRAW_CONTEXT* pDC,
     PA_STATE& pa,
     uint32_t workerId,
-    uint32_t* pPrimData)
+    uint32_t* pPrimData,
+    uint32_t streamIndex)
 {
     RDTSC_START(FEStreamout);
 
@@ -516,7 +502,6 @@ static void StreamOut(
     const API_STATE& state = GetApiState(pDC);
     const SWR_STREAMOUT_STATE &soState = state.soState;
 
-    uint32_t streamIndex = 0; ///@todo Stream index will come from PA_STATE.
     uint32_t soVertsPerPrim = NumVertsPerPrim(pa.binTopology, false);
 
     // The pPrimData buffer is sparse in that we allocate memory for all 32 attributes for each vertex.
@@ -563,6 +548,7 @@ static void StreamOut(
         soContext.pPrimData = pPrimData;
 
         // Call SOS
+        SWR_ASSERT(state.pfnSoFunc[streamIndex] != nullptr, "Trying to execute uninitialized streamout jit function.");
         state.pfnSoFunc[streamIndex](soContext);
     }
 
@@ -629,7 +615,7 @@ static void GeometryShaderStage(
     SWR_ASSERT(pGsOut != nullptr, "GS output buffer should be initialized");
     SWR_ASSERT(pCutBuffer != nullptr, "GS output cut buffer should be initialized");
 
-    gsContext.pStream[0] = (uint8_t*)pGsOut;
+    gsContext.pStream = (uint8_t*)pGsOut;
     gsContext.pCutBuffer = (uint8_t*)pCutBuffer;
     gsContext.PrimitiveID = primID;
     gsContext.pImmediateData = (float*)state.pGsImmediateData;
@@ -675,7 +661,7 @@ static void GeometryShaderStage(
         // execute the geometry shader
         state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
 
-        gsContext.pStream[0] += instanceStride;
+        gsContext.pStream += instanceStride;
         gsContext.pCutBuffer += cutInstanceStride;
     }
 
@@ -718,6 +704,13 @@ static void GeometryShaderStage(
             _BitScanReverse(&numAttribs, state.feAttribMask);
             numAttribs++;
 
+            // assign default stream ID, only relevant when GS is outputting a single stream
+            uint32_t streamID = 0;
+            if (pState->isSingleStream)
+            {
+                streamID = pState->singleStreamID;
+            }
+
             PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, pCutBase, numEmittedVerts, numAttribs, pState->outputTopology, true);
 
             while (gsPa.GetNextStreamOutput())
@@ -732,7 +725,7 @@ static void GeometryShaderStage(
 
                         if (HasStreamOutT)
                         {
-                            StreamOut(pDC, gsPa, workerId, pSoPrimData);
+                            StreamOut(pDC, gsPa, workerId, pSoPrimData, streamID);
                         }
 
                         if (HasRastT)
@@ -773,6 +766,8 @@ static void GeometryShaderStage(
 /// @param ppCutBuffer - pointer to GS output cut buffer allocation
 static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, void** ppGsOut, void** ppCutBuffer)
 {
+    Arena* pArena = pDC->pArena;
+    SWR_ASSERT(pArena != nullptr);
     SWR_ASSERT(state.gsState.gsEnable);
     // allocate arena space to hold GS output verts
     // @todo pack attribs
@@ -780,13 +775,13 @@ static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, 
     const uint32_t vertexStride = sizeof(simdvertex);
     const uint32_t numSimdBatches = (state.gsState.maxNumVerts + KNOB_SIMD_WIDTH - 1) / KNOB_SIMD_WIDTH;
     uint32_t size = state.gsState.instanceCount * numSimdBatches * vertexStride * KNOB_SIMD_WIDTH;
-    *ppGsOut = pDC->arena.AllocAligned(size, KNOB_SIMD_WIDTH * sizeof(float));
+    *ppGsOut = pArena->AllocAligned(size, KNOB_SIMD_WIDTH * sizeof(float));
 
     // allocate arena space to hold cut buffer, which is essentially a bitfield sized to the
     // maximum vertex output as defined by the GS state, per SIMD lane, per GS instance
     const uint32_t cutPrimStride = (state.gsState.maxNumVerts + 7) / 8;
     const uint32_t cutBufferSize = cutPrimStride * state.gsState.instanceCount * KNOB_SIMD_WIDTH;
-    *ppCutBuffer = pDC->arena.AllocAligned(cutBufferSize, KNOB_SIMD_WIDTH * sizeof(float));
+    *ppCutBuffer = pArena->AllocAligned(cutBufferSize, KNOB_SIMD_WIDTH * sizeof(float));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -987,7 +982,7 @@ static void TessellationStages(
             {
                 if (HasStreamOutT)
                 {
-                    StreamOut(pDC, tessPa, workerId, pSoPrimData);
+                    StreamOut(pDC, tessPa, workerId, pSoPrimData, 0);
                 }
 
                 if (HasRastT)
@@ -1042,7 +1037,6 @@ void ProcessDraw(
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_QUEUE_FE)
     {
-        pDC->doneFE = 1;
         return;
     }
 #endif
@@ -1142,7 +1136,7 @@ void ProcessDraw(
     uint32_t* pSoPrimData = nullptr;
     if (HasStreamOutT)
     {
-        pSoPrimData = (uint32_t*)pDC->arena.AllocAligned(4096, 16);
+        pSoPrimData = (uint32_t*)pDC->pArena->AllocAligned(4096, 16);
     }
 
     // choose primitive assembler
@@ -1251,7 +1245,7 @@ void ProcessDraw(
                                 // If streamout is enabled then stream vertices out to memory.
                                 if (HasStreamOutT)
                                 {
-                                    StreamOut(pDC, pa, workerId, pSoPrimData);
+                                    StreamOut(pDC, pa, workerId, pSoPrimData, 0);
                                 }
 
                                 if (HasRastT)
@@ -1279,8 +1273,6 @@ void ProcessDraw(
         pa.Reset();
     }
 
-    _ReadWriteBarrier();
-    pDC->doneFE = true;
     RDTSC_STOP(FEProcessDraw, numPrims * work.numInstances, pDC->drawId);
 }
 // Explicit Instantiation of all combinations
@@ -1690,14 +1682,17 @@ void BinTriangles(
             work.pfnWork = gRasterizerTable[rastState.scissorEnable][SWR_MULTISAMPLE_1X];
         }
 
+        Arena* pArena = pDC->pArena;
+        SWR_ASSERT(pArena != nullptr);
+
         // store active attribs
-        float *pAttribs = (float*)pDC->arena.AllocAligned(numScalarAttribs*3*sizeof(float), 16);
+        float *pAttribs = (float*)pArena->AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
         desc.pAttribs = pAttribs;
         desc.numAttribs = linkageCount;
         ProcessAttributes<3>(pDC, pa, linkageMask, state.linkageMap, triIndex, desc.pAttribs);
 
         // store triangle vertex data
-        desc.pTriBuffer = (float*)pDC->arena.AllocAligned(4*4*sizeof(float), 16);
+        desc.pTriBuffer = (float*)pArena->AllocAligned(4 * 4 * sizeof(float), 16);
 
         _mm_store_ps(&desc.pTriBuffer[0], vHorizX[triIndex]);
         _mm_store_ps(&desc.pTriBuffer[4], vHorizY[triIndex]);
@@ -1708,7 +1703,7 @@ void BinTriangles(
         if (rastState.clipDistanceMask)
         {
             uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
-            desc.pUserClipBuffer = (float*)pDC->arena.Alloc(numClipDist * 3 * sizeof(float));
+            desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 3 * sizeof(float));
             ProcessUserClipDist<3>(pa, triIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
         }
 
@@ -1755,17 +1750,21 @@ void BinPoints(
     simdvector& primVerts = prim[0];
 
     const API_STATE& state = GetApiState(pDC);
+    const SWR_FRONTEND_STATE& feState = state.frontendState;
     const SWR_GS_STATE& gsState = state.gsState;
     const SWR_RASTSTATE& rastState = state.rastState;
 
-    // perspective divide
-    simdscalar vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), primVerts.w);
-    primVerts.x = _simd_mul_ps(primVerts.x, vRecipW0);
-    primVerts.y = _simd_mul_ps(primVerts.y, vRecipW0);
-    primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
+    if (!feState.vpTransformDisable)
+    {
+        // perspective divide
+        simdscalar vRecipW0 = _simd_div_ps(_simd_set1_ps(1.0f), primVerts.w);
+        primVerts.x = _simd_mul_ps(primVerts.x, vRecipW0);
+        primVerts.y = _simd_mul_ps(primVerts.y, vRecipW0);
+        primVerts.z = _simd_mul_ps(primVerts.z, vRecipW0);
 
-    // viewport transform to screen coords
-    viewportTransform<1>(&primVerts, state.vpMatrix[0]);
+        // viewport transform to screen coords
+        viewportTransform<1>(&primVerts, state.vpMatrix[0]);
+    }
 
     // adjust for pixel center location
     simdscalar offset = g_pixelOffsets[rastState.pixelLocation];
@@ -1855,15 +1854,18 @@ void BinPoints(
 
             work.pfnWork = RasterizeSimplePoint;
 
+            Arena* pArena = pDC->pArena;
+            SWR_ASSERT(pArena != nullptr);
+
             // store attributes
-            float *pAttribs = (float*)pDC->arena.AllocAligned(3 * numScalarAttribs * sizeof(float), 16);
+            float *pAttribs = (float*)pArena->AllocAligned(3 * numScalarAttribs * sizeof(float), 16);
             desc.pAttribs = pAttribs;
             desc.numAttribs = linkageCount;
 
             ProcessAttributes<1>(pDC, pa, linkageMask, state.linkageMap, primIndex, pAttribs);
 
             // store raster tile aligned x, y, perspective correct z
-            float *pTriBuffer = (float*)pDC->arena.AllocAligned(4 * sizeof(float), 16);
+            float *pTriBuffer = (float*)pArena->AllocAligned(4 * sizeof(float), 16);
             desc.pTriBuffer = pTriBuffer;
             *(uint32_t*)pTriBuffer++ = aTileAlignedX[primIndex];
             *(uint32_t*)pTriBuffer++ = aTileAlignedY[primIndex];
@@ -1986,13 +1988,16 @@ void BinPoints(
 
             work.pfnWork = RasterizeTriPoint;
 
+            Arena* pArena = pDC->pArena;
+            SWR_ASSERT(pArena != nullptr);
+
             // store active attribs
-            desc.pAttribs = (float*)pDC->arena.AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
+            desc.pAttribs = (float*)pArena->AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
             desc.numAttribs = linkageCount;
             ProcessAttributes<1>(pDC, pa, linkageMask, state.linkageMap, primIndex, desc.pAttribs);
 
             // store point vertex data
-            float *pTriBuffer = (float*)pDC->arena.AllocAligned(4 * sizeof(float), 16);
+            float *pTriBuffer = (float*)pArena->AllocAligned(4 * sizeof(float), 16);
             desc.pTriBuffer = pTriBuffer;
             *pTriBuffer++ = aPrimVertsX[primIndex];
             *pTriBuffer++ = aPrimVertsY[primIndex];
@@ -2002,7 +2007,7 @@ void BinPoints(
             if (rastState.clipDistanceMask)
             {
                 uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
-                desc.pUserClipBuffer = (float*)pDC->arena.Alloc(numClipDist * 2 * sizeof(float));
+                desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
                 ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
             }
 
@@ -2200,13 +2205,16 @@ void BinLines(
 
         work.pfnWork = RasterizeLine;
 
+        Arena* pArena = pDC->pArena;
+        SWR_ASSERT(pArena != nullptr);
+
         // store active attribs
-        desc.pAttribs = (float*)pDC->arena.AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
+        desc.pAttribs = (float*)pArena->AllocAligned(numScalarAttribs * 3 * sizeof(float), 16);
         desc.numAttribs = linkageCount;
         ProcessAttributes<2>(pDC, pa, linkageMask, state.linkageMap, primIndex, desc.pAttribs);
 
         // store line vertex data
-        desc.pTriBuffer = (float*)pDC->arena.AllocAligned(4 * 4 * sizeof(float), 16);
+        desc.pTriBuffer = (float*)pArena->AllocAligned(4 * 4 * sizeof(float), 16);
         _mm_store_ps(&desc.pTriBuffer[0], vHorizX[primIndex]);
         _mm_store_ps(&desc.pTriBuffer[4], vHorizY[primIndex]);
         _mm_store_ps(&desc.pTriBuffer[8], vHorizZ[primIndex]);
@@ -2216,7 +2224,7 @@ void BinLines(
         if (rastState.clipDistanceMask)
         {
             uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
-            desc.pUserClipBuffer = (float*)pDC->arena.Alloc(numClipDist * 2 * sizeof(float));
+            desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
             ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
         }
 

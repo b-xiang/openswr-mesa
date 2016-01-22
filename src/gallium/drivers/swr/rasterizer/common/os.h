@@ -71,6 +71,9 @@
 #include <X11/Xmd.h>
 #include <x86intrin.h>
 #include <stdint.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 typedef void			VOID;
 typedef void*           LPVOID;
@@ -174,6 +177,10 @@ unsigned char _bittest(const LONG *a, LONG b)
     return ((*(unsigned *)(a) & (1 << b)) != 0);
 }
 
+#define GetCurrentProcessId getpid
+
+#define CreateDirectory(name, pSecurity) mkdir(name, 0777)
+
 #if defined(_WIN32)
 static inline
 unsigned int _mm_popcnt_u32(unsigned int v)
@@ -197,6 +204,11 @@ unsigned int _mm_popcnt_u32(unsigned int v)
 #error Unsupported OS/system.
 
 #endif
+
+// Universal types
+typedef BYTE        KILOBYTE[1024];
+typedef KILOBYTE    MEGABYTE[1024];
+typedef MEGABYTE    GIGABYTE[1024];
 
 #define OSALIGNLINE(RWORD) OSALIGN(RWORD, 64)
 #if KNOB_SIMD_WIDTH == 8

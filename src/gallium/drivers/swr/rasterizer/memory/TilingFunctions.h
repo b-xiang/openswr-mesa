@@ -431,8 +431,8 @@ INLINE void ComputeSurfaceOffset2D(uint32_t x, uint32_t y, uint32_t array, uint3
     }
 
     AdjustCoordsForMSAA(pState, x, y, array, sampleNum);
-    xOffsetBytes = (x + lodOffsetX) * info.Bpp;
-    yOffsetRows = (array * pState->qpitch) + lodOffsetY + y;
+    xOffsetBytes = (x + lodOffsetX + pState->xOffset) * info.Bpp;
+    yOffsetRows = (array * pState->qpitch) + lodOffsetY + y + pState->yOffset;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -37,7 +37,8 @@
 class Arena
 {
 public:
-                ~Arena();
+    Arena();
+   ~Arena();
 
     void        Init();
 
@@ -47,7 +48,7 @@ public:
     void*       AllocAlignedSync(size_t size, size_t align);
     void*       AllocSync(size_t size);
 
-    void        Reset();
+    void        Reset(bool removeAll = false);
     size_t      Size() { return m_size; }
 
 private:
@@ -61,10 +62,8 @@ private:
     };
 
     ArenaBlock*     m_pCurBlock = nullptr;
-
-    /// @note Mutex is only used by sync allocation functions.
-    std::mutex*     m_pMutex    = nullptr;
-
     size_t          m_size      = 0;
 
+    /// @note Mutex is only used by sync allocation functions.
+    std::mutex*     m_pMutex;
 };
