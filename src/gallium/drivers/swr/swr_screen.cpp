@@ -110,11 +110,13 @@ swr_is_format_supported(struct pipe_screen *screen,
          return FALSE;
    }
 
-   /* We're going to lie and say we support all depth/stencil formats.
+   /* We're going to lie and say we support most depth/stencil formats.
     * SWR actually needs separate bindings, and only does F32 depth.
     */
    if (bind & PIPE_BIND_DEPTH_STENCIL) {
       if (format_desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS)
+         return FALSE;
+      if (format == PIPE_FORMAT_Z16_UNORM)
          return FALSE;
    }
 
@@ -577,8 +579,8 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
    if (res->bound_to_context && !res->display_target) {
       struct swr_context *ctx =
          swr_context((pipe_context *)res->bound_to_context);
-      SwrWaitForIdle(
-         ctx->swrContext); // BMCDEBUG, don't SwrWaitForIdle!!! Use a fence.
+	  // XXX, don't SwrWaitForIdle!!! Use a fence.
+      SwrWaitForIdle(ctx->swrContext);
    }
 
    /*
