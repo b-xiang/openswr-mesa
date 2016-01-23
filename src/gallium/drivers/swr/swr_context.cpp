@@ -158,7 +158,6 @@ swr_transfer_map(struct pipe_context *pipe,
          }
    }
 
-
    pt = CALLOC_STRUCT(pipe_transfer);
    if (!pt)
       return NULL;
@@ -173,6 +172,11 @@ swr_transfer_map(struct pipe_context *pipe,
        && spr->has_stencil) {
       for (unsigned i = 0; i < spr->alignedWidth * spr->alignedHeight; i++) {
          spr->swr.pBaseAddress[4 * i + 3] = spr->secondary.pBaseAddress[i];
+      }
+   } else if (spr->base.format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT
+              && spr->has_stencil) {
+      for (unsigned i = 0; i < spr->alignedWidth * spr->alignedHeight; i++) {
+         spr->swr.pBaseAddress[8 * i + 4] = spr->secondary.pBaseAddress[i];
       }
    }
 
@@ -204,6 +208,11 @@ swr_transfer_unmap(struct pipe_context *pipe, struct pipe_transfer *transfer)
        && res->has_stencil) {
       for (unsigned i = 0; i < res->alignedWidth * res->alignedHeight; i++) {
          res->secondary.pBaseAddress[i] = res->swr.pBaseAddress[4 * i + 3];
+      }
+   } else if (res->base.format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT
+              && res->has_stencil) {
+      for (unsigned i = 0; i < res->alignedWidth * res->alignedHeight; i++) {
+         res->secondary.pBaseAddress[i] = res->swr.pBaseAddress[8 * i + 4];
       }
    }
 

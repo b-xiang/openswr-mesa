@@ -110,13 +110,11 @@ swr_is_format_supported(struct pipe_screen *screen,
          return FALSE;
    }
 
-   /* We're going to lie and say we support most depth/stencil formats.
-    * SWR actually needs separate bindings, and only does F32 depth.
-    */
    if (bind & PIPE_BIND_DEPTH_STENCIL) {
       if (format_desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS)
          return FALSE;
-      if (format == PIPE_FORMAT_Z16_UNORM)
+
+      if (mesa_to_swr_format(format) == (SWR_FORMAT)-1)
          return FALSE;
    }
 
@@ -396,8 +394,15 @@ mesa_to_swr_format(enum pipe_format format)
       return B8G8R8A8_UNORM_SRGB;
    case PIPE_FORMAT_I8_UNORM:
       return R8_UNORM;
+   case PIPE_FORMAT_Z16_UNORM:
+      return R16_UNORM;
+   case PIPE_FORMAT_Z24X8_UNORM:
    case PIPE_FORMAT_Z24_UNORM_S8_UINT:
       return R24_UNORM_X8_TYPELESS;
+   case PIPE_FORMAT_Z32_FLOAT:
+      return R32_FLOAT;
+   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+      return R32_FLOAT_X8X24_TYPELESS;
    case PIPE_FORMAT_L8A8_UNORM:
       return R8G8_UNORM;
    default:
@@ -457,8 +462,6 @@ swr_resource_create(struct pipe_screen *_screen,
    res->has_stencil = util_format_has_stencil(desc);
 
    pipe_format fmt = templat->format;
-   if (res->has_depth)
-      fmt = PIPE_FORMAT_Z24_UNORM_S8_UINT;
    if (res->has_stencil && !res->has_depth)
       fmt = PIPE_FORMAT_R8_UINT;
 
@@ -579,7 +582,7 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
    if (res->bound_to_context && !res->display_target) {
       struct swr_context *ctx =
          swr_context((pipe_context *)res->bound_to_context);
-	  // XXX, don't SwrWaitForIdle!!! Use a fence.
+      // XXX, don't SwrWaitForIdle!!! Use a fence.
       SwrWaitForIdle(ctx->swrContext);
    }
 
