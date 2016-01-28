@@ -251,6 +251,8 @@ EXT(EXT_unpack_subimage                     , dummy_true                        
 EXT(EXT_vertex_array                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_vertex_array_bgra                   , EXT_vertex_array_bgra                  , GLL, GLC,  x ,  x , 2008)
 
+EXT(GREMEDY_string_marker                   , GREMEDY_string_marker                  , GLL, GLC,  x ,  x , 2007)
+
 EXT(IBM_multimode_draw_arrays               , dummy_true                             , GLL, GLC,  x ,  x , 1998)
 EXT(IBM_rasterpos_clip                      , dummy_true                             , GLL,  x ,  x ,  x , 1996)
 EXT(IBM_texture_mirrored_repeat             , dummy_true                             , GLL,  x ,  x ,  x , 1998)
@@ -309,6 +311,8 @@ EXT(OES_element_index_uint                  , dummy_true                        
 EXT(OES_fbo_render_mipmap                   , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_fixed_point                         , dummy_true                             ,  x ,  x , ES1,  x , 2002)
 EXT(OES_framebuffer_object                  , dummy_true                             ,  x ,  x , ES1,  x , 2005)
+EXT(OES_geometry_point_size                 , OES_geometry_shader                    ,  x ,  x ,  x ,  31, 2015)
+EXT(OES_geometry_shader                     , OES_geometry_shader                    ,  x ,  x ,  x ,  31, 2015)
 EXT(OES_get_program_binary                  , dummy_true                             ,  x ,  x ,  x , ES2, 2008)
 EXT(OES_mapbuffer                           , dummy_true                             ,  x ,  x , ES1, ES2, 2005)
 EXT(OES_packed_depth_stencil                , dummy_true                             ,  x ,  x , ES1, ES2, 2007)

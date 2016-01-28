@@ -208,14 +208,18 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 * this for non-cs shaders.  Using the wrong value here can result in
 	 * GPU lockups, but the maximum value seems to always work.
 	 */
-	sctx->scratch_waves = 32 * sscreen->b.info.max_compute_units;
+	sctx->scratch_waves = 32 * sscreen->b.info.num_good_compute_units;
 
 #if HAVE_LLVM >= 0x0306
 	/* Initialize LLVM TargetMachine */
 	r600_target = radeon_llvm_get_r600_target(triple);
 	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
 					   r600_get_llvm_processor_name(sscreen->b.family),
-					   "+DumpCode,+vgpr-spilling",
+#if HAVE_LLVM >= 0x0308
+					   sscreen->b.debug_flags & DBG_SI_SCHED ?
+					   	"+DumpCode,+vgpr-spilling,+si-scheduler" :
+#endif
+					   	"+DumpCode,+vgpr-spilling",
 					   LLVMCodeGenLevelDefault,
 					   LLVMRelocDefault,
 					   LLVMCodeModelDefault);
@@ -349,6 +353,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_GENERATE_MIPMAP:
+	case PIPE_CAP_STRING_MARKER:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

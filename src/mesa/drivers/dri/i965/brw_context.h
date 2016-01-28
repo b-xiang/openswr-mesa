@@ -836,6 +836,7 @@ struct brw_context
    bool always_flush_cache;
    bool disable_throttling;
    bool precompile;
+   bool dual_color_blend_by_location;
 
    driOptionCache optionCache;
    /** @} */
@@ -1264,7 +1265,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[76];
-   const struct brw_tracked_state compute_atoms[10];
+   const struct brw_tracked_state compute_atoms[11];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {

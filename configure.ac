@@ -2164,7 +2164,12 @@ gallium_require_drm_loader() {
     fi
 }
 
+dnl This is for Glamor. Skip this if OpenGL is disabled.
 require_egl_drm() {
+    if test "x$enable_opengl" = xno; then
+        return 0
+    fi
+
     case "$with_egl_platforms" in
         *drm*)
             ;;
@@ -2481,6 +2486,7 @@ CXXFLAGS="$CXXFLAGS $USER_CXXFLAGS"
 dnl Substitute the config
 AC_CONFIG_FILES([Makefile
 		src/Makefile
+		src/compiler/Makefile
 		src/egl/Makefile
 		src/egl/main/egl.pc
 		src/egl/wayland/wayland-drm/Makefile
@@ -2551,7 +2557,6 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/virgl/vtest/Makefile
 		src/gbm/Makefile
 		src/gbm/main/gbm.pc
-		src/glsl/Makefile
 		src/glx/Makefile
 		src/glx/apple/Makefile
 		src/glx/tests/Makefile

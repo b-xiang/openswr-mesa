@@ -49,6 +49,26 @@ struct r600_multi_fence {
 };
 
 /*
+ * shader binary helpers.
+ */
+void radeon_shader_binary_init(struct radeon_shader_binary *b)
+{
+	memset(b, 0, sizeof(*b));
+}
+
+void radeon_shader_binary_clean(struct radeon_shader_binary *b)
+{
+	if (!b)
+		return;
+	FREE(b->code);
+	FREE(b->config);
+	FREE(b->rodata);
+	FREE(b->global_symbol_offsets);
+	FREE(b->relocs);
+	FREE(b->disasm_string);
+}
+
+/*
  * pipe_context
  */
 
@@ -389,6 +409,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
 	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
 	{ "norbplus", DBG_NO_RB_PLUS, "Disable RB+ on Stoney." },
+	{ "sisched", DBG_SI_SCHED, "Enable LLVM SI Machine Instruction Scheduler." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };
@@ -705,7 +726,7 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 	case PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS:
 		if (ret) {
 			uint32_t *max_compute_units = ret;
-			*max_compute_units = rscreen->info.max_compute_units;
+			*max_compute_units = rscreen->info.num_good_compute_units;
 		}
 		return sizeof(uint32_t);
 
@@ -973,7 +994,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("gart_size = %i MB\n", (int)(rscreen->info.gart_size >> 20));
 		printf("vram_size = %i MB\n", (int)(rscreen->info.vram_size >> 20));
 		printf("max_sclk = %i\n", rscreen->info.max_sclk);
-		printf("max_compute_units = %i\n", rscreen->info.max_compute_units);
+		printf("num_good_compute_units = %i\n", rscreen->info.num_good_compute_units);
 		printf("max_se = %i\n", rscreen->info.max_se);
 		printf("max_sh_per_se = %i\n", rscreen->info.max_sh_per_se);
 		printf("drm = %i.%i.%i\n", rscreen->info.drm_major,

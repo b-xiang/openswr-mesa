@@ -213,6 +213,10 @@ struct si_shader_selector {
 
 	/* PS parameters. */
 	unsigned	db_shader_control;
+	/* Set 0xf or 0x0 (4 bits) per each written output.
+	 * ANDed with spi_shader_col_format.
+	 */
+	unsigned	colors_written_4bit;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	outputs_written;
@@ -232,7 +236,8 @@ struct si_shader_selector {
 
 union si_shader_key {
 	struct {
-		unsigned	export_16bpc:8;
+		unsigned	spi_shader_col_format;
+		unsigned	color_is_int8:8;
 		unsigned	last_cbuf:3;
 		unsigned	color_two_side:1;
 		unsigned	alpha_func:3;
@@ -292,7 +297,6 @@ struct si_shader {
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
 	unsigned		nr_param_exports;
-	bool			is_gs_copy_shader;
 	bool			dx10_clamp_mode; /* convert NaNs to 0 */
 };
 
@@ -341,7 +345,6 @@ int si_compile_llvm(struct si_screen *sscreen,
 		    struct pipe_debug_callback *debug,
 		    unsigned processor);
 void si_shader_destroy(struct si_shader *shader);
-void si_shader_destroy_binary(struct radeon_shader_binary *binary);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,

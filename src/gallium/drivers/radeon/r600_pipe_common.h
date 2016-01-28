@@ -87,6 +87,7 @@
 #define DBG_NO_DCC		(1llu << 43)
 #define DBG_NO_DCC_CLEAR	(1llu << 44)
 #define DBG_NO_RB_PLUS		(1llu << 45)
+#define DBG_SI_SCHED		(1llu << 46)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -128,6 +129,9 @@ struct radeon_shader_binary {
 	/** Disassembled shader in a string. */
 	char *disasm_string;
 };
+
+void radeon_shader_binary_init(struct radeon_shader_binary *b);
+void radeon_shader_binary_clean(struct radeon_shader_binary *b);
 
 struct r600_resource {
 	struct u_resource		b;
@@ -236,6 +240,7 @@ struct r600_surface {
 	/* Misc. color flags. */
 	bool alphatest_bypass;
 	bool export_16bpc;
+	bool color_is_int8;
 
 	/* Color registers. */
 	unsigned cb_color_info;
@@ -252,6 +257,10 @@ struct r600_surface {
 	unsigned cb_color_fmask_slice;	/* EG and later */
 	unsigned cb_color_cmask;	/* CB_COLORn_TILE (r600 only) */
 	unsigned cb_color_mask;		/* R600 only */
+	unsigned spi_shader_col_format;		/* SI+, no blending, no alpha-to-coverage. */
+	unsigned spi_shader_col_format_alpha;	/* SI+, alpha-to-coverage */
+	unsigned spi_shader_col_format_blend;	/* SI+, blending without alpha. */
+	unsigned spi_shader_col_format_blend_alpha; /* SI+, blending with alpha. */
 	unsigned sx_ps_downconvert;	/* Stoney only */
 	unsigned sx_blend_opt_epsilon;	/* Stoney only */
 	struct r600_resource *cb_buffer_fmask; /* Used for FMASK relocations. R600 only */

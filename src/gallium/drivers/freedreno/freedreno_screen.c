@@ -155,6 +155,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:
 	case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
 	case PIPE_CAP_VERTEXID_NOBASE:
+	case PIPE_CAP_STRING_MARKER:
 		return 1;
 
 	case PIPE_CAP_SHADER_STENCIL_EXPORT:
@@ -573,6 +574,7 @@ fd_screen_create(struct fd_device *dev)
 		fd3_screen_init(pscreen);
 		break;
 	case 420:
+	case 430:
 		fd4_screen_init(pscreen);
 		break;
 	default:

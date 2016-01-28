@@ -42,7 +42,7 @@
 #include "main/config.h"
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
-#include "glsl/nir/shader_enums.h"
+#include "compiler/shader_enums.h"
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 
 
@@ -3880,6 +3880,7 @@ struct gl_extensions
    GLboolean ATI_texture_env_combine3;
    GLboolean ATI_fragment_shader;
    GLboolean ATI_separate_stencil;
+   GLboolean GREMEDY_string_marker;
    GLboolean INTEL_performance_query;
    GLboolean KHR_texture_compression_astc_hdr;
    GLboolean KHR_texture_compression_astc_ldr;
@@ -3904,6 +3905,7 @@ struct gl_extensions
    GLboolean OES_texture_half_float;
    GLboolean OES_texture_half_float_linear;
    GLboolean OES_compressed_ETC1_RGB8_texture;
+   GLboolean OES_geometry_shader;
    GLboolean extension_sentinel;
    /** The extension string */
    const GLubyte *String;

@@ -34,9 +34,9 @@
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
-#include "glsl/glsl_symbol_table.h"
-#include "glsl/ir.h"
-#include "glsl/program.h"
+#include "compiler/glsl/glsl_symbol_table.h"
+#include "compiler/glsl/ir.h"
+#include "compiler/glsl/program.h"
 #include "program/hash_table.h"
 #include "util/strndup.h"
 
@@ -64,8 +64,8 @@ DECL_RESOURCE_FUNC(XFB, gl_transform_feedback_varying_info);
 DECL_RESOURCE_FUNC(SUB, gl_subroutine_function);
 
 void GLAPIENTRY
-_mesa_BindAttribLocation(GLhandleARB program, GLuint index,
-                            const GLcharARB *name)
+_mesa_BindAttribLocation(GLuint program, GLuint index,
+                         const GLchar *name)
 {
    GET_CURRENT_CONTEXT(ctx);
 
@@ -126,9 +126,9 @@ is_active_attrib(const gl_shader_variable *var)
 }
 
 void GLAPIENTRY
-_mesa_GetActiveAttrib(GLhandleARB program, GLuint desired_index,
-                         GLsizei maxLength, GLsizei * length, GLint * size,
-                         GLenum * type, GLcharARB * name)
+_mesa_GetActiveAttrib(GLuint program, GLuint desired_index,
+                      GLsizei maxLength, GLsizei * length, GLint * size,
+                      GLenum * type, GLchar * name)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *shProg;
@@ -191,7 +191,7 @@ _mesa_GetActiveAttrib(GLhandleARB program, GLuint desired_index,
 }
 
 GLint GLAPIENTRY
-_mesa_GetAttribLocation(GLhandleARB program, const GLcharARB * name)
+_mesa_GetAttribLocation(GLuint program, const GLchar * name)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_shader_program *const shProg =
