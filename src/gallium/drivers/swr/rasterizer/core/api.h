@@ -207,8 +207,7 @@ void SWR_API SwrSetSoBuffers(
 /// @param pfnVertexFunc - Pointer to shader.
 void SWR_API SwrSetVertexFunc(
     HANDLE hContext,
-    PFN_VERTEX_FUNC pfnVertexFunc,
-    void* pImmediateData);
+    PFN_VERTEX_FUNC pfnVertexFunc);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set frontend state.
@@ -232,8 +231,7 @@ void SWR_API SwrSetGsState(
 /// @param pState - Pointer to geometry shader function
 void SWR_API SwrSetGsFunc(
     HANDLE hContext,
-    PFN_GS_FUNC pfnGsFunc,
-    void* pImmediateData);
+    PFN_GS_FUNC pfnGsFunc);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set compute shader
@@ -259,8 +257,7 @@ void SWR_API SwrSetTsState(
 /// @param pfnFunc - Pointer to shader function
 void SWR_API SwrSetHsFunc(
     HANDLE hContext,
-    PFN_HS_FUNC pfnFunc,
-    void* pImmediateData);
+    PFN_HS_FUNC pfnFunc);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set domain shader
@@ -268,8 +265,7 @@ void SWR_API SwrSetHsFunc(
 /// @param pfnFunc - Pointer to shader function
 void SWR_API SwrSetDsFunc(
     HANDLE hContext,
-    PFN_DS_FUNC pfnFunc,
-    void* pImmediateData);
+    PFN_DS_FUNC pfnFunc);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set depth stencil state
@@ -293,8 +289,7 @@ void SWR_API SwrSetBackendState(
 /// @param pState - Pointer to state.
 void SWR_API SwrSetPixelShaderState(
     HANDLE hContext,
-    SWR_PS_STATE *pState,
-    void* pImmediateData);
+    SWR_PS_STATE *pState);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Set blend state

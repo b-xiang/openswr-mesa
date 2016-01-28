@@ -306,10 +306,11 @@ public:
 
         LONG constantInterpMask = this->state.backendState.constantInterpolationMask;
         uint32_t provokingVertex = 0;
-        if (pa.binTopology == TOP_TRIANGLE_FAN)
+        if(pa.binTopology == TOP_TRIANGLE_FAN)
         {
-            provokingVertex = 1;
+            provokingVertex = this->state.frontendState.provokingVertex.triFan;
         }
+        ///@todo: line topology for wireframe?
 
         // assemble pos
         simdvector tmpVector[NumVertsPerPrim];

@@ -1,4 +1,4 @@
-# Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
+﻿# Copyright (C) 2014-2015 Intel Corporation.   All Rights Reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -163,6 +163,12 @@ def gen_llvm_types(input_file, output_file):
                     idx += 1
                     line = lines[idx].rstrip()
 
+                    is_llvm_typedef = re.search(r"@llvm_typedef", line)
+                    if is_llvm_typedef is not None:
+                        is_llvm_typedef = True
+                    else:
+                        is_llvm_typedef = False
+
                     ###########################################
                     # Is field a llvm struct? Tells script to treat type as array of bytes that is size of structure.
                     is_llvm_struct = re.search(r"@llvm_struct", line)
@@ -289,9 +295,10 @@ def gen_llvm_types(input_file, output_file):
                                 type = field_match.group(2)
                                 name = field_match.group(4)
 
-                    if type is not None:
-                        output_lines += gen_llvm_type(type, name, postfix_name, is_pointer, is_pointer_pointer, is_array, is_array_array, array_count, array_count1, is_llvm_struct, is_llvm_enum, is_llvm_pfn, output_file)
-                        llvm_args.append(name)
+                    if is_llvm_typedef is False:
+                        if type is not None:
+                            output_lines += gen_llvm_type(type, name, postfix_name, is_pointer, is_pointer_pointer, is_array, is_array_array, array_count, array_count1, is_llvm_struct, is_llvm_enum, is_llvm_pfn, output_file)
+                            llvm_args.append(name)
 
                     # Detect end of structure
                     end_of_struct = re.match(r"(\s*)};", line)

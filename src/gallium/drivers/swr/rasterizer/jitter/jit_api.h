@@ -70,19 +70,17 @@ void JITCALL JitDestroyContext(HANDLE hJitContext);
 /// @param hJitContext - Jit Context
 /// @param input  - Input containing LLVM IR and other information
 /// @param output - Output containing information about JIT shader
-/// @return HANDLE - pointer to shader object.
-HANDLE JITCALL JitCompileShader(
+ShaderInfo* JITCALL JitCompileShader(
     HANDLE hJitContext,
-    const JIT_COMPILE_INPUT& input,
-    ShaderInfo& output);     ///@todo Move ShaderInfo into Jitter.
+    const JIT_COMPILE_INPUT& input);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief JIT destroy shader.
 /// @param hJitContext - Jit Context
-/// @param hShader  - pointer to shader object.
+/// @param pShaderInfo  - pointer to shader object.
 void JITCALL JitDestroyShader(
     HANDLE hJitContext,
-    HANDLE hShader);
+    ShaderInfo*& pShaderInfo);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief JIT compiles fetch shader

@@ -443,7 +443,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint64_t& curDrawBE)
         if (isWorkComplete)
         {
             curDrawBE++;
-            pDC->threadsDoneBE++;
+            InterlockedIncrement(&pDC->threadsDoneBE);
         }
         else
         {
@@ -556,7 +556,7 @@ void WorkOnFifoBE(
                         {
                             // We can increment the current BE and safely move to next draw since we know this draw is complete.
                             curDrawBE++;
-                            pDC->threadsDoneBE++;
+                            InterlockedIncrement(&pDC->threadsDoneBE);
 
                             lastRetiredDraw++;
 
@@ -586,7 +586,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint64_t &curDrawFE,
         if (pDC->isCompute || pDC->doneFE || pDC->FeLock)
         {
             curDrawFE++;
-            pDC->threadsDoneFE++;
+            InterlockedIncrement(&pDC->threadsDoneFE);
         }
         else
         {

@@ -33,7 +33,6 @@
 
 #include <condition_variable>
 #include <algorithm>
-#include <atomic>
 
 #include "core/api.h"
 #include "core/utils.h"
@@ -233,15 +232,9 @@ OSALIGNLINE(struct) API_STATE
     // VS - Vertex Shader State
     PFN_VERTEX_FUNC         pfnVertexFunc;
 
-    // VS - Immediate Data
-    void*                   pVsImmediateData;
-
     // GS - Geometry Shader State
     PFN_GS_FUNC             pfnGsFunc;
     SWR_GS_STATE            gsState;
-
-    // GS - Immediate Data
-    void*                   pGsImmediateData;
 
     // CS - Compute Shader
     PFN_CS_FUNC             pfnCsFunc;
@@ -260,8 +253,6 @@ OSALIGNLINE(struct) API_STATE
     // Tessellation State
     PFN_HS_FUNC             pfnHsFunc;
     PFN_DS_FUNC             pfnDsFunc;
-    void*                   pHsImmediateData;
-    void*                   pDsImmediateData;
     SWR_TS_STATE            tsState;
 
     // Specifies which VS outputs are sent to PS.
@@ -295,7 +286,6 @@ OSALIGNLINE(struct) API_STATE
 
     // PS - Pixel shader state
     SWR_PS_STATE            psState;
-    void*                   pPsImmediateData;
 
     SWR_DEPTH_STENCIL_STATE depthStencilState;
 
@@ -395,8 +385,8 @@ struct DRAW_CONTEXT
     volatile OSALIGNLINE(bool) doneFE;    // Is FE work done for this draw?
 
     // Have all worker threads moved past draw in DC ring?
-    OSALIGNLINE(std::atomic<uint32_t>) threadsDoneFE;
-    OSALIGNLINE(std::atomic<uint32_t>) threadsDoneBE;
+    volatile OSALIGNLINE(uint32_t) threadsDoneFE;
+    volatile OSALIGNLINE(uint32_t) threadsDoneBE;
 
     uint64_t dependency;
 

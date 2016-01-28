@@ -587,6 +587,50 @@ static INLINE uint32_t GetNumInvocations(
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Converts a streamId buffer to a cut buffer for the given stream id.
+///        The geometry shader will loop over each active streamout buffer, assembling
+///        primitives for the downstream stages. When multistream output is enabled,
+///        the generated stream ID buffer from the GS needs to be converted to a cut
+///        buffer for the primitive assembler.
+/// @param stream - stream id to generate the cut buffer for
+/// @param pStreamIdBase - pointer to the stream ID buffer
+/// @param numEmittedVerts - Number of total verts emitted by the GS
+/// @param pCutBuffer - output buffer to write cuts to
+void ProcessStreamIdBuffer(uint32_t stream, uint8_t* pStreamIdBase, uint32_t numEmittedVerts, uint8_t *pCutBuffer)
+{
+    SWR_ASSERT(stream < MAX_SO_STREAMS);
+
+    uint32_t numInputBytes = (numEmittedVerts * 2  + 7) / 8;
+    uint32_t numOutputBytes = std::max(numInputBytes / 2, 1U);
+
+    for (uint32_t b = 0; b < numOutputBytes; ++b)
+    {
+        uint8_t curInputByte = pStreamIdBase[2*b];
+        uint8_t outByte = 0;
+        for (uint32_t i = 0; i < 4; ++i)
+        {
+            if ((curInputByte & 0x3) != stream)
+            {
+                outByte |= (1 << i);
+            }
+            curInputByte >>= 2;
+        }
+
+        curInputByte = pStreamIdBase[2 * b + 1];
+        for (uint32_t i = 0; i < 4; ++i)
+        {
+            if ((curInputByte & 0x3) != stream)
+            {
+                outByte |= (1 << (i + 4));
+            }
+            curInputByte >>= 2;
+        }
+        
+        *pCutBuffer++ = outByte;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Implements GS stage.
 /// @param pDC - pointer to draw context.
 /// @param workerId - thread's worker id. Even thread has a unique id.
@@ -601,6 +645,7 @@ static void GeometryShaderStage(
     PA_STATE& pa,
     void* pGsOut,
     void* pCutBuffer,
+    void* pStreamCutBuffer,
     uint32_t* pSoPrimData,
     simdscalari primID)
 {
@@ -616,9 +661,8 @@ static void GeometryShaderStage(
     SWR_ASSERT(pCutBuffer != nullptr, "GS output cut buffer should be initialized");
 
     gsContext.pStream = (uint8_t*)pGsOut;
-    gsContext.pCutBuffer = (uint8_t*)pCutBuffer;
+    gsContext.pCutOrStreamIdBuffer = (uint8_t*)pCutBuffer;
     gsContext.PrimitiveID = primID;
-    gsContext.pImmediateData = (float*)state.pGsImmediateData;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, true);
     simdvector attrib[MAX_ATTRIBUTES];
@@ -646,8 +690,19 @@ static void GeometryShaderStage(
     const uint32_t numSimdBatches = (state.gsState.maxNumVerts + KNOB_SIMD_WIDTH - 1) / KNOB_SIMD_WIDTH;
     const uint32_t inputPrimStride = numSimdBatches * vertexStride;
     const uint32_t instanceStride = inputPrimStride * KNOB_SIMD_WIDTH;
-    const uint32_t cutPrimStride = (state.gsState.maxNumVerts + 7) / 8;
-    const uint32_t cutInstanceStride = cutPrimStride * KNOB_SIMD_WIDTH;
+    uint32_t cutPrimStride;
+    uint32_t cutInstanceStride;
+
+    if (pState->isSingleStream)
+    {
+        cutPrimStride = (state.gsState.maxNumVerts + 7) / 8;
+        cutInstanceStride = cutPrimStride * KNOB_SIMD_WIDTH;
+    }
+    else
+    {
+        cutPrimStride = AlignUp(state.gsState.maxNumVerts * 2 / 8, 4);
+        cutInstanceStride = cutPrimStride * KNOB_SIMD_WIDTH;
+    }
 
     // record valid prims from the frontend to avoid over binning the newly generated
     // prims from the GS
@@ -662,7 +717,7 @@ static void GeometryShaderStage(
         state.pfnGsFunc(GetPrivateState(pDC), &gsContext);
 
         gsContext.pStream += instanceStride;
-        gsContext.pCutBuffer += cutInstanceStride;
+        gsContext.pCutOrStreamIdBuffer += cutInstanceStride;
     }
 
     // set up new binner and state for the GS output topology
@@ -704,49 +759,71 @@ static void GeometryShaderStage(
             _BitScanReverse(&numAttribs, state.feAttribMask);
             numAttribs++;
 
-            // assign default stream ID, only relevant when GS is outputting a single stream
-            uint32_t streamID = 0;
-            if (pState->isSingleStream)
+            for (uint32_t stream = 0; stream < MAX_SO_STREAMS; ++stream)
             {
-                streamID = pState->singleStreamID;
-            }
+                bool processCutVerts = false;
 
-            PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, pCutBase, numEmittedVerts, numAttribs, pState->outputTopology, true);
+                uint8_t* pCutBuffer = pCutBase;
 
-            while (gsPa.GetNextStreamOutput())
-            {
-                do
+                // assign default stream ID, only relevant when GS is outputting a single stream
+                uint32_t streamID = 0;
+                if (pState->isSingleStream)
                 {
-                    bool assemble = gsPa.Assemble(VERTEX_POSITION_SLOT, attrib);
-
-                    if (assemble)
+                    processCutVerts = true;
+                    streamID = pState->singleStreamID;
+                    if (streamID != stream) continue;
+                }
+                else
+                {
+                    // early exit if this stream is not enabled for streamout
+                    if (HasStreamOutT && !state.soState.streamEnable[stream])
                     {
-                        totalPrimsGenerated += gsPa.NumPrims();
-
-                        if (HasStreamOutT)
-                        {
-                            StreamOut(pDC, gsPa, workerId, pSoPrimData, streamID);
-                        }
-
-                        if (HasRastT)
-                        {
-                            simdscalari vPrimId;
-                            // pull primitiveID from the GS output if available
-                            if (state.gsState.emitsPrimitiveID)
-                            {
-                                simdvector primIdAttrib[3];
-                                gsPa.Assemble(VERTEX_PRIMID_SLOT, primIdAttrib);
-                                vPrimId = _simd_castps_si(primIdAttrib[0].x);
-                            }
-                            else
-                            {
-                                vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
-                            }
-
-                            pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId);
-                        }
+                        continue;
                     }
-                } while (gsPa.NextPrim());
+
+                    // multi-stream output, need to translate StreamID buffer to a cut buffer
+                    ProcessStreamIdBuffer(stream, pCutBase, numEmittedVerts, (uint8_t*)pStreamCutBuffer);
+                    pCutBuffer = (uint8_t*)pStreamCutBuffer;
+                    processCutVerts = false;
+                }
+
+                PA_STATE_CUT gsPa(pDC, pBase, numEmittedVerts, pCutBuffer, numEmittedVerts, numAttribs, pState->outputTopology, processCutVerts);
+
+                while (gsPa.GetNextStreamOutput())
+                {
+                    do
+                    {
+                        bool assemble = gsPa.Assemble(VERTEX_POSITION_SLOT, attrib);
+
+                        if (assemble)
+                        {
+                            totalPrimsGenerated += gsPa.NumPrims();
+
+                            if (HasStreamOutT)
+                            {
+                                StreamOut(pDC, gsPa, workerId, pSoPrimData, stream);
+                            }
+
+                            if (HasRastT && state.soState.streamToRasterizer == stream)
+                            {
+                                simdscalari vPrimId;
+                                // pull primitiveID from the GS output if available
+                                if (state.gsState.emitsPrimitiveID)
+                                {
+                                    simdvector primIdAttrib[3];
+                                    gsPa.Assemble(VERTEX_PRIMID_SLOT, primIdAttrib);
+                                    vPrimId = _simd_castps_si(primIdAttrib[0].x);
+                                }
+                                else
+                                {
+                                    vPrimId = _simd_set1_epi32(pPrimitiveId[inputPrim]);
+                                }
+
+                                pfnClipFunc(pDC, gsPa, workerId, attrib, GenMask(gsPa.NumPrims()), vPrimId);
+                            }
+                        }
+                    } while (gsPa.NextPrim());
+                }
             }
         }
     }
@@ -764,7 +841,8 @@ static void GeometryShaderStage(
 /// @param state - API state
 /// @param ppGsOut - pointer to GS output buffer allocation
 /// @param ppCutBuffer - pointer to GS output cut buffer allocation
-static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, void** ppGsOut, void** ppCutBuffer)
+static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, void** ppGsOut, void** ppCutBuffer,
+    void **ppStreamCutBuffer)
 {
     Arena* pArena = pDC->pArena;
     SWR_ASSERT(pArena != nullptr);
@@ -777,11 +855,26 @@ static INLINE void AllocateGsBuffers(DRAW_CONTEXT* pDC, const API_STATE& state, 
     uint32_t size = state.gsState.instanceCount * numSimdBatches * vertexStride * KNOB_SIMD_WIDTH;
     *ppGsOut = pArena->AllocAligned(size, KNOB_SIMD_WIDTH * sizeof(float));
 
-    // allocate arena space to hold cut buffer, which is essentially a bitfield sized to the
-    // maximum vertex output as defined by the GS state, per SIMD lane, per GS instance
     const uint32_t cutPrimStride = (state.gsState.maxNumVerts + 7) / 8;
+    const uint32_t streamIdPrimStride = AlignUp(state.gsState.maxNumVerts * 2 / 8, 4);
     const uint32_t cutBufferSize = cutPrimStride * state.gsState.instanceCount * KNOB_SIMD_WIDTH;
-    *ppCutBuffer = pArena->AllocAligned(cutBufferSize, KNOB_SIMD_WIDTH * sizeof(float));
+    const uint32_t streamIdSize = streamIdPrimStride * state.gsState.instanceCount * KNOB_SIMD_WIDTH;
+
+    // allocate arena space to hold cut or streamid buffer, which is essentially a bitfield sized to the
+    // maximum vertex output as defined by the GS state, per SIMD lane, per GS instance
+
+    // allocate space for temporary per-stream cut buffer if multi-stream is enabled
+    if (state.gsState.isSingleStream)
+    {
+        *ppCutBuffer = pArena->AllocAligned(cutBufferSize, KNOB_SIMD_WIDTH * sizeof(float));
+        *ppStreamCutBuffer = nullptr;
+    }
+    else
+    {
+        *ppCutBuffer = pArena->AllocAligned(streamIdSize, KNOB_SIMD_WIDTH * sizeof(float));
+        *ppStreamCutBuffer = pArena->AllocAligned(cutBufferSize, KNOB_SIMD_WIDTH * sizeof(float));
+    }
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -830,6 +923,7 @@ static void TessellationStages(
     PA_STATE& pa,
     void* pGsOut,
     void* pCutBuffer,
+    void* pCutStreamBuffer,
     uint32_t* pSoPrimData,
     simdscalari primID)
 {
@@ -872,7 +966,6 @@ static void TessellationStages(
     SWR_HS_CONTEXT& hsContext = gt_pTessellationThreadData->hsContext;
     hsContext.pCPout = gt_pTessellationThreadData->patchData;
     hsContext.PrimitiveID = primID;
-    hsContext.pImmediateData = (float*)state.pHsImmediateData;
 
     uint32_t numVertsPerPrim = NumVertsPerPrim(pa.binTopology, false);
     // Max storage for one attribute for an entire simdprimitive
@@ -945,7 +1038,6 @@ static void TessellationStages(
         dsContext.pDomainV = (simdscalar*)tsData.pDomainPointsV;
         dsContext.pOutputData = gt_pTessellationThreadData->pDSOutput;
         dsContext.vectorStride = requiredDSVectorInvocations;
-        dsContext.pImmediateData = (float*)state.pDsImmediateData;
 
         uint32_t dsInvocations = 0;
 
@@ -975,7 +1067,7 @@ static void TessellationStages(
             if (HasGeometryShaderT)
             {
                 GeometryShaderStage<HasStreamOutT, HasRastT>(
-                    pDC, workerId, tessPa, pGsOut, pCutBuffer, pSoPrimData,
+                    pDC, workerId, tessPa, pGsOut, pCutBuffer, pCutStreamBuffer, pSoPrimData,
                     _simd_set1_epi32(dsContext.PrimitiveID));
             }
             else
@@ -1087,7 +1179,6 @@ void ProcessDraw(
     fetchInfo.StartVertex = 0;
 
     vsContext.pVin = &vin;
-    vsContext.pImmediateData = (float*)state.pVsImmediateData;
 
     if (IsIndexedT)
     {
@@ -1112,9 +1203,10 @@ void ProcessDraw(
 
     void* pGsOut = nullptr;
     void* pCutBuffer = nullptr;
+    void* pStreamCutBuffer = nullptr;
     if (HasGeometryShaderT)
     {
-        AllocateGsBuffers(pDC, state, &pGsOut, &pCutBuffer);
+        AllocateGsBuffers(pDC, state, &pGsOut, &pCutBuffer, &pStreamCutBuffer);
     }
 
     if (HasTessellationT)
@@ -1137,6 +1229,13 @@ void ProcessDraw(
     if (HasStreamOutT)
     {
         pSoPrimData = (uint32_t*)pDC->pArena->AllocAligned(4096, 16);
+
+        // update the
+        for (uint32_t i = 0; i < 4; ++i)
+        {
+            SET_STAT(SoWriteOffset[i], state.soBuffer[i].streamOffset);
+        }
+
     }
 
     // choose primitive assembler
@@ -1233,12 +1332,12 @@ void ProcessDraw(
                             if (HasTessellationT)
                             {
                                 TessellationStages<HasGeometryShaderT, HasStreamOutT, HasRastT>(
-                                    pDC, workerId, pa, pGsOut, pCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
+                                    pDC, workerId, pa, pGsOut, pCutBuffer, pStreamCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
                             }
                             else if (HasGeometryShaderT)
                             {
                                 GeometryShaderStage<HasStreamOutT, HasRastT>(
-                                    pDC, workerId, pa, pGsOut, pCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
+                                    pDC, workerId, pa, pGsOut, pCutBuffer, pStreamCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
                             }
                             else
                             {
@@ -1331,12 +1430,7 @@ INLINE void ProcessAttributes(
     DWORD slot = 0;
     uint32_t mapIdx = 0;
     LONG constantInterpMask = pDC->pState->state.backendState.constantInterpolationMask;
-
-    uint32_t provokingVertex = 0;
-    if (pa.binTopology == TOP_TRIANGLE_FAN)
-    {
-        provokingVertex = 1;
-    }
+    const uint32_t provokingVertex = pDC->pState->state.frontendState.topologyProvokingVertex;
 
     while (_BitScanForward(&slot, linkageMask))
     {

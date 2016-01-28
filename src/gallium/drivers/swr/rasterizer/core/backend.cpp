@@ -880,7 +880,6 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
     psContext.pRecipW = work.pRecipW;
     psContext.pSamplePosX = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosX;
     psContext.pSamplePosY = (const float*)&MultisampleTraits<SWR_MULTISAMPLE_1X>::samplePosY;
-    psContext.pImmediateData = (float*)state.pPsImmediateData;
 
     for(uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
@@ -1066,7 +1065,6 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
     psContext.pRecipW = work.pRecipW;
     psContext.frontFace = work.triFlags.frontFacing;
     psContext.primID = work.triFlags.primID;
-    psContext.pImmediateData = (float*)state.pPsImmediateData;
 
     // save Ia/Ib/Ic and Ja/Jb/Jc if we need to reevaluate i/j/k in the shader because of pull attribs
     psContext.I = work.I;
@@ -1277,7 +1275,6 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     psContext.pPerspAttribs = work.pPerspAttribs;
     psContext.frontFace = work.triFlags.frontFacing;
     psContext.primID = work.triFlags.primID;
-    psContext.pImmediateData = (float*)state.pPsImmediateData;
     psContext.pRecipW = work.pRecipW;
     // save Ia/Ib/Ic and Ja/Jb/Jc if we need to reevaluate i/j/k in the shader because of pull attribs
     psContext.I = work.I;
@@ -1580,7 +1577,6 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
     RDTSC_STOP(BESetup, 0, 0);
 
     SWR_PS_CONTEXT psContext;
-    psContext.pImmediateData = (float*)state.pPsImmediateData;
     for (uint32_t yy = y; yy < y + KNOB_TILE_Y_DIM; yy += SIMD_TILE_Y_DIM)
     {
         // UL pixel corner

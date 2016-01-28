@@ -217,8 +217,6 @@ struct SWR_VS_CONTEXT
     uint32_t InstanceID;    // IN: Instance ID, constant across all verts of the SIMD
     simdscalari VertexID;   // IN: Vertex ID
     simdscalari mask;       // IN: Active mask for shader
-
-    float* pImmediateData;  // IN: pointer to immediate data memory (i.e. push constants)
 };
 
 /////////////////////////////////////////////////////////////////////////
@@ -268,7 +266,6 @@ struct SWR_HS_CONTEXT
     simdscalari mask;           // IN: Active mask for shader
     ScalarPatch* pCPout;        // OUT: Output control point patch
                                 // SIMD-sized-array of SCALAR patches
-    float* pImmediateData;      // IN: pointer to immediate data memory (i.e. push constants)
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -285,8 +282,6 @@ struct SWR_DS_CONTEXT
     simdscalar*     pDomainV;       // IN: (SIMD) Domain Point V coords
     simdscalari     mask;           // IN: Active mask for shader
     simdscalar*     pOutputData;    // OUT: (SIMD) Vertex Attributes (2D array of vectors, one row per attribute-component)
-
-    float* pImmediateData;          // IN: pointer to immediate data memory (i.e. push constants)
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -296,14 +291,12 @@ struct SWR_DS_CONTEXT
 struct SWR_GS_CONTEXT
 {
     simdvertex vert[MAX_NUM_VERTS_PER_PRIM]; // IN: input primitive data for SIMD prims
-    simdscalari PrimitiveID;    // IN: input primitive ID generated from the draw call
-    uint32_t InstanceID;        // IN: input instance ID
-    simdscalari mask;           // IN: Active mask for shader
-    uint8_t* pStream;           // OUT: output stream (contains vertices for all output streams)
-    uint8_t* pCutBuffer;        // OUT: cut buffer
-    simdscalari vertexCount;    // OUT: num vertices emitted per SIMD lane
-
-    float* pImmediateData;      // IN: pointer to immediate data memory (i.e. push constants)
+    simdscalari PrimitiveID;        // IN: input primitive ID generated from the draw call
+    uint32_t InstanceID;            // IN: input instance ID
+    simdscalari mask;               // IN: Active mask for shader
+    uint8_t* pStream;               // OUT: output stream (contains vertices for all output streams)
+    uint8_t* pCutOrStreamIdBuffer;  // OUT: cut or stream id buffer
+    simdscalari vertexCount;        // OUT: num vertices emitted per SIMD lane
 };
 
 struct PixelPositions
@@ -345,8 +338,6 @@ struct SWR_PS_CONTEXT
     uint32_t frontFace;         // IN: front- 1, back- 0
     uint32_t primID;            // IN: primitive ID
     uint32_t sampleIndex;       // IN: sampleIndex
-
-    float* pImmediateData;      // IN: pointer to immediate data memory (i.e. push constants)
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -805,6 +796,17 @@ struct SWR_FRONTEND_STATE
     // skip clip test, perspective divide, and viewport transform
     // intended for verts in screen space
     bool vpTransformDisable;
+    union
+    {
+        struct
+        {
+            uint32_t triFan : 2;
+            uint32_t lineStripList : 1;
+            uint32_t triStripList : 2;
+        };
+        uint32_t bits;
+    }provokingVertex;
+    uint32_t topologyProvokingVertex; // provoking vertex for the draw topology
 };
 
 //////////////////////////////////////////////////////////////////////////

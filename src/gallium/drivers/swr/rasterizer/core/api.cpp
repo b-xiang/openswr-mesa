@@ -511,13 +511,11 @@ void SwrSetSoBuffers(
 
 void SwrSetVertexFunc(
     HANDLE hContext,
-    PFN_VERTEX_FUNC pfnVertexFunc,
-    void* pImmediateData)
+    PFN_VERTEX_FUNC pfnVertexFunc)
 {
     API_STATE* pState = GetDrawState(GetContext(hContext));
 
     pState->pfnVertexFunc = pfnVertexFunc;
-    pState->pVsImmediateData = pImmediateData;
 }
 
 void SwrSetFrontendState(
@@ -538,12 +536,10 @@ void SwrSetGsState(
 
 void SwrSetGsFunc(
     HANDLE hContext,
-    PFN_GS_FUNC pfnGsFunc,
-    void* pImmediateData)
+    PFN_GS_FUNC pfnGsFunc)
 {
     API_STATE* pState = GetDrawState(GetContext(hContext));
     pState->pfnGsFunc = pfnGsFunc;
-    pState->pGsImmediateData = pImmediateData;
 }
 
 void SwrSetCsFunc(
@@ -566,22 +562,18 @@ void SwrSetTsState(
 
 void SwrSetHsFunc(
     HANDLE hContext,
-    PFN_HS_FUNC pfnFunc,
-    void* pImmediateData)
+    PFN_HS_FUNC pfnFunc)
 {
     API_STATE* pApiState = GetDrawState(GetContext(hContext));
     pApiState->pfnHsFunc = pfnFunc;
-    pApiState->pHsImmediateData = pImmediateData;
 }
 
 void SwrSetDsFunc(
     HANDLE hContext,
-    PFN_DS_FUNC pfnFunc,
-    void* pImmediateData)
+    PFN_DS_FUNC pfnFunc)
 {
     API_STATE* pApiState = GetDrawState(GetContext(hContext));
     pApiState->pfnDsFunc = pfnFunc;
-    pApiState->pDsImmediateData = pImmediateData;
 }
 
 void SwrSetDepthStencilState(
@@ -604,12 +596,10 @@ void SwrSetBackendState(
 
 void SwrSetPixelShaderState(
     HANDLE hContext,
-    SWR_PS_STATE *pPSState,
-    void* pImmediateData)
+    SWR_PS_STATE *pPSState)
 {
     API_STATE *pState = GetDrawState(GetContext(hContext));
     pState->psState = *pPSState;
-    pState->pPsImmediateData = pImmediateData;
 }
 
 void SwrSetBlendState(
