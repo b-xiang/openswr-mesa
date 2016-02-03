@@ -211,7 +211,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_VERTEX_COLOR_CLAMPED: /* draw module */
       return 1;
    case PIPE_CAP_MIXED_COLORBUFFER_FORMATS:
-      return 0;
+      return 1;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return 330;
    case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
