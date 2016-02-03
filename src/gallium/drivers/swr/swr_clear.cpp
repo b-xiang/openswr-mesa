@@ -76,6 +76,7 @@ swr_clear(struct pipe_context *pipe,
    vp.height = ctx->framebuffer.height;
    SwrSetViewports(ctx->swrContext, 1, &vp, NULL);
 
+	swr_update_draw_context(ctx);
    SwrClearRenderTarget(ctx->swrContext, clearMask, color->f, depth, stencil);
 }
 

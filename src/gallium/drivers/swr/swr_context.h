@@ -147,8 +147,8 @@ struct swr_context {
    // blend jit functions
    std::unordered_map<BLEND_COMPILE_STATE, PFN_BLEND_JIT_FUNC> *blendJIT;
 
-   /* Shadows of current SWR API DrawState */
-   struct swr_shadow_state current;
+   /* Derived SWR API DrawState */
+   struct swr_derived_state derived;
 
    /* SWR private state - draw context */
    struct swr_draw_context swrDC;
@@ -160,6 +160,14 @@ static INLINE struct swr_context *
 swr_context(struct pipe_context *pipe)
 {
    return (struct swr_context *)pipe;
+}
+
+static INLINE void
+swr_update_draw_context(struct swr_context *ctx)
+{
+   swr_draw_context *pDC =
+      (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
+   memcpy(pDC, &ctx->swrDC, sizeof(swr_draw_context));
 }
 
 struct pipe_context *swr_create_context(struct pipe_screen *, void *priv, unsigned flags);

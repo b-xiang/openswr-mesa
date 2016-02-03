@@ -93,6 +93,5 @@ swr_resource_data(struct pipe_resource *resource)
 
 void swr_store_render_target(struct swr_context *ctx,
                              uint32_t attachment,
-                             enum SWR_TILE_STATE post_tile_state,
-                             struct SWR_SURFACE_STATE *surface = nullptr);
+                             enum SWR_TILE_STATE post_tile_state);
 #endif

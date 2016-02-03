@@ -66,9 +66,11 @@ struct swr_blend_state {
    RENDER_TARGET_BLEND_COMPILE_STATE compileState[PIPE_MAX_COLOR_BUFS];
 };
 
-/* Shadows of SWR API DrawState */
-struct swr_shadow_state {
-   SWR_SURFACE_STATE *attachment[SWR_NUM_ATTACHMENTS];
+/*
+ * Derived SWR API DrawState
+ * For convenience of making simple changes without re-deriving state.
+ */
+struct swr_derived_state {
    SWR_RASTSTATE rastState;
    SWR_VIEWPORT vp;
    SWR_VIEWPORT_MATRIX vpm;

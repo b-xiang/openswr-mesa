@@ -642,7 +642,6 @@ swr_update_derived(struct swr_context *ctx,
    if (ctx->dirty & SWR_NEW_FRAMEBUFFER) {
       struct pipe_framebuffer_state *fb = &ctx->framebuffer;
       SWR_SURFACE_STATE *new_attachment[SWR_NUM_ATTACHMENTS] = {0};
-      boolean changed, need_idle;
       UINT i;
 
       /* colorbuffer targets */
@@ -669,76 +668,55 @@ swr_update_derived(struct swr_context *ctx,
             new_attachment[SWR_ATTACHMENT_STENCIL] = &depthStencilBuffer->swr;
       }
 
-      /* For each attachment that has changed, store tile contents to render
-       * target */
-      changed = FALSE;
-      need_idle = FALSE;
+      /* Make the attachment updates */
+      swr_draw_context *pDC = &ctx->swrDC;
+      SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
       for (i = 0; i < SWR_NUM_ATTACHMENTS; i++) {
-         if ((uintptr_t)ctx->current.attachment[i]
-             ^ (uintptr_t)new_attachment[i]) {
-            if (ctx->current.attachment[i]) {
-               enum SWR_TILE_STATE post_state;
-               post_state =
-                  (new_attachment[i] ? SWR_TILE_INVALID : SWR_TILE_RESOLVED);
+         void *new_base = nullptr;
+         if (new_attachment[i])
+            new_base = new_attachment[i]->pBaseAddress;
+         
+         /* StoreTile for changed target */
+         if (renderTargets[i].pBaseAddress != new_base) {
+            if (renderTargets[i].pBaseAddress) {
+               enum SWR_TILE_STATE post_state = (new_attachment[i]
+                  ? SWR_TILE_INVALID : SWR_TILE_RESOLVED);
                swr_store_render_target(ctx, i, post_state);
-               need_idle |= TRUE;
             }
-            changed |= TRUE;
-         }
-      }
 
-      /*
-       * Attachments are live, don't update any until idle
-       * (all StoreTiles, called by swr_store_render_targets, finish)
-       */
-      if (need_idle)
-         SwrWaitForIdle(ctx->swrContext);
-
-      if (changed) {
-         /* Update actual SWR core attachments, or clear those no longer
-          * attached */
-         swr_draw_context *pDC = &ctx->swrDC;
-         SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
-         for (i = 0; i < SWR_NUM_ATTACHMENTS; i++) {
-            if ((uintptr_t)ctx->current.attachment[i]
-                ^ (uintptr_t)new_attachment[i]) {
-               if (new_attachment[i]) {
-                  renderTargets[i] = *new_attachment[i];
-                  ctx->current.attachment[i] = new_attachment[i];
-               } else {
+            /* Make new attachment */
+            if (new_attachment[i])
+               renderTargets[i] = *new_attachment[i];
+            else
+               if (renderTargets[i].pBaseAddress)
                   renderTargets[i] = {0};
-                  ctx->current.attachment[i] = nullptr;
-               }
-            }
          }
-
-         /* rendertarget changes also necessitate updating other state */
-         ctx->dirty |= SWR_NEW_BLEND | SWR_NEW_SAMPLER_VIEW | SWR_NEW_VS
-            | SWR_NEW_FS | SWR_NEW_RASTERIZER | SWR_NEW_VIEWPORT
-            | SWR_NEW_DEPTH_STENCIL_ALPHA;
       }
    }
 
    /* Raster state */
-   if (ctx->dirty & (SWR_NEW_RASTERIZER | SWR_NEW_VS)) {
-      SWR_RASTSTATE *rastState = &ctx->current.rastState;
-      rastState->cullMode = swr_convert_cull_mode(ctx->rasterizer->cull_face);
-      rastState->frontWinding = ctx->rasterizer->front_ccw
+   if (ctx->dirty & (SWR_NEW_RASTERIZER | SWR_NEW_FRAMEBUFFER)) {
+      pipe_rasterizer_state *rasterizer = ctx->rasterizer;
+      pipe_framebuffer_state *fb = &ctx->framebuffer;
+
+      SWR_RASTSTATE *rastState = &ctx->derived.rastState;
+      rastState->cullMode = swr_convert_cull_mode(rasterizer->cull_face);
+      rastState->frontWinding = rasterizer->front_ccw
          ? SWR_FRONTWINDING_CCW
          : SWR_FRONTWINDING_CW;
-      rastState->scissorEnable = ctx->rasterizer->scissor;
-      rastState->pointSize = ctx->rasterizer->point_size > 0.0f
-         ? ctx->rasterizer->point_size
+      rastState->scissorEnable = rasterizer->scissor;
+      rastState->pointSize = rasterizer->point_size > 0.0f
+         ? rasterizer->point_size
          : 1.0f;
-      rastState->lineWidth = ctx->rasterizer->line_width > 0.0f
-         ? ctx->rasterizer->line_width
+      rastState->lineWidth = rasterizer->line_width > 0.0f
+         ? rasterizer->line_width
          : 1.0f;
 
-      rastState->pointParam = ctx->rasterizer->point_size_per_vertex;
+      rastState->pointParam = rasterizer->point_size_per_vertex;
 
-      rastState->pointSpriteEnable = ctx->rasterizer->sprite_coord_enable;
+      rastState->pointSpriteEnable = rasterizer->sprite_coord_enable;
       rastState->pointSpriteTopOrigin =
-         ctx->rasterizer->sprite_coord_mode == PIPE_SPRITE_COORD_UPPER_LEFT;
+         rasterizer->sprite_coord_mode == PIPE_SPRITE_COORD_UPPER_LEFT;
 
       /* XXX TODO: Add multisample */
       rastState->msaaRastEnable = false;
@@ -747,54 +725,59 @@ swr_update_derived(struct swr_context *ctx,
       rastState->bForcedSampleCount = false;
 
       bool do_offset = false;
-      switch (ctx->rasterizer->fill_front) {
+      switch (rasterizer->fill_front) {
       case PIPE_POLYGON_MODE_FILL:
-         do_offset = ctx->rasterizer->offset_tri;
+         do_offset = rasterizer->offset_tri;
          break;
       case PIPE_POLYGON_MODE_LINE:
-         do_offset = ctx->rasterizer->offset_line;
+         do_offset = rasterizer->offset_line;
          break;
       case PIPE_POLYGON_MODE_POINT:
-         do_offset = ctx->rasterizer->offset_point;
+         do_offset = rasterizer->offset_point;
          break;
       }
 
       if (do_offset) {
-         rastState->depthBias = ctx->rasterizer->offset_units;
-         rastState->slopeScaledDepthBias = ctx->rasterizer->offset_scale;
-         rastState->depthBiasClamp = ctx->rasterizer->offset_clamp;
+         rastState->depthBias = rasterizer->offset_units;
+         rastState->slopeScaledDepthBias = rasterizer->offset_scale;
+         rastState->depthBiasClamp = rasterizer->offset_clamp;
       } else {
          rastState->depthBias = 0;
          rastState->slopeScaledDepthBias = 0;
          rastState->depthBiasClamp = 0;
       }
-      struct pipe_surface *zb = ctx->framebuffer.zsbuf;
+      struct pipe_surface *zb = fb->zsbuf;
       if (zb && swr_resource(zb->texture)->has_depth)
          rastState->depthFormat = swr_resource(zb->texture)->swr.format;
 
-      rastState->depthClipEnable = ctx->rasterizer->depth_clip;
+      rastState->depthClipEnable = rasterizer->depth_clip;
 
       SwrSetRastState(ctx->swrContext, rastState);
    }
 
    /* Scissor */
    if (ctx->dirty & SWR_NEW_SCISSOR) {
-      BBOX bbox(ctx->scissor.miny, ctx->scissor.maxy,
-                   ctx->scissor.minx, ctx->scissor.maxx);
+      pipe_scissor_state *scissor = &ctx->scissor;
+      BBOX bbox(scissor->miny, scissor->maxy,
+                scissor->minx, scissor->maxx);
       SwrSetScissorRects(ctx->swrContext, 1, &bbox);
    }
 
    /* Viewport */
-   if (ctx->dirty & SWR_NEW_VIEWPORT) {
+   if (ctx->dirty & (SWR_NEW_VIEWPORT | SWR_NEW_FRAMEBUFFER
+                     | SWR_NEW_RASTERIZER)) {
       pipe_viewport_state *state = &ctx->viewport;
-      SWR_VIEWPORT *vp = &ctx->current.vp;
-      SWR_VIEWPORT_MATRIX *vpm = &ctx->current.vpm;
+      pipe_framebuffer_state *fb = &ctx->framebuffer;
+      pipe_rasterizer_state *rasterizer = ctx->rasterizer;
+
+      SWR_VIEWPORT *vp = &ctx->derived.vp;
+      SWR_VIEWPORT_MATRIX *vpm = &ctx->derived.vpm;
 
       vp->x = state->translate[0] - state->scale[0];
       vp->width = state->translate[0] + state->scale[0];
       vp->y = state->translate[1] - fabs(state->scale[1]);
       vp->height = state->translate[1] + fabs(state->scale[1]);
-      if (ctx->rasterizer->clip_halfz == 0) {
+      if (rasterizer->clip_halfz == 0) {
          vp->minZ = state->translate[2] - state->scale[2];
          vp->maxZ = state->translate[2] + state->scale[2];
       } else {
@@ -814,8 +797,8 @@ swr_update_derived(struct swr_context *ctx,
        */
       vp->x = std::max(vp->x, 0.0f);
       vp->y = std::max(vp->y, 0.0f);
-      vp->width = std::min(vp->width, (float)ctx->framebuffer.width);
-      vp->height = std::min(vp->height, (float)ctx->framebuffer.height);
+      vp->width = std::min(vp->width, (float)fb->width);
+      vp->height = std::min(vp->height, (float)fb->height);
 
       SwrSetViewports(ctx->swrContext, 1, vp, vpm);
    }
@@ -932,7 +915,7 @@ swr_update_derived(struct swr_context *ctx,
    }
 
    /* VertexShader */
-   if (ctx->dirty & SWR_NEW_VS) {
+   if (ctx->dirty & (SWR_NEW_VS | SWR_NEW_FRAMEBUFFER)) {
       SwrSetVertexFunc(ctx->swrContext, ctx->vs->func);
    }
 
@@ -1009,7 +992,7 @@ swr_update_derived(struct swr_context *ctx,
    }
 
    /* JIT sampler view state */
-   if (ctx->dirty & SWR_NEW_SAMPLER_VIEW) {
+   if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
       swr_draw_context *pDC = &ctx->swrDC;
 
       for (unsigned i = 0; i < key.nr_sampler_views; i++) {
@@ -1090,7 +1073,7 @@ swr_update_derived(struct swr_context *ctx,
    }
 
    /* Depth/stencil state */
-   if (ctx->dirty & SWR_NEW_DEPTH_STENCIL_ALPHA) {
+   if (ctx->dirty & (SWR_NEW_DEPTH_STENCIL_ALPHA | SWR_NEW_FRAMEBUFFER)) {
       struct pipe_depth_state *depth = &(ctx->depth_stencil->depth);
       struct pipe_stencil_state *stencil = ctx->depth_stencil->stencil;
       SWR_DEPTH_STENCIL_STATE depthStencilState = {{0}};

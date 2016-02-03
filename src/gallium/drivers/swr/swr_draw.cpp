@@ -93,9 +93,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    if (ctx->dirty)
       swr_update_derived(ctx, info);
 
-   swr_draw_context *pDC =
-      (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
-   memcpy(pDC, &ctx->swrDC, sizeof(swr_draw_context));
+   swr_update_draw_context(ctx);
 
    if (ctx->vs->pipe.stream_output.num_outputs) {
       if (!ctx->vs->soFunc[info->mode]) {
@@ -223,25 +221,19 @@ swr_finish(struct pipe_context *pipe)
 void
 swr_store_render_target(struct swr_context *ctx,
                         uint32_t attachment,
-                        enum SWR_TILE_STATE post_tile_state,
-                        struct SWR_SURFACE_STATE *surface)
+                        enum SWR_TILE_STATE post_tile_state)
 {
    struct swr_draw_context *pDC = &ctx->swrDC;
    struct SWR_SURFACE_STATE *renderTarget = &pDC->renderTargets[attachment];
-
-   /* If the passed in surface isn't already attached, it will be attached and
-    * then restored. */
-   if (surface && (surface != ctx->current.attachment[attachment]))
-      *renderTarget = *surface;
 
    /* Only proceed if there's a valid surface to store to */
    if (renderTarget->pBaseAddress) {
       /* Set viewport to full renderTarget width/height and disable scissor
        * before StoreTiles */
       boolean change_viewport =
-         (ctx->current.vp.x != 0.0f || ctx->current.vp.y != 0.0f
-          || ctx->current.vp.width != renderTarget->width
-          || ctx->current.vp.height != renderTarget->height);
+         (ctx->derived.vp.x != 0.0f || ctx->derived.vp.y != 0.0f
+          || ctx->derived.vp.width != renderTarget->width
+          || ctx->derived.vp.height != renderTarget->height);
       if (change_viewport) {
          SWR_VIEWPORT vp = {0};
          vp.width = renderTarget->width;
@@ -249,31 +241,24 @@ swr_store_render_target(struct swr_context *ctx,
          SwrSetViewports(ctx->swrContext, 1, &vp, NULL);
       }
 
-      boolean scissor_enable = ctx->current.rastState.scissorEnable;
+      boolean scissor_enable = ctx->derived.rastState.scissorEnable;
       if (scissor_enable) {
-         ctx->current.rastState.scissorEnable = FALSE;
-         SwrSetRastState(ctx->swrContext, &ctx->current.rastState);
+         ctx->derived.rastState.scissorEnable = FALSE;
+         SwrSetRastState(ctx->swrContext, &ctx->derived.rastState);
       }
 
-      swr_draw_context *pPrivateDC =
-         (swr_draw_context *)SwrGetPrivateContextState(ctx->swrContext);
-      memcpy(pPrivateDC, pDC, sizeof(swr_draw_context));
-
+      swr_update_draw_context(ctx);
       SwrStoreTiles(ctx->swrContext,
                     (enum SWR_RENDERTARGET_ATTACHMENT)attachment,
                     post_tile_state);
 
       /* Restore viewport and scissor enable */
       if (change_viewport)
-         SwrSetViewports(ctx->swrContext, 1, &ctx->current.vp, &ctx->current.vpm);
+         SwrSetViewports(ctx->swrContext, 1, &ctx->derived.vp, &ctx->derived.vpm);
       if (scissor_enable) {
-         ctx->current.rastState.scissorEnable = scissor_enable;
-         SwrSetRastState(ctx->swrContext, &ctx->current.rastState);
+         ctx->derived.rastState.scissorEnable = scissor_enable;
+         SwrSetRastState(ctx->swrContext, &ctx->derived.rastState);
       }
-
-      /* Restore surface attachment, if changed */
-      if (surface && (surface != ctx->current.attachment[attachment]))
-         *renderTarget = *ctx->current.attachment[attachment];
    }
 }
 

@@ -93,20 +93,20 @@ swr_surface_destroy(struct pipe_context *pipe, struct pipe_surface *surf)
                          | PIPE_BIND_DISPLAY_TARGET)) {
       struct swr_context *ctx = swr_context(pipe);
       struct swr_resource *spr = swr_resource(resource);
+		swr_draw_context *pDC = &ctx->swrDC;
+		SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
       for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
-         if (ctx->current.attachment[i] == &spr->swr) {
+         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
             swr_store_render_target(ctx, i, SWR_TILE_RESOLVED);
-            ctx->current.attachment[i] = nullptr;
+
             /*
              * Mesa thinks depth/stencil are fused, so we'll never get an
              * explicit resource for stencil.  So, if checking depth, then
-             * also
-             * check for stencil.
+             * also check for stencil.
              */
             if (spr->has_stencil && (i == SWR_ATTACHMENT_DEPTH)) {
                swr_store_render_target(
                   ctx, SWR_ATTACHMENT_STENCIL, SWR_TILE_RESOLVED);
-               ctx->current.attachment[SWR_ATTACHMENT_STENCIL] = nullptr;
             }
 
             SwrWaitForIdle(ctx->swrContext);
@@ -142,8 +142,10 @@ swr_transfer_map(struct pipe_context *pipe,
    if (resource->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL
                          | PIPE_BIND_DISPLAY_TARGET)) {
       struct swr_context *ctx = swr_context(pipe);
+      swr_draw_context *pDC = &ctx->swrDC;
+      SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
       for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
-         if (ctx->current.attachment[i] == &spr->swr) {
+         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
             swr_store_render_target(ctx, i, SWR_TILE_INVALID);
             /*
              * Mesa thinks depth/stencil are fused, so we'll never get an
