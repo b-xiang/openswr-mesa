@@ -280,4 +280,28 @@ swr_convert_blend_factor(const UINT blend_factor)
       return BLENDFACTOR_ONE;
    }
 }
+
+static INLINE enum SWR_SURFACE_TYPE
+swr_convert_target_type(const enum pipe_texture_target target)
+{
+   switch (target) {
+   case PIPE_BUFFER:
+      return SURFACE_BUFFER;
+   case PIPE_TEXTURE_1D:
+   case PIPE_TEXTURE_1D_ARRAY:
+      return SURFACE_1D;
+   case PIPE_TEXTURE_2D:
+   case PIPE_TEXTURE_2D_ARRAY:
+   case PIPE_TEXTURE_RECT:
+      return SURFACE_2D;
+   case PIPE_TEXTURE_3D:
+      return SURFACE_3D;
+   case PIPE_TEXTURE_CUBE:
+   case PIPE_TEXTURE_CUBE_ARRAY:
+      return SURFACE_CUBE;
+   default:
+      assert(0);
+      return SURFACE_NULL;
+   }
+}
 #endif

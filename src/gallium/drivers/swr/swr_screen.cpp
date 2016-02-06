@@ -45,10 +45,20 @@ extern "C" {
 
 #include <stdio.h>
 
+/* MSVC case instensitive compare */
 #if defined(PIPE_CC_MSVC)
-   // portable case instensitive compare 
    #define strcasecmp lstrcmpiA  
 #endif
+
+/*
+ * Max texture sizes
+ * XXX Check max texture size values against core and sampler.
+ */
+#define SWR_MAX_TEXTURE_SIZE (4 * 1048 * 1048 * 1024ULL) /* 4GB */
+#define SWR_MAX_TEXTURE_2D_LEVELS 14  /* 8K x 8K for now */
+#define SWR_MAX_TEXTURE_3D_LEVELS 12  /* 2K x 2K x 2K for now */
+#define SWR_MAX_TEXTURE_CUBE_LEVELS 14  /* 8K x 8K for now */
+#define SWR_MAX_TEXTURE_ARRAY_LAYERS 512 /* 8K x 512 / 8K x 8K x 512 */
 
 static const char *
 swr_get_name(struct pipe_screen *screen)
@@ -153,12 +163,11 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
       return 0;
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
-      return 13; // xxx This increases rendertarget max size to 4k x 4k.  No
-                 // way to separate widht/height.
+      return SWR_MAX_TEXTURE_2D_LEVELS;
    case PIPE_CAP_MAX_TEXTURE_3D_LEVELS:
-      return 12; // xxx
+      return SWR_MAX_TEXTURE_3D_LEVELS;
    case PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS:
-      return 12; // xxx
+      return SWR_MAX_TEXTURE_CUBE_LEVELS;
    case PIPE_CAP_BLEND_EQUATION_SEPARATE:
       return 1;
    case PIPE_CAP_INDEP_BLEND_ENABLE:
@@ -197,7 +206,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return 1;
    case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
-      return 256; /* for GL3 */
+      return SWR_MAX_TEXTURE_ARRAY_LAYERS;
    case PIPE_CAP_MIN_TEXEL_OFFSET:
       return -8;
    case PIPE_CAP_MAX_TEXEL_OFFSET:
@@ -419,29 +428,140 @@ static boolean
 swr_displaytarget_layout(struct swr_screen *screen, struct swr_resource *res)
 {
    struct sw_winsys *winsys = screen->winsys;
+   struct sw_displaytarget *dt;
 
    UINT stride;
-   res->display_target = winsys->displaytarget_create(winsys,
-                                                      res->base.bind,
-                                                      res->base.format,
-                                                      res->alignedWidth,
-                                                      res->alignedHeight,
-                                                      64, NULL,
-                                                      &stride);
+   dt = winsys->displaytarget_create(winsys,
+                                     res->base.bind,
+                                     res->base.format,
+                                     res->alignedWidth,
+                                     res->alignedHeight,
+                                     64, NULL,
+                                     &stride);
 
-   if (res->display_target == NULL)
+   if (dt == NULL)
       return FALSE;
 
-   /* Clear the display target surface */
-   void *map = winsys->displaytarget_map(
-      winsys, res->display_target, PIPE_TRANSFER_WRITE);
+   void *map = winsys->displaytarget_map(winsys, dt, 0);
 
+   res->display_target = dt;
+   res->swr.pBaseAddress = (uint8_t*) map;
+
+   /* Clear the display target surface */
    if (map)
       memset(map, 0, res->alignedHeight * stride);
 
-   winsys->displaytarget_unmap(winsys, res->display_target);
+   winsys->displaytarget_unmap(winsys, dt);
 
    return TRUE;
+}
+
+static boolean
+swr_texture_layout(struct swr_screen *screen,
+                   struct swr_resource *res,
+                   boolean allocate)
+{
+   struct pipe_resource *pt = &res->base;
+
+   pipe_format fmt = pt->format;
+   const struct util_format_description *desc = util_format_description(fmt);
+
+   res->has_depth = util_format_has_depth(desc);
+   res->has_stencil = util_format_has_stencil(desc);
+
+   if (res->has_stencil && !res->has_depth)
+      fmt = PIPE_FORMAT_R8_UINT;
+
+   res->swr.width = pt->width0;
+   res->swr.height = pt->height0;
+   res->swr.depth = pt->depth0;
+   res->swr.type = swr_convert_target_type(pt->target);
+   res->swr.tileMode = SWR_TILE_NONE;
+   res->swr.format = mesa_to_swr_format(fmt);
+   res->swr.numSamples = (1 << pt->nr_samples);
+
+   SWR_FORMAT_INFO finfo = GetFormatInfo(res->swr.format);
+
+   unsigned total_size = 0;
+   unsigned width = pt->width0;
+   unsigned height = pt->height0;
+   unsigned depth = pt->depth0;
+   unsigned layers = pt->array_size;
+
+   for (int level = 0; level <= pt->last_level; level++) {
+      unsigned alignedWidth, alignedHeight;
+      unsigned num_slices;
+
+      if (pt->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL)) {
+         alignedWidth = align(width, KNOB_MACROTILE_X_DIM);
+         alignedHeight = align(height, KNOB_MACROTILE_Y_DIM);
+      } else {
+         alignedWidth = width;
+         alignedHeight = height;
+      }
+
+      if (level == 0) {
+         res->alignedWidth = alignedWidth;
+         res->alignedHeight = alignedHeight;
+      }
+
+      res->row_stride[level] = alignedWidth * finfo.Bpp;
+      res->img_stride[level] = res->row_stride[level] * alignedHeight;
+      res->mip_offsets[level] = total_size;
+
+      if (pt->target == PIPE_TEXTURE_3D)
+         num_slices = depth;
+      else if (pt->target == PIPE_TEXTURE_1D_ARRAY
+               || pt->target == PIPE_TEXTURE_2D_ARRAY
+               || pt->target == PIPE_TEXTURE_CUBE
+               || pt->target == PIPE_TEXTURE_CUBE_ARRAY)
+         num_slices = layers;
+      else
+         num_slices = 1;
+
+      total_size += res->img_stride[level] * num_slices;
+      if (total_size > SWR_MAX_TEXTURE_SIZE)
+         return FALSE;
+
+      width = u_minify(width, 1);
+      height = u_minify(height, 1);
+      depth = u_minify(depth, 1);
+   }
+
+   res->swr.halign = res->alignedWidth;
+   res->swr.valign = res->alignedHeight;
+   res->swr.pitch = res->row_stride[0];
+
+   if (allocate) {
+      res->swr.pBaseAddress = (BYTE *)_aligned_malloc(total_size, 64);
+
+      if (res->has_depth && res->has_stencil) {
+         SWR_FORMAT_INFO finfo = GetFormatInfo(res->secondary.format);
+         res->secondary.width = pt->width0;
+         res->secondary.height = pt->height0;
+         res->secondary.depth = pt->depth0;
+         res->secondary.type = SURFACE_2D;
+         res->secondary.tileMode = SWR_TILE_NONE;
+         res->secondary.format = R8_UINT;
+         res->secondary.numSamples = (1 << pt->nr_samples);
+         res->secondary.pitch = res->alignedWidth * finfo.Bpp;
+
+         res->secondary.pBaseAddress = (BYTE *)_aligned_malloc(
+            res->alignedHeight * res->secondary.pitch, 64);
+      }
+   }
+
+   return TRUE;
+}
+
+static boolean
+swr_can_create_resource(struct pipe_screen *screen,
+                        const struct pipe_resource *templat)
+{
+   struct swr_resource res;
+   memset(&res, 0, sizeof(res));
+   res.base = *templat;
+   return swr_texture_layout(swr_screen(screen), &res, false);
 }
 
 static struct pipe_resource *
@@ -457,106 +577,31 @@ swr_resource_create(struct pipe_screen *_screen,
    pipe_reference_init(&res->base.reference, 1);
    res->base.screen = &screen->base;
 
-   const struct util_format_description *desc =
-      util_format_description(templat->format);
-   res->has_depth = util_format_has_depth(desc);
-   res->has_stencil = util_format_has_stencil(desc);
-
-   pipe_format fmt = templat->format;
-   if (res->has_stencil && !res->has_depth)
-      fmt = PIPE_FORMAT_R8_UINT;
-
-   res->swr.width = templat->width0;
-   res->swr.height = templat->height0;
-   res->swr.depth = templat->depth0;
-   res->swr.type = SURFACE_2D;
-   res->swr.tileMode = SWR_TILE_NONE;
-   res->swr.format = mesa_to_swr_format(fmt);
-   res->swr.numSamples = (1 << templat->nr_samples);
-
-   SWR_FORMAT_INFO finfo = GetFormatInfo(res->swr.format);
-
-   unsigned total_size = 0;
-   unsigned width = templat->width0;
-   unsigned height = templat->height0;
-   unsigned depth = templat->depth0;
-   unsigned layers = templat->array_size;
-
-   for (int level = 0; level <= templat->last_level; level++) {
-      unsigned alignedWidth, alignedHeight;
-      unsigned num_slices;
-
-      if (templat->bind & (PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_RENDER_TARGET
-                           | PIPE_BIND_DISPLAY_TARGET)) {
-         alignedWidth = (width + (KNOB_MACROTILE_X_DIM - 1))
-            & ~(KNOB_MACROTILE_X_DIM - 1);
-         alignedHeight = (height + (KNOB_MACROTILE_Y_DIM - 1))
-            & ~(KNOB_MACROTILE_Y_DIM - 1);
-      } else {
-         alignedWidth = width;
-         alignedHeight = height;
-      }
-
-      if (level == 0) {
-         res->alignedWidth = alignedWidth;
-         res->alignedHeight = alignedHeight;
-      }
-
-      res->row_stride[level] = alignedWidth * finfo.Bpp;
-      res->img_stride[level] = res->row_stride[level] * alignedHeight;
-      res->mip_offsets[level] = total_size;
-
-      if (templat->target == PIPE_TEXTURE_3D)
-         num_slices = depth;
-      else if (templat->target == PIPE_TEXTURE_1D_ARRAY
-               || templat->target == PIPE_TEXTURE_2D_ARRAY
-               || templat->target == PIPE_TEXTURE_CUBE
-               || templat->target == PIPE_TEXTURE_CUBE_ARRAY)
-         num_slices = layers;
-      else
-         num_slices = 1;
-
-      total_size += res->img_stride[level] * num_slices;
-
-      width = u_minify(width, 1);
-      height = u_minify(height, 1);
-      depth = u_minify(depth, 1);
-   }
-
-   res->swr.halign = res->alignedWidth;
-   res->swr.valign = res->alignedHeight;
-   res->swr.pitch = res->row_stride[0];
-   res->swr.pBaseAddress = (BYTE *)_aligned_malloc(total_size, 64);
-
-   if (res->has_depth && res->has_stencil) {
-      res->secondary.width = templat->width0;
-      res->secondary.height = templat->height0;
-      res->secondary.depth = templat->depth0;
-      res->secondary.type = SURFACE_2D;
-      res->secondary.tileMode = SWR_TILE_NONE;
-      res->secondary.format = R8_UINT;
-      res->secondary.numSamples = (1 << templat->nr_samples);
-
-      SWR_FORMAT_INFO finfo = GetFormatInfo(res->secondary.format);
-      res->secondary.pitch = res->alignedWidth * finfo.Bpp;
-      res->secondary.pBaseAddress = (BYTE *)_aligned_malloc(
-         res->alignedHeight * res->secondary.pitch, 64);
-   }
-
    if (swr_resource_is_texture(&res->base)) {
       if (res->base.bind & (PIPE_BIND_DISPLAY_TARGET | PIPE_BIND_SCANOUT
                             | PIPE_BIND_SHARED)) {
-         /* displayable surface */
+         /* displayable surface
+          * first call swr_texture_layout without allocating to finish
+          * filling out the SWR_SURFAE_STATE in res */
+         swr_texture_layout(screen, res, false);
          if (!swr_displaytarget_layout(screen, res))
             goto fail;
-      
-         // else we go ahead and map the display_target directly to winsys memory
-         struct sw_winsys *winsys = screen->winsys;
-         struct sw_displaytarget *dt = ((struct swr_resource *) res)->display_target;
-         _aligned_free(res->swr.pBaseAddress);
-
-         res->swr.pBaseAddress = (uint8_t*) (winsys->displaytarget_map(winsys, dt, 0));
+      } else {
+         /* texture map */
+         if (!swr_texture_layout(screen, res, true))
+            goto fail;
       }
+   } else {
+      /* other data (vertex buffer, const buffer, etc) */
+      assert(util_format_get_blocksize(templat->format) == 1);
+      assert(templat->height0 == 1);
+      assert(templat->depth0 == 1);
+      assert(templat->last_level == 0);
+
+      /* Easiest to just call swr_texture_layout, as it sets up
+       * SWR_SURFAE_STATE in res */
+      if (!swr_texture_layout(screen, res, true))
+         goto fail;
    }
 
    return &res->base;
@@ -678,6 +723,7 @@ swr_create_screen(struct sw_winsys *winsys)
    screen->base.get_vendor = swr_get_vendor;
    screen->base.is_format_supported = swr_is_format_supported;
    screen->base.context_create = swr_create_context;
+   screen->base.can_create_resource = swr_can_create_resource;
 
    screen->base.destroy = swr_destroy_screen;
    screen->base.get_param = swr_get_param;
