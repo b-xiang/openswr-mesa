@@ -692,7 +692,7 @@ swr_destroy_screen(struct pipe_screen *p_screen)
    FREE(screen);
 }
 
-
+PUBLIC
 struct pipe_screen *
 swr_create_screen(struct sw_winsys *winsys)
 {
@@ -700,19 +700,6 @@ swr_create_screen(struct sw_winsys *winsys)
 
    if (!screen)
       return NULL;
-
-   fprintf(stderr, "SWR create screen!\n");
-   util_cpu_detect();
-   if (util_cpu_caps.has_avx2)
-      fprintf(stderr, "This processor supports AVX2.\n");
-   else if (util_cpu_caps.has_avx)
-      fprintf(stderr, "This processor supports AVX.\n");
-   /* Exit gracefully if there is no AVX support */
-   else {
-      fprintf(stderr, " !!! This processor does not support AVX or AVX2.  "
-                      "OpenSWR requires AVX.\n");
-      exit(-1);
-   }
 
    if (!getenv("KNOB_MAX_PRIMS_PER_DRAW")) {
       g_GlobalKnobs.MAX_PRIMS_PER_DRAW.Value(49152);

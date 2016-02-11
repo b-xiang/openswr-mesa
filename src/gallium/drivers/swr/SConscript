@@ -8,110 +8,18 @@ if not env['llvm']:
     print 'warning: LLVM disabled: not building swr'
     Return()
 
+swr_arch = 'avx'
+SConscript('SConscript-arch', variant_dir='avx', duplicate=0, exports='swr_arch')
+swr_arch = 'avx2'
+SConscript('SConscript-arch', variant_dir='avx2', duplicate=0, exports='swr_arch')
+
 env = env.Clone()
 
 env.MSVC2008Compat()
 
-env.Append(CPPDEFINES = [
-	'__STDC_CONSTANT_MACROS',
-	'__STDC_LIMIT_MACROS',
-	])
-
-if env["swr_arch"] == "avx":
-    env.Append(CPPDEFINES = [
-    'KNOB_ARCH=KNOB_ARCH_AVX',
-    ])
-    if env['msvc'] :
-        env.Append(CCFLAGS = ['/arch:AVX'])
-    else :
-        env.Append(CCFLAGS = ['-march=core-avx-i'])
-
-else:
-    env.Append(CPPDEFINES = [
-    'KNOB_ARCH=KNOB_ARCH_AVX2',
-    ])
-    if env['msvc'] :
-        env.Append(CCFLAGS = ['/arch:AVX2'])
-    else :
-        env.Append(CCFLAGS = ['-march=core-avx2'])
-
-if not env['msvc'] :
-    env.Append(CCFLAGS = [
-        '-std=c++11',
-    ])
-
-env.Prepend(CPPPATH = [
-    'rasterizer',
-    'rasterizer/core',
-    'rasterizer/jitter',
-    'rasterizer/scripts',
-    ])
-
-env.CodeGenerate(
-    target = 'rasterizer/scripts/gen_knobs.cpp',
-    script = 'rasterizer/scripts/gen_knobs.py',
-    source = [],
-    command = python_cmd + ' $SCRIPT ' + Dir('rasterizer/scripts').abspath
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/scripts/gen_knobs.h',
-    script = 'rasterizer/scripts/gen_knobs.py',
-    source = [],
-    command = python_cmd + ' $SCRIPT ' + Dir('rasterizer/scripts').abspath
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/state_llvm.h',
-    script = 'rasterizer/jitter/scripts/gen_llvm_types.py',
-    source = 'rasterizer/core/state.h',
-    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_gen.h',
-    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
-    source = os.path.join(env['llvm_includedir'], 'llvm/IR/IRBuilder.h'),
-    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_h'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_gen.cpp',
-    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
-    source = os.path.join(env['llvm_includedir'], 'llvm/IR/IRBuilder.h'),
-    command = python_cmd + ' $SCRIPT --input $SOURCE --output $TARGET --gen_cpp'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_x86.h',
-    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
-    source = '',
-    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_h'
-)
-
-env.CodeGenerate(
-    target = 'rasterizer/jitter/builder_x86.cpp',
-    script = 'rasterizer/jitter/scripts/gen_llvm_ir_macros.py',
-    source = '',
-    command = python_cmd + ' $SCRIPT --output $TARGET --gen_x86_cpp'
-)
-
-source = [
-       'rasterizer/scripts/gen_knobs.cpp', 'rasterizer/scripts/gen_knobs.h',
-       'rasterizer/jitter/builder_gen.cpp', 'rasterizer/jitter/builder_gen.h',
-       'rasterizer/jitter/builder_x86.cpp', 'rasterizer/jitter/builder_x86.h',
-       ]
-source += env.ParseSourceList('Makefile.sources', [
-    'CXX_SOURCES',
-    'COMMON_CXX_SOURCES',
-    'CORE_CXX_SOURCES',
-    'JITTER_CXX_SOURCES',
-    'MEMORY_CXX_SOURCES'
+source = env.ParseSourceList('Makefile.sources', [
+    'CXX_SOURCES'
 ])
-
-
-if env['msvc'] : # Visual Studio compiler
-    source = filter(lambda f: not f.endswith(".h") and not f.endswith(".hpp"), source)
 
 swr = env.ConvenienceLibrary(
 	target = 'swr',

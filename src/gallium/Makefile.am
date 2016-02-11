@@ -80,6 +80,8 @@ endif
 
 if HAVE_GALLIUM_SWR
 SUBDIRS += drivers/swr
+SUBDIRS += drivers/swr/avx
+SUBDIRS += drivers/swr/avx2
 endif
 
 ## vc4/rpi

@@ -24,5 +24,7 @@ if HAVE_GALLIUM_SWR
 TARGET_CPPFLAGS += -DGALLIUM_SWR
 TARGET_LIB_DEPS += \
 	$(top_builddir)/src/gallium/drivers/swr/libmesaswr.la
+	$(top_builddir)/src/gallium/drivers/swr/avx/libswrAVX.la
+	$(top_builddir)/src/gallium/drivers/swr/avx2/libswrAVX2.la
 
 endif
