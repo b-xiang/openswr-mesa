@@ -46,6 +46,9 @@
 #include "tilemgr.h"
 #include "core/multisample.h"
 
+
+
+
 // ThreadId
 struct Core
 {
@@ -60,9 +63,11 @@ struct NumaNode
 
 typedef std::vector<NumaNode> CPUNumaNodes;
 
-void CalculateProcessorTopology(CPUNumaNodes& out_nodes)
+void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThreadsPerProcGroup)
 {
     out_nodes.clear();
+    out_numThreadsPerProcGroup = 0;
+
 #if defined(_WIN32)
 
     SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer[KNOB_MAX_NUM_THREADS];
@@ -124,6 +129,10 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes)
 #endif
                 }
                 pCore->threadIds.push_back(threadId);
+                if (procGroup == 0)
+                {
+                    out_numThreadsPerProcGroup++;
+                }
             }
         }
         pBuffer = PtrAdd(pBuffer, pBuffer->Size);
@@ -154,6 +163,8 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes)
 
                 core.procGroup = coreId;
                 core.threadIds.push_back(threadId);
+
+                out_numThreadsPerProcGroup++;
             }
 
             auto data_start = line.find(": ") + 2;
@@ -184,6 +195,7 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes)
 
         core.procGroup = coreId;
         core.threadIds.push_back(threadId);
+        out_numThreadsPerProcGroup++;
     }
 
     for (uint32_t node = 0; node < out_nodes.size(); node++) {
@@ -205,8 +217,14 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes)
 }
 
 
-void bindThread(uint32_t threadId, uint32_t procGroupId = 0)
+void bindThread(uint32_t threadId, uint32_t procGroupId = 0, bool bindProcGroup=false)
 {
+    // Only bind threads when MAX_WORKER_THREADS isn't set.
+    if (KNOB_MAX_WORKER_THREADS && bindProcGroup == false)
+    {
+        return;
+    }
+
 #if defined(_WIN32)
     {
         GROUP_AFFINITY affinity = {};
@@ -224,7 +242,12 @@ void bindThread(uint32_t threadId, uint32_t procGroupId = 0)
         else
 #endif
         {
-            affinity.Mask = KAFFINITY(1) << threadId;
+            // If KNOB_MAX_WORKER_THREADS is set, only bind to the proc group,
+            // Not the individual HW thread.
+            if (!KNOB_MAX_WORKER_THREADS)
+            {
+                affinity.Mask = KAFFINITY(1) << threadId;
+            }
         }
 
         SetThreadGroupAffinity(GetCurrentThread(), &affinity, nullptr);
@@ -670,14 +693,14 @@ void WorkOnCompute(
     }
 }
 
-DWORD workerThread(LPVOID pData)
+DWORD workerThreadMain(LPVOID pData)
 {
     THREAD_DATA *pThreadData = (THREAD_DATA*)pData;
     SWR_CONTEXT *pContext = pThreadData->pContext;
     uint32_t threadId = pThreadData->threadId;
     uint32_t workerId = pThreadData->workerId;
 
-    bindThread(threadId, pThreadData->procGroupId); 
+    bindThread(threadId, pThreadData->procGroupId, pThreadData->forceBindProcGroup); 
 
     RDTSC_INIT(threadId);
 
@@ -764,13 +787,32 @@ DWORD workerThread(LPVOID pData)
     return 0;
 }
 
+DWORD workerThreadInit(LPVOID pData)
+{
+#if defined(_WIN32)
+    __try
+#endif // _WIN32
+    {
+        return workerThreadMain(pData);
+    }
+
+#if defined(_WIN32)
+    __except(EXCEPTION_CONTINUE_SEARCH)
+    {
+    }
+
+#endif // _WIN32
+
+    return 1;
+}
+
 void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
-    // Bind application thread to HW thread 0
     bindThread(0);
 
     CPUNumaNodes nodes;
-    CalculateProcessorTopology(nodes);
+    uint32_t numThreadsPerProcGroup = 0;
+    CalculateProcessorTopology(nodes, numThreadsPerProcGroup);
 
     uint32_t numHWNodes         = (uint32_t)nodes.size();
     uint32_t numHWCoresPerNode  = (uint32_t)nodes[0].cores.size();
@@ -797,6 +839,12 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 
     // Calculate numThreads
     uint32_t numThreads = numNodes * numCoresPerNode * numHyperThreads;
+
+    if (KNOB_MAX_WORKER_THREADS)
+    {
+        uint32_t maxHWThreads = numHWNodes * numHWCoresPerNode * numHWHyperThreads;
+        numThreads = std::min(KNOB_MAX_WORKER_THREADS, maxHWThreads);
+    }
 
     if (numThreads > KNOB_MAX_NUM_THREADS)
     {
@@ -840,31 +888,51 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     pPool->inThreadShutdown = false;
     pPool->pThreadData = (THREAD_DATA *)malloc(pPool->numThreads * sizeof(THREAD_DATA));
 
-    uint32_t workerId = 0;
-    for (uint32_t n = 0; n < numNodes; ++n)
+    if (KNOB_MAX_WORKER_THREADS)
     {
-        auto& node = nodes[n];
-
-        uint32_t numCores = numCoresPerNode;
-        for (uint32_t c = 0; c < numCores; ++c)
+        bool bForceBindProcGroup = (numThreads > numThreadsPerProcGroup);
+        uint32_t numProcGroups = (numThreads + numThreadsPerProcGroup - 1) / numThreadsPerProcGroup;
+        // When MAX_WORKER_THREADS is set we don't bother to bind to specific HW threads
+        // But Windows will still require binding to specific process groups
+        for (uint32_t workerId = 0; workerId < numThreads; ++workerId)
         {
-            auto& core = node.cores[c];
-            for (uint32_t t = 0; t < numHyperThreads; ++t)
+            pPool->pThreadData[workerId].workerId = workerId;
+            pPool->pThreadData[workerId].procGroupId = workerId % numProcGroups;
+            pPool->pThreadData[workerId].threadId = 0;
+            pPool->pThreadData[workerId].numaId = 0;
+            pPool->pThreadData[workerId].pContext = pContext;
+            pPool->pThreadData[workerId].forceBindProcGroup = bForceBindProcGroup;
+            pPool->threads[workerId] = new std::thread(workerThreadInit, &pPool->pThreadData[workerId]);
+        }
+    }
+    else
+    {
+        uint32_t workerId = 0;
+        for (uint32_t n = 0; n < numNodes; ++n)
+        {
+            auto& node = nodes[n];
+
+            uint32_t numCores = numCoresPerNode;
+            for (uint32_t c = 0; c < numCores; ++c)
             {
-                if (c == 0 && n == 0 && t == 0)
+                auto& core = node.cores[c];
+                for (uint32_t t = 0; t < numHyperThreads; ++t)
                 {
-                    // Skip core 0, thread0  on node 0 to reserve for API thread
-                    continue;
+                    if (c == 0 && n == 0 && t == 0)
+                    {
+                        // Skip core 0, thread0  on node 0 to reserve for API thread
+                        continue;
+                    }
+
+                    pPool->pThreadData[workerId].workerId = workerId;
+                    pPool->pThreadData[workerId].procGroupId = core.procGroup;
+                    pPool->pThreadData[workerId].threadId = core.threadIds[t];
+                    pPool->pThreadData[workerId].numaId = n;
+                    pPool->pThreadData[workerId].pContext = pContext;
+                    pPool->threads[workerId] = new std::thread(workerThreadInit, &pPool->pThreadData[workerId]);
+
+                    ++workerId;
                 }
-
-                pPool->pThreadData[workerId].workerId = workerId;
-                pPool->pThreadData[workerId].procGroupId = core.procGroup;
-                pPool->pThreadData[workerId].threadId = core.threadIds[t];
-                pPool->pThreadData[workerId].numaId = n;
-                pPool->pThreadData[workerId].pContext = pContext;
-                pPool->threads[workerId] = new std::thread(workerThread, &pPool->pThreadData[workerId]);
-
-                ++workerId;
             }
         }
     }

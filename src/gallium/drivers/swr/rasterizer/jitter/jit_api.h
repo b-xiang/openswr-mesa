@@ -35,6 +35,10 @@
 #include "blend_jit.h"
 
 #if defined(_WIN32)
+#define EXCEPTION_PRINT_STACK(ret) ret
+#endif // _WIN32
+
+#if defined(_WIN32)
 #define JITCALL __stdcall
 #else
 #define JITCALL

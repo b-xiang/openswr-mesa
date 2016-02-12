@@ -34,7 +34,7 @@ Constant *C(char i);
 Constant *C(uint8_t i);
 Constant *C(int i);
 Constant *C(int64_t i);
-Constant *C(UINT16 i);
+Constant *C(uint16_t i);
 Constant *C(uint32_t i);
 Constant *C(float i);
 

@@ -73,7 +73,7 @@ struct BLEND_DESC
         uint32_t bits;
     };
 };
-#define BLEND_ENABLE_MASK 0x3C // a2c | oMaskEnable | inputCoverageEnable | sampleMaskEnable
+#define BLEND_ENABLE_MASK 0x3D // a2c | oMaskEnable | inputCoverageEnable | sampleMaskEnable
 //////////////////////////////////////////////////////////////////////////
 /// State required for blend jit
 //////////////////////////////////////////////////////////////////////////

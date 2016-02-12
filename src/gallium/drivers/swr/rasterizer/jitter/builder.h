@@ -50,6 +50,7 @@ struct Builder
     Type*                mInt16Ty;
     Type*                mInt32Ty;
     Type*                mInt64Ty;
+    Type*                mIntPtrTy;
     Type*                mFP16Ty;
     Type*                mFP32Ty;
     Type*                mDoubleTy;
@@ -58,6 +59,7 @@ struct Builder
     Type*                mSimdInt16Ty;
     Type*                mSimdInt32Ty;
     Type*                mSimdInt64Ty;
+    Type*                mSimdIntPtrTy;
     StructType*          mV4FP32Ty;
     StructType*          mV4Int32Ty;
 

@@ -56,4 +56,16 @@ Builder::Builder(JitManager *pJitMgr)
     mSimdInt64Ty = VectorType::get(mInt64Ty, mpJitMgr->mVWidth);
     mSimdFP16Ty = VectorType::get(mFP16Ty, mpJitMgr->mVWidth);
     mSimdFP32Ty = VectorType::get(mFP32Ty, mpJitMgr->mVWidth);
+
+    if (sizeof(uint32_t*) == 4)
+    {
+        mIntPtrTy = mInt32Ty;
+        mSimdIntPtrTy = mSimdInt32Ty;
+    }
+    else
+    {
+        SWR_ASSERT(sizeof(uint32_t*) == 8);
+        mIntPtrTy = mInt64Ty;
+        mSimdIntPtrTy = mSimdInt64Ty;
+    }
 }

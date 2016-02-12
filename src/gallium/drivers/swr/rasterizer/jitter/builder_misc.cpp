@@ -167,7 +167,7 @@ Constant *Builder::C(int64_t i)
     return ConstantInt::get(IRB()->getInt64Ty(), i);
 }
 
-Constant *Builder::C(UINT16 i)
+Constant *Builder::C(uint16_t i)
 {
     return ConstantInt::get(mInt16Ty,i);
 }

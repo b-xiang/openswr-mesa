@@ -107,6 +107,10 @@
 #define KNOB_DEPTH_HOT_TILE_FORMAT           R32_FLOAT
 #define KNOB_STENCIL_HOT_TILE_FORMAT         R8_UINT
 
+// Max scissor rectangle
+#define KNOB_MAX_SCISSOR_X                  KNOB_NUM_HOT_TILES_X * KNOB_MACROTILE_X_DIM
+#define KNOB_MAX_SCISSOR_Y                  KNOB_NUM_HOT_TILES_Y * KNOB_MACROTILE_Y_DIM
+
 #if KNOB_SIMD_WIDTH==8 && KNOB_TILE_X_DIM < 4
 #error "incompatible width/tile dimensions"
 #endif

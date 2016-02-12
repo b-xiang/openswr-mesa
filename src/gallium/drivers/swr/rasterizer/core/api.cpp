@@ -752,10 +752,23 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
         bottom = (int32_t)pState->vp[0].y + (int32_t)pState->vp[0].height;
     }
 
-    pState->scissorInFixedPoint.left   = left * FIXED_POINT_SCALE;
-    pState->scissorInFixedPoint.right  = right * FIXED_POINT_SCALE - 1;
-    pState->scissorInFixedPoint.top    = top * FIXED_POINT_SCALE;
-    pState->scissorInFixedPoint.bottom = bottom * FIXED_POINT_SCALE - 1;
+    right = std::min<uint32_t>(right, KNOB_MAX_SCISSOR_X);
+    bottom = std::min<uint32_t>(bottom, KNOB_MAX_SCISSOR_Y);
+
+    if (left > KNOB_MAX_SCISSOR_X || top > KNOB_MAX_SCISSOR_Y)
+    {
+        pState->scissorInFixedPoint.left = 0;
+        pState->scissorInFixedPoint.right = 0;
+        pState->scissorInFixedPoint.top = 0;
+        pState->scissorInFixedPoint.bottom = 0;
+    }
+    else
+    {
+        pState->scissorInFixedPoint.left = left * FIXED_POINT_SCALE;
+        pState->scissorInFixedPoint.right = right * FIXED_POINT_SCALE - 1;
+        pState->scissorInFixedPoint.top = top * FIXED_POINT_SCALE;
+        pState->scissorInFixedPoint.bottom = bottom * FIXED_POINT_SCALE - 1;
+    }
 }
 
 void SetupPipeline(DRAW_CONTEXT *pDC)
@@ -1053,14 +1066,12 @@ void DrawInstanced(
     uint32_t numInstances = 1,
     uint32_t startInstance = 0)
 {
-    RDTSC_START(APIDraw);
-
-#if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_DRAW)
     {
         return;
     }
-#endif
+
+    RDTSC_START(APIDraw);
 
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
@@ -1172,6 +1183,11 @@ void DrawIndexedInstance(
     uint32_t numInstances = 1,
     uint32_t startInstance = 0)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     RDTSC_START(APIDrawIndexed);
 
     SWR_CONTEXT *pContext = GetContext(hContext);
@@ -1318,6 +1334,11 @@ void SwrDispatch(
     uint32_t threadGroupCountY,
     uint32_t threadGroupCountZ)
 {
+    if (KNOB_TOSS_DRAW)
+    {
+        return;
+    }
+
     RDTSC_START(APIDispatch);
     SWR_CONTEXT *pContext = (SWR_CONTEXT*)hContext;
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);

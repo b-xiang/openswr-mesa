@@ -771,6 +771,16 @@ static T1 AlignDown(T1 value, T2 alignment)
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// Align down to specified alignment
+//////////////////////////////////////////////////////////////////////////
+template <typename T1, typename T2>
+INLINE
+static T1* AlignDown(T1* value, T2 alignment)
+{
+    return (T1*)AlignDown(uintptr_t(value), alignment);
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// Align up to specified alignment
 /// Note: IsPow2(alignment) MUST be true
 //////////////////////////////////////////////////////////////////////////
@@ -781,3 +791,41 @@ static T1 AlignUp(T1 value, T2 alignment)
     return AlignDown(value + T1(alignment - 1), alignment);
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// Align up to specified alignment
+/// Note: IsPow2(alignment) MUST be true
+//////////////////////////////////////////////////////////////////////////
+template <typename T1, typename T2>
+INLINE
+static T1* AlignUp(T1* value, T2 alignment)
+{
+    return AlignDown(PtrAdd(value, alignment - 1), alignment);
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// Helper structure used to access an array of elements that don't 
+/// correspond to a typical word size.
+//////////////////////////////////////////////////////////////////////////
+template<typename T, size_t BitsPerElementT, size_t ArrayLenT>
+class BitsArray
+{
+private:
+    static const size_t BITS_PER_WORD = sizeof(size_t) * 8;
+    static const size_t ELEMENTS_PER_WORD = BITS_PER_WORD / BitsPerElementT;
+    static const size_t NUM_WORDS = (ArrayLenT + ELEMENTS_PER_WORD - 1) / ELEMENTS_PER_WORD;
+    static const size_t ELEMENT_MASK = (size_t(1) << BitsPerElementT) - 1;
+
+    static_assert(ELEMENTS_PER_WORD * BitsPerElementT == BITS_PER_WORD,
+        "Element size must an integral fraction of pointer size");
+
+    size_t              m_words[NUM_WORDS] = {};
+
+public:
+
+    T operator[] (size_t elementIndex) const
+    {
+        size_t word = m_words[elementIndex / ELEMENTS_PER_WORD];
+        word >>= ((elementIndex % ELEMENTS_PER_WORD) * BitsPerElementT);
+        return T(word & ELEMENT_MASK);
+    }
+};

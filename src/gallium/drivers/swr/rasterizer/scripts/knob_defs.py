@@ -28,18 +28,24 @@ KNOBS = [
                        'Asserts are only enabled in debug builds'],
     }],
 
-    ['USE_GENERIC_STORETILE', {
-        'type'      : 'bool',
-        'default'   : 'false',
-        'desc'      : ['Always use generic function for performing StoreTile.',
-                       'Will be slightly slower than using optimized (jitted) path'],
-    }],
-
     ['SINGLE_THREADED', {
         'type'      : 'bool',
         'default'   : 'false',
         'desc'      : ['If enabled will perform all rendering on the API thread.',
                        'This is useful mainly for debugging purposes.'],
+    }],
+
+    ['DUMP_SHADER_IR', {
+       'type'       : 'bool',
+       'default'    : 'false',
+       'desc'       : ['Dumps shader LLVM IR at various stages of jit compilation.'],
+    }],
+
+    ['USE_GENERIC_STORETILE', {
+        'type'      : 'bool',
+        'default'   : 'false',
+        'desc'      : ['Always use generic function for performing StoreTile.',
+                       'Will be slightly slower than using optimized (jitted) path'],
     }],
 
     ['FAST_CLEAR', {
@@ -73,6 +79,16 @@ KNOBS = [
                        '  N == Use at most N hyper-threads per physical core'],
     }],
 
+    ['MAX_WORKER_THREADS', {
+        'type'      : 'uint32_t',
+        'default'   : '0',
+        'desc'      : ['Maximum worker threads to spawn.',
+                       '',
+                       'IMPORTANT: If this is non-zero, no worker threads will be bound to',
+                       'specific HW threads.  They will all be "floating" SW threads.',
+                       'In this case, the above 3 KNOBS will be ignored.'],
+    }],
+
     ['BUCKETS_START_FRAME', {
         'type'      : 'uint32_t',
         'default'   : '1200',
@@ -91,6 +107,54 @@ KNOBS = [
                        'for this to have an effect.'],
     }],
 
+    ['WORKER_SPIN_LOOP_COUNT', {
+        'type'      : 'uint32_t',
+        'default'   : '5000',
+        'desc'      : ['Number of spin-loop iterations worker threads will perform',
+                       'before going to sleep when waiting for work'],
+    }],
+
+    ['MAX_DRAWS_IN_FLIGHT', {
+        'type'      : 'uint32_t',
+        'default'   : '160',
+        'desc'      : ['Maximum number of draws outstanding before API thread blocks.'],
+    }],
+
+    ['MAX_PRIMS_PER_DRAW', {
+       'type'       : 'uint32_t',
+       'default'    : '2040',
+       'desc'       : ['Maximum primitives in a single Draw().',
+                       'Larger primitives are split into smaller Draw calls.',
+                       'Should be a multiple of (3 * vectorWidth).'],
+    }],
+
+    ['MAX_TESS_PRIMS_PER_DRAW', {
+       'type'       : 'uint32_t',
+       'default'    : '16',
+       'desc'       : ['Maximum primitives in a single Draw() with tessellation enabled.',
+                       'Larger primitives are split into smaller Draw calls.',
+                       'Should be a multiple of (vectorWidth).'],
+    }],
+
+    ['MAX_FRAC_ODD_TESS_FACTOR', {
+        'type'      : 'float',
+        'default'   : '63.0f',
+        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-odd partitioning.'],
+    }],
+
+    ['MAX_FRAC_EVEN_TESS_FACTOR', {
+        'type'      : 'float',
+        'default'   : '64.0f',
+        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-even partitioning.'],
+    }],
+
+    ['MAX_INTEGER_TESS_FACTOR', {
+        'type'      : 'uint32_t',
+        'default'   : '64',
+        'desc'      : ['(DEBUG) Maximum tessellation factor for integer partitioning.'],
+    }],
+
+
     ['BUCKETS_ENABLE_THREADVIZ', {
         'type'      : 'bool',
         'default'   : 'false',
@@ -100,9 +164,7 @@ KNOBS = [
     ['TOSS_DRAW', {
         'type'      : 'bool',
         'default'   : 'false',
-        'desc'      : ['Disable per-draw execution',
-                       '',
-                       'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
+        'desc'      : ['Disable per-draw/dispatch execution'],
     }],
 
     ['TOSS_QUEUE_FE', {
@@ -160,59 +222,5 @@ KNOBS = [
                        '',
                        'NOTE: Requires KNOB_ENABLE_TOSS_POINTS to be enabled in core/knobs.h'],
     }],
-
-    ['WORKER_SPIN_LOOP_COUNT', {
-        'type'      : 'uint32_t',
-        'default'   : '5000',
-        'desc'      : ['Number of spin-loop iterations worker threads will perform',
-                       'before going to sleep when waiting for work'],
-    }],
-
-    ['MAX_DRAWS_IN_FLIGHT', {
-        'type'      : 'uint32_t',
-        'default'   : '160',
-        'desc'      : ['Maximum number of draws outstanding before API thread blocks.'],
-    }],
-
-    ['MAX_PRIMS_PER_DRAW', {
-       'type'       : 'uint32_t',
-       'default'    : '2040',
-       'desc'       : ['Maximum primitives in a single Draw().',
-                       'Larger primitives are split into smaller Draw calls.',
-                       'Should be a multiple of (3 * vectorWidth).'],
-    }],
-
-    ['MAX_TESS_PRIMS_PER_DRAW', {
-       'type'       : 'uint32_t',
-       'default'    : '16',
-       'desc'       : ['Maximum primitives in a single Draw() with tessellation enabled.',
-                       'Larger primitives are split into smaller Draw calls.',
-                       'Should be a multiple of (vectorWidth).'],
-    }],
-
-    ['MAX_FRAC_ODD_TESS_FACTOR', {
-        'type'      : 'float',
-        'default'   : '63.0f',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-odd partitioning.'],
-    }],                
-
-    ['MAX_FRAC_EVEN_TESS_FACTOR', {
-        'type'      : 'float',
-        'default'   : '64.0f',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for fractional-even partitioning.'],
-    }],                
-
-    ['MAX_INTEGER_TESS_FACTOR', {
-        'type'      : 'uint32_t',
-        'default'   : '64',
-        'desc'      : ['(DEBUG) Maximum tessellation factor for integer partitioning.'],
-    }],                
-
-    ['DUMP_SHADER_IR', {
-       'type'       : 'bool',
-       'default'    : 'false',
-       'desc'       : ['Dumps shader LLVM IR at various stages of jit compilation.'],
-    }],
-
 
 ]
