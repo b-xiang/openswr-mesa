@@ -2191,6 +2191,16 @@ radeon_llvm_check() {
     fi
 }
 
+swr_llvm_check() {
+    gallium_require_llvm $1
+    if test ${LLVM_VERSION_INT} -lt 306; then
+        AC_MSG_ERROR([LLVM version 3.6 or later required when building $1])
+    fi
+    if test "x$enable_gallium_llvm" != "xyes"; then
+        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
+    fi
+}
+
 dnl Duplicates in GALLIUM_DRIVERS_DIRS are removed by sorting it after this block
 if test -n "$with_gallium_drivers"; then
     gallium_drivers=`IFS=', '; echo $with_gallium_drivers`
@@ -2264,6 +2274,7 @@ if test -n "$with_gallium_drivers"; then
             fi
             ;;
         xswr)
+            swr_llvm_check "swr"
             HAVE_GALLIUM_SWR=yes
             ;;
         xvc4)
