@@ -27,6 +27,7 @@
 
 #include "main/core.h" /* for struct gl_context */
 #include "main/context.h"
+#include "main/debug_output.h"
 #include "main/shaderobj.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/ralloc.h"
@@ -67,8 +68,6 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->info_log = ralloc_strdup(mem_ctx, "");
    this->error = false;
    this->loop_nesting_ast = NULL;
-
-   this->struct_specifier_depth = 0;
 
    this->uses_builtin_functions = false;
 
@@ -945,27 +944,11 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
                           "the interface block");
       }
 
-      /* From GLSL ES 3.0, chapter 4.3.7 "Interface Blocks":
-       *
-       * "GLSL ES 3.0 does not support interface blocks for shader inputs or
-       * outputs."
-       *
-       * And from GLSL ES 3.0, chapter 4.6.1 "The invariant qualifier":.
-       *
-       * "Only variables output from a shader can be candidates for
-       * invariance."
-       *
-       * From GLSL 4.40 and GLSL 1.50, section "Interface Blocks":
-       *
-       * "If optional qualifiers are used, they can include interpolation
-       * qualifiers, auxiliary storage qualifiers, and storage qualifiers
-       * and they must declare an input, output, or uniform member
-       * consistent with the interface qualifier of the block"
-       */
-      if (qualifier.flags.q.invariant)
+      if (!(q.flags.q.in || q.flags.q.out) && qualifier.flags.q.invariant)
          _mesa_glsl_error(locp, state,
-                          "invariant qualifiers cannot be used "
-                          "with interface blocks members");
+                          "invariant qualifiers can be used only "
+                          "in interface block members for shader "
+                          "inputs or outputs");
    }
 }
 
@@ -1866,58 +1849,75 @@ do_common_optimization(exec_list *ir, bool linked,
                        const struct gl_shader_compiler_options *options,
                        bool native_integers)
 {
+   const bool debug = false;
    GLboolean progress = GL_FALSE;
 
-   progress = lower_instructions(ir, SUB_TO_ADD_NEG) || progress;
+#define OPT(PASS, ...) do {                                             \
+      if (debug) {                                                      \
+         fprintf(stderr, "START GLSL optimization %s\n", #PASS);        \
+         const bool opt_progress = PASS(__VA_ARGS__);                   \
+         progress = opt_progress || progress;                           \
+         if (opt_progress)                                              \
+            _mesa_print_ir(stderr, ir, NULL);                           \
+         fprintf(stderr, "GLSL optimization %s: %s progress\n",         \
+                 #PASS, opt_progress ? "made" : "no");                  \
+      } else {                                                          \
+         progress = PASS(__VA_ARGS__) || progress;                      \
+      }                                                                 \
+   } while (false)
+
+   OPT(lower_instructions, ir, SUB_TO_ADD_NEG);
 
    if (linked) {
-      progress = do_function_inlining(ir) || progress;
-      progress = do_dead_functions(ir) || progress;
-      progress = do_structure_splitting(ir) || progress;
+      OPT(do_function_inlining, ir);
+      OPT(do_dead_functions, ir);
+      OPT(do_structure_splitting, ir);
    }
-   progress = do_if_simplification(ir) || progress;
-   progress = opt_flatten_nested_if_blocks(ir) || progress;
-   progress = opt_conditional_discard(ir) || progress;
-   progress = do_copy_propagation(ir) || progress;
-   progress = do_copy_propagation_elements(ir) || progress;
+   OPT(do_if_simplification, ir);
+   OPT(opt_flatten_nested_if_blocks, ir);
+   OPT(opt_conditional_discard, ir);
+   OPT(do_copy_propagation, ir);
+   OPT(do_copy_propagation_elements, ir);
 
    if (options->OptimizeForAOS && !linked)
-      progress = opt_flip_matrices(ir) || progress;
+      OPT(opt_flip_matrices, ir);
 
    if (linked && options->OptimizeForAOS) {
-      progress = do_vectorize(ir) || progress;
+      OPT(do_vectorize, ir);
    }
 
    if (linked)
-      progress = do_dead_code(ir, uniform_locations_assigned) || progress;
+      OPT(do_dead_code, ir, uniform_locations_assigned);
    else
-      progress = do_dead_code_unlinked(ir) || progress;
-   progress = do_dead_code_local(ir) || progress;
-   progress = do_tree_grafting(ir) || progress;
-   progress = do_constant_propagation(ir) || progress;
+      OPT(do_dead_code_unlinked, ir);
+   OPT(do_dead_code_local, ir);
+   OPT(do_tree_grafting, ir);
+   OPT(do_constant_propagation, ir);
    if (linked)
-      progress = do_constant_variable(ir) || progress;
+      OPT(do_constant_variable, ir);
    else
-      progress = do_constant_variable_unlinked(ir) || progress;
-   progress = do_constant_folding(ir) || progress;
-   progress = do_minmax_prune(ir) || progress;
-   progress = do_rebalance_tree(ir) || progress;
-   progress = do_algebraic(ir, native_integers, options) || progress;
-   progress = do_lower_jumps(ir) || progress;
-   progress = do_vec_index_to_swizzle(ir) || progress;
-   progress = lower_vector_insert(ir, false) || progress;
-   progress = do_swizzle_swizzle(ir) || progress;
-   progress = do_noop_swizzle(ir) || progress;
+      OPT(do_constant_variable_unlinked, ir);
+   OPT(do_constant_folding, ir);
+   OPT(do_minmax_prune, ir);
+   OPT(do_rebalance_tree, ir);
+   OPT(do_algebraic, ir, native_integers, options);
+   OPT(do_lower_jumps, ir);
+   OPT(do_vec_index_to_swizzle, ir);
+   OPT(lower_vector_insert, ir, false);
+   OPT(do_swizzle_swizzle, ir);
+   OPT(do_noop_swizzle, ir);
 
-   progress = optimize_split_arrays(ir, linked) || progress;
-   progress = optimize_redundant_jumps(ir) || progress;
+   OPT(optimize_split_arrays, ir, linked);
+   OPT(optimize_redundant_jumps, ir);
 
    loop_state *ls = analyze_loop_variables(ir);
    if (ls->loop_found) {
-      progress = set_loop_controls(ir, ls) || progress;
-      progress = unroll_loops(ir, ls, options) || progress;
+      OPT(set_loop_controls, ir, ls);
+      OPT(unroll_loops, ir, ls, options);
    }
    delete ls;
+
+#undef OPT
 
    return progress;
 }

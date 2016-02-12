@@ -1079,6 +1079,22 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
+   case nir_op_extract_u8:
+   case nir_op_extract_i8: {
+      nir_const_value *byte = nir_src_as_const_value(instr->src[1].src);
+      bld.emit(SHADER_OPCODE_EXTRACT_BYTE,
+               result, op[0], brw_imm_ud(byte->u[0]));
+      break;
+   }
+
+   case nir_op_extract_u16:
+   case nir_op_extract_i16: {
+      nir_const_value *word = nir_src_as_const_value(instr->src[1].src);
+      bld.emit(SHADER_OPCODE_EXTRACT_WORD,
+               result, op[0], brw_imm_ud(word->u[0]));
+      break;
+   }
+
    default:
       unreachable("unhandled instruction");
    }
@@ -2924,7 +2940,9 @@ fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
 void
 fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
+   unsigned texture = instr->texture_index;
    unsigned sampler = instr->sampler_index;
+   fs_reg texture_reg(brw_imm_ud(texture));
    fs_reg sampler_reg(brw_imm_ud(sampler));
 
    int gather_component = instr->component;
@@ -2933,7 +2951,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
                         instr->is_array;
 
    int lod_components = 0;
-   int UNUSED offset_components = 0;
 
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
 
@@ -2981,19 +2998,24 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       case nir_tex_src_ms_index:
          sample_index = retype(src, BRW_REGISTER_TYPE_UD);
          break;
-      case nir_tex_src_offset:
-         tex_offset = retype(src, BRW_REGISTER_TYPE_D);
-         if (instr->is_array)
-            offset_components = instr->coord_components - 1;
-         else
-            offset_components = instr->coord_components;
+
+      case nir_tex_src_offset: {
+         nir_const_value *const_offset =
+            nir_src_as_const_value(instr->src[i].src);
+         if (const_offset) {
+            tex_offset = brw_imm_ud(brw_texture_offset(const_offset->i, 3));
+         } else {
+            tex_offset = retype(src, BRW_REGISTER_TYPE_D);
+         }
          break;
+      }
+
       case nir_tex_src_projector:
          unreachable("should be lowered");
 
-      case nir_tex_src_sampler_offset: {
-         /* Figure out the highest possible sampler index and mark it as used */
-         uint32_t max_used = sampler + instr->sampler_array_size - 1;
+      case nir_tex_src_texture_offset: {
+         /* Figure out the highest possible texture index and mark it as used */
+         uint32_t max_used = texture + instr->texture_array_size - 1;
          if (instr->op == nir_texop_tg4 && devinfo->gen < 8) {
             max_used += stage_prog_data->binding_table.gather_texture_start;
          } else {
@@ -3001,6 +3023,14 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          }
          brw_mark_surface_used(prog_data, max_used);
 
+         /* Emit code to evaluate the actual indexing expression */
+         texture_reg = vgrf(glsl_type::uint_type);
+         bld.ADD(texture_reg, src, brw_imm_ud(texture));
+         texture_reg = bld.emit_uniformize(texture_reg);
+         break;
+      }
+
+      case nir_tex_src_sampler_offset: {
          /* Emit code to evaluate the actual indexing expression */
          sampler_reg = vgrf(glsl_type::uint_type);
          bld.ADD(sampler_reg, src, brw_imm_ud(sampler));
@@ -3016,18 +3046,10 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    if (instr->op == nir_texop_txf_ms ||
        instr->op == nir_texop_samples_identical) {
       if (devinfo->gen >= 7 &&
-          key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
-         mcs = emit_mcs_fetch(coordinate, instr->coord_components, sampler_reg);
+          key_tex->compressed_multisample_layout_mask & (1 << texture)) {
+         mcs = emit_mcs_fetch(coordinate, instr->coord_components, texture_reg);
       } else {
          mcs = brw_imm_ud(0u);
-      }
-   }
-
-   for (unsigned i = 0; i < 3; i++) {
-      if (instr->const_offset[i] != 0) {
-         assert(offset_components == 0);
-         tex_offset = brw_imm_ud(brw_texture_offset(instr->const_offset, 3));
-         break;
       }
    }
 
@@ -3054,7 +3076,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
       fs_inst *inst = bld.emit(SHADER_OPCODE_SAMPLEINFO, dst,
                                bld.vgrf(BRW_REGISTER_TYPE_D, 1),
-                               sampler_reg);
+                               texture_reg, texture_reg);
       inst->mlen = 1;
       inst->header_size = 1;
       inst->base_mrf = -1;
@@ -3067,8 +3089,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
-                tex_offset, mcs, gather_component,
-                is_cube_array, sampler, sampler_reg);
+                tex_offset, mcs, gather_component, is_cube_array,
+                texture, texture_reg, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;

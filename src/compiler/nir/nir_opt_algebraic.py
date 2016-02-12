@@ -149,6 +149,8 @@ optimizations = [
    (('ior', a, 0), a),
    (('fxor', a, a), 0.0),
    (('ixor', a, a), 0),
+   (('fxor', a, 0.0), a),
+   (('ixor', a, 0), a),
    (('inot', ('inot', a)), a),
    # DeMorgan's Laws
    (('iand', ('inot', a), ('inot', b)), ('inot', ('ior',  a, b))),
@@ -165,6 +167,8 @@ optimizations = [
    (('flog2', ('fexp2', a)), a), # lg2(2^a) = a
    (('fpow', a, b), ('fexp2', ('fmul', ('flog2', a), b)), 'options->lower_fpow'), # a^b = 2^(lg2(a)*b)
    (('fexp2', ('fmul', ('flog2', a), b)), ('fpow', a, b), '!options->lower_fpow'), # 2^(lg2(a)*b) = a^b
+   (('fexp2', ('fadd', ('fmul', ('flog2', a), b), ('fmul', ('flog2', c), d))),
+    ('fmul', ('fpow', a, b), ('fpow', c, d)), '!options->lower_fpow'), # 2^(lg2(a) * b + lg2(c) + d) = a^b * c^d
    (('fpow', a, 1.0), a),
    (('fpow', a, 2.0), ('fmul', a, a)),
    (('fpow', a, 4.0), ('fmul', ('fmul', a, a), ('fmul', a, a))),
@@ -242,7 +246,84 @@ optimizations = [
     ('bcsel', ('ult', 31, 'bits'), 'value',
               ('ubfe', 'value', 'offset', 'bits')),
     'options->lower_bitfield_extract'),
+
+   (('extract_i8', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 24),
+    'options->lower_extract_byte'),
+
+   (('extract_u8', a, b),
+    ('iand', ('ushr', a, ('imul', b, 8)), 0xff),
+    'options->lower_extract_byte'),
+
+   (('extract_i16', a, b),
+    ('ishr', ('ishl', a, ('imul', ('isub', 1, b), 16)), 16),
+    'options->lower_extract_word'),
+
+   (('extract_u16', a, b),
+    ('iand', ('ushr', a, ('imul', b, 16)), 0xffff),
+    'options->lower_extract_word'),
+
+    (('pack_unorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 65535.0)))),
+     'options->lower_pack_unorm_2x16'),
+
+    (('pack_unorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2u', ('fround_even', ('fmul', ('fsat', 'v'), 255.0)))),
+     'options->lower_pack_unorm_4x8'),
+
+    (('pack_snorm_2x16', 'v'),
+     ('pack_uvec2_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 32767.0)))),
+     'options->lower_pack_snorm_2x16'),
+
+    (('pack_snorm_4x8', 'v'),
+     ('pack_uvec4_to_uint',
+        ('f2i', ('fround_even', ('fmul', ('fmin', 1.0, ('fmax', -1.0, 'v')), 127.0)))),
+     'options->lower_pack_snorm_4x8'),
+
+    (('unpack_unorm_2x16', 'v'),
+     ('fdiv', ('u2f', ('vec2', ('extract_u16', 'v', 0),
+                               ('extract_u16', 'v', 1))),
+              65535.0),
+     'options->lower_unpack_unorm_2x16'),
+
+    (('unpack_unorm_4x8', 'v'),
+     ('fdiv', ('u2f', ('vec4', ('extract_u8', 'v', 0),
+                               ('extract_u8', 'v', 1),
+                               ('extract_u8', 'v', 2),
+                               ('extract_u8', 'v', 3))),
+              255.0),
+     'options->lower_unpack_unorm_4x8'),
+
+    (('unpack_snorm_2x16', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec2', ('extract_i16', 'v', 0),
+                                                            ('extract_i16', 'v', 1))),
+                                           32767.0))),
+     'options->lower_unpack_snorm_2x16'),
+
+    (('unpack_snorm_4x8', 'v'),
+     ('fmin', 1.0, ('fmax', -1.0, ('fdiv', ('i2f', ('vec4', ('extract_i8', 'v', 0),
+                                                            ('extract_i8', 'v', 1),
+                                                            ('extract_i8', 'v', 2),
+                                                            ('extract_i8', 'v', 3))),
+                                           127.0))),
+     'options->lower_unpack_snorm_4x8'),
 ]
+
+# Unreal Engine 4 demo applications open-codes bitfieldReverse()
+def bitfield_reverse(u):
+    step1 = ('ior', ('ishl', u, 16), ('ushr', u, 16))
+    step2 = ('ior', ('ishl', ('iand', step1, 0x00ff00ff), 8), ('ushr', ('iand', step1, 0xff00ff00), 8))
+    step3 = ('ior', ('ishl', ('iand', step2, 0x0f0f0f0f), 4), ('ushr', ('iand', step2, 0xf0f0f0f0), 4))
+    step4 = ('ior', ('ishl', ('iand', step3, 0x33333333), 2), ('ushr', ('iand', step3, 0xcccccccc), 2))
+    step5 = ('ior', ('ishl', ('iand', step4, 0x55555555), 1), ('ushr', ('iand', step4, 0xaaaaaaaa), 1))
+
+    return step5
+
+optimizations += [(bitfield_reverse('x'), ('bitfield_reverse', 'x'))]
+
 
 # Add optimizations to handle the case where the result of a ternary is
 # compared to a constant.  This way we can take things like

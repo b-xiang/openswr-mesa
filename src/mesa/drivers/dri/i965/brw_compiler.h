@@ -384,6 +384,9 @@ struct brw_wm_prog_data {
    bool uses_pos_offset;
    bool uses_omask;
    bool uses_kill;
+   bool uses_src_depth;
+   bool uses_src_w;
+   bool uses_sample_mask;
    bool pulls_bary;
    uint32_t prog_offset_16;
 
@@ -623,6 +626,8 @@ struct brw_gs_prog_data
 {
    struct brw_vue_prog_data base;
 
+   unsigned vertices_in;
+
    /**
     * Size of an output vertex, measured in HWORDS (32 bytes).
     */
@@ -686,6 +691,9 @@ struct brw_gs_prog_data
 
 
 /** @} */
+
+struct brw_compiler *
+brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
 
 /**
  * Compile a vertex shader.

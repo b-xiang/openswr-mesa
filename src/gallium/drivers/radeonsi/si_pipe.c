@@ -74,9 +74,7 @@ static void si_destroy_context(struct pipe_context *context)
 
 	r600_common_context_cleanup(&sctx->b);
 
-#if HAVE_LLVM >= 0x0306
 	LLVMDisposeTargetMachine(sctx->tm);
-#endif
 
 	r600_resource_reference(&sctx->trace_buf, NULL);
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
@@ -104,9 +102,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	struct si_screen* sscreen = (struct si_screen *)screen;
 	struct radeon_winsys *ws = sscreen->b.ws;
 	LLVMTargetRef r600_target;
-#if HAVE_LLVM >= 0x0306
 	const char *triple = "amdgcn--";
-#endif
 	int shader, i;
 
 	if (!sctx)
@@ -210,7 +206,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	 */
 	sctx->scratch_waves = 32 * sscreen->b.info.num_good_compute_units;
 
-#if HAVE_LLVM >= 0x0306
 	/* Initialize LLVM TargetMachine */
 	r600_target = radeon_llvm_get_r600_target(triple);
 	sctx->tm = LLVMCreateTargetMachine(r600_target, triple,
@@ -223,7 +218,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 					   LLVMCodeGenLevelDefault,
 					   LLVMRelocDefault,
 					   LLVMCodeModelDefault);
-#endif
 
 	return &sctx->b.b;
 fail:
@@ -308,6 +302,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL:
 	case PIPE_CAP_TGSI_FS_FACE_IS_INTEGER_SYSVAL:
 	case PIPE_CAP_INVALIDATE_BUFFER:
+	case PIPE_CAP_SURFACE_REINTERPRET_BLOCKS:
+	case PIPE_CAP_QUERY_MEMORY_INFO:
+	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -339,6 +336,9 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->b.info.vram_size, 0xFFFFFFFF);
 
+	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
+		return 0;
+
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
 	case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
@@ -348,12 +348,12 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_DRAW_PARAMETERS:
-	case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT:
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_GENERATE_MIPMAP:
 	case PIPE_CAP_STRING_MARKER:
+	case PIPE_CAP_QUERY_BUFFER_OBJECT:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
@@ -403,7 +403,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	/* Timer queries, present when the clock frequency is non zero. */
 	case PIPE_CAP_QUERY_TIMESTAMP:
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
-		return sscreen->b.info.r600_clock_crystal_freq != 0;
+		return sscreen->b.info.clock_crystal_freq != 0;
 
  	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
 	case PIPE_CAP_MIN_TEXEL_OFFSET:
@@ -441,18 +441,13 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
 		/* LLVM 3.6.2 is required for tessellation because of bug fixes there */
-		if (HAVE_LLVM < 0x0306 ||
-		    (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2))
+		if (HAVE_LLVM == 0x0306 && MESA_LLVM_VERSION_PATCH < 2)
 			return 0;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
 		case PIPE_SHADER_CAP_PREFERRED_IR:
-#if HAVE_LLVM < 0x0306
-			return PIPE_SHADER_IR_LLVM;
-#else
 			return PIPE_SHADER_IR_NATIVE;
-#endif
 		case PIPE_SHADER_CAP_DOUBLES:
 			return HAVE_LLVM >= 0x0307;
 
@@ -545,57 +540,6 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 	r600_destroy_common_screen(&sscreen->b);
 }
 
-#define SI_TILE_MODE_COLOR_2D_8BPP  14
-
-/* Initialize pipe config. This is especially important for GPUs
- * with 16 pipes and more where it's initialized incorrectly by
- * the TILING_CONFIG ioctl. */
-static bool si_initialize_pipe_config(struct si_screen *sscreen)
-{
-	unsigned mode2d;
-
-	/* This is okay, because there can be no 2D tiling without
-	 * the tile mode array, so we won't need the pipe config.
-	 * Return "success".
-	 */
-	if (!sscreen->b.info.si_tile_mode_array_valid)
-		return true;
-
-	/* The same index is used for the 2D mode on CIK too. */
-	mode2d = sscreen->b.info.si_tile_mode_array[SI_TILE_MODE_COLOR_2D_8BPP];
-
-	switch (G_009910_PIPE_CONFIG(mode2d)) {
-	case V_02803C_ADDR_SURF_P2:
-		sscreen->b.tiling_info.num_channels = 2;
-		break;
-	case V_02803C_X_ADDR_SURF_P4_8X16:
-	case V_02803C_X_ADDR_SURF_P4_16X16:
-	case V_02803C_X_ADDR_SURF_P4_16X32:
-	case V_02803C_X_ADDR_SURF_P4_32X32:
-		sscreen->b.tiling_info.num_channels = 4;
-		break;
-	case V_02803C_X_ADDR_SURF_P8_16X16_8X16:
-	case V_02803C_X_ADDR_SURF_P8_16X32_8X16:
-	case V_02803C_X_ADDR_SURF_P8_32X32_8X16:
-	case V_02803C_X_ADDR_SURF_P8_16X32_16X16:
-	case V_02803C_X_ADDR_SURF_P8_32X32_16X16:
-	case V_02803C_X_ADDR_SURF_P8_32X32_16X32:
-	case V_02803C_X_ADDR_SURF_P8_32X64_32X32:
-		sscreen->b.tiling_info.num_channels = 8;
-		break;
-	case V_02803C_X_ADDR_SURF_P16_32X32_8X16:
-	case V_02803C_X_ADDR_SURF_P16_32X32_16X16:
-		sscreen->b.tiling_info.num_channels = 16;
-		break;
-	default:
-		assert(0);
-		fprintf(stderr, "radeonsi: Unknown pipe config %i.\n",
-			G_009910_PIPE_CONFIG(mode2d));
-		return false;
-	}
-	return true;
-}
-
 static bool si_init_gs_info(struct si_screen *sscreen)
 {
 	switch (sscreen->b.family) {
@@ -640,7 +584,6 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
-	    !si_initialize_pipe_config(sscreen) ||
 	    !si_init_gs_info(sscreen)) {
 		FREE(sscreen);
 		return NULL;

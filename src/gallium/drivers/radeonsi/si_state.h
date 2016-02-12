@@ -124,7 +124,7 @@ union si_state_atoms {
 		struct r600_atom *db_render_state;
 		struct r600_atom *msaa_config;
 		struct r600_atom *sample_mask;
-		struct r600_atom *cb_target_mask;
+		struct r600_atom *cb_render_state;
 		struct r600_atom *blend_color;
 		struct r600_atom *clip_regs;
 		struct r600_atom *clip_state;
@@ -133,7 +133,6 @@ union si_state_atoms {
 		struct r600_atom *viewports;
 		struct r600_atom *stencil_ref;
 		struct r600_atom *spi_map;
-		struct r600_atom *spi_ps_input;
 	} s;
 	struct r600_atom *array[0];
 };
@@ -145,17 +144,12 @@ struct si_shader_data {
 	uint32_t		sh_base[SI_NUM_SHADERS];
 };
 
+/* User sampler views:   0..15
+ * Polygon stipple tex:  16
+ */
 #define SI_NUM_USER_SAMPLERS            16 /* AKA OpenGL textures units per shader */
 #define SI_POLY_STIPPLE_SAMPLER         SI_NUM_USER_SAMPLERS
 #define SI_NUM_SAMPLERS                 (SI_POLY_STIPPLE_SAMPLER + 1)
-
-/* User sampler views:   0..15
- * Polygon stipple tex:  16
- * FMASK sampler views:  17..33 (no sampler states)
- */
-#define SI_FMASK_TEX_OFFSET		SI_NUM_SAMPLERS
-#define SI_NUM_SAMPLER_VIEWS		(SI_FMASK_TEX_OFFSET + SI_NUM_SAMPLERS)
-#define SI_NUM_SAMPLER_STATES		SI_NUM_SAMPLERS
 
 /* User constant buffers:   0..15
  * Driver state constants:  16
@@ -211,12 +205,8 @@ struct si_descriptors {
 
 struct si_sampler_views {
 	struct si_descriptors		desc;
-	struct pipe_sampler_view	*views[SI_NUM_SAMPLER_VIEWS];
-};
-
-struct si_sampler_states {
-	struct si_descriptors		desc;
-	void				*saved_states[2]; /* saved for u_blitter */
+	struct pipe_sampler_view	*views[SI_NUM_SAMPLERS];
+	void				*sampler_states[SI_NUM_SAMPLERS];
 };
 
 struct si_buffer_resources {

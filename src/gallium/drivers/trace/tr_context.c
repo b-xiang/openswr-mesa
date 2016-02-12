@@ -120,18 +120,13 @@ trace_context_draw_vbo(struct pipe_context *_pipe,
    trace_dump_trace_flush();
 
    if (info->indirect) {
-      struct pipe_draw_info *_info = NULL;
+      struct pipe_draw_info _info;
 
-      _info = MALLOC(sizeof(*_info));
-      if (!_info)
-         return;
-
-      memcpy(_info, info, sizeof(*_info));
-      _info->indirect = trace_resource_unwrap(tr_ctx, _info->indirect);
-      _info->indirect_params = trace_resource_unwrap(tr_ctx,
-                                                     _info->indirect_params);
-      pipe->draw_vbo(pipe, _info);
-      FREE(_info);
+      memcpy(&_info, info, sizeof(_info));
+      _info.indirect = trace_resource_unwrap(tr_ctx, _info.indirect);
+      _info.indirect_params = trace_resource_unwrap(tr_ctx,
+                                                    _info.indirect_params);
+      pipe->draw_vbo(pipe, &_info);
    } else {
       pipe->draw_vbo(pipe, info);
    }
@@ -1285,6 +1280,33 @@ trace_context_clear_depth_stencil(struct pipe_context *_pipe,
 }
 
 static inline void
+trace_context_clear_texture(struct pipe_context *_pipe,
+                            struct pipe_resource *res,
+                            unsigned level,
+                            const struct pipe_box *box,
+                            const void *data)
+{
+   struct trace_context *tr_ctx = trace_context(_pipe);
+   struct pipe_context *pipe = tr_ctx->pipe;
+
+   res = trace_resource_unwrap(tr_ctx, res);
+
+   trace_dump_call_begin("pipe_context", "clear_texture");
+
+   trace_dump_arg(ptr, pipe);
+   trace_dump_arg(ptr, res);
+   trace_dump_arg(uint, level);
+   trace_dump_arg_begin("box");
+   trace_dump_box(box);
+   trace_dump_arg_end();
+   trace_dump_arg(ptr, data);
+
+   pipe->clear_texture(pipe, res, level, box, data);
+
+   trace_dump_call_end();
+}
+
+static inline void
 trace_context_flush(struct pipe_context *_pipe,
                     struct pipe_fence_handle **fence,
                     unsigned flags)
@@ -1578,6 +1600,45 @@ static void trace_context_set_tess_state(struct pipe_context *_context,
 }
 
 
+static void trace_context_set_shader_buffers(struct pipe_context *_context,
+                                             unsigned shader,
+                                             unsigned start, unsigned nr,
+                                             struct pipe_shader_buffer *buffers)
+{
+   struct trace_context *tr_context = trace_context(_context);
+   struct pipe_context *context = tr_context->pipe;
+   struct pipe_shader_buffer *_buffers = NULL;
+
+   trace_dump_call_begin("pipe_context", "set_shader_buffers");
+   trace_dump_arg(ptr, context);
+   trace_dump_arg(uint, shader);
+   trace_dump_arg(uint, start);
+   trace_dump_arg_begin("buffers");
+   trace_dump_struct_array(shader_buffer, buffers, nr);
+   trace_dump_arg_end();
+   trace_dump_call_end();
+
+   if (buffers) {
+      int i;
+
+      _buffers = MALLOC(nr * sizeof(struct pipe_shader_buffer));
+      if (!_buffers)
+         return;
+
+      for (i = 0; i < nr; i++) {
+         _buffers[i] = buffers[i];
+         _buffers[i].buffer = trace_resource_unwrap(
+            tr_context, _buffers[i].buffer);
+      }
+   }
+
+   context->set_shader_buffers(context, shader, start, nr, _buffers);
+
+   if (_buffers)
+      FREE(_buffers);
+}
+
+
 static const struct debug_named_value rbug_blocker_flags[] = {
    {"before", 1, NULL},
    {"after", 2, NULL},
@@ -1670,11 +1731,13 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(clear);
    TR_CTX_INIT(clear_render_target);
    TR_CTX_INIT(clear_depth_stencil);
+   TR_CTX_INIT(clear_texture);
    TR_CTX_INIT(flush);
    TR_CTX_INIT(generate_mipmap);
    TR_CTX_INIT(texture_barrier);
    TR_CTX_INIT(memory_barrier);
    TR_CTX_INIT(set_tess_state);
+   TR_CTX_INIT(set_shader_buffers);
 
    TR_CTX_INIT(transfer_map);
    TR_CTX_INIT(transfer_unmap);

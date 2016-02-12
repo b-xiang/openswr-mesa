@@ -4210,33 +4210,46 @@ ast_declarator_list::hir(exec_list *instructions,
          _mesa_glsl_error(&loc, state,
                           "invalid type `%s' in empty declaration",
                           type_name);
-      } else if (decl_type->base_type == GLSL_TYPE_ATOMIC_UINT) {
-         /* Empty atomic counter declarations are allowed and useful
-          * to set the default offset qualifier.
-          */
-         return NULL;
-      } else if (this->type->qualifier.precision != ast_precision_none) {
-         if (this->type->specifier->structure != NULL) {
-            _mesa_glsl_error(&loc, state,
-                             "precision qualifiers can't be applied "
-                             "to structures");
-         } else {
-            static const char *const precision_names[] = {
-               "highp",
-               "highp",
-               "mediump",
-               "lowp"
-            };
-
-            _mesa_glsl_warning(&loc, state,
-                               "empty declaration with precision qualifier, "
-                               "to set the default precision, use "
-                               "`precision %s %s;'",
-                               precision_names[this->type->qualifier.precision],
-                               type_name);
+      } else {
+         if (decl_type->base_type == GLSL_TYPE_ARRAY) {
+            /* From Section 4.12 (Empty Declarations) of the GLSL 4.5 spec:
+             *
+             *    "The combinations of types and qualifiers that cause
+             *    compile-time or link-time errors are the same whether or not
+             *    the declaration is empty."
+             */
+            validate_array_dimensions(decl_type, state, &loc);
          }
-      } else if (this->type->specifier->structure == NULL) {
-         _mesa_glsl_warning(&loc, state, "empty declaration");
+
+         if (decl_type->base_type == GLSL_TYPE_ATOMIC_UINT) {
+            /* Empty atomic counter declarations are allowed and useful
+             * to set the default offset qualifier.
+             */
+            return NULL;
+         } else if (this->type->qualifier.precision != ast_precision_none) {
+            if (this->type->specifier->structure != NULL) {
+               _mesa_glsl_error(&loc, state,
+                                "precision qualifiers can't be applied "
+                                "to structures");
+            } else {
+               static const char *const precision_names[] = {
+                  "highp",
+                  "highp",
+                  "mediump",
+                  "lowp"
+               };
+
+               _mesa_glsl_warning(&loc, state,
+                                  "empty declaration with precision "
+                                  "qualifier, to set the default precision, "
+                                  "use `precision %s %s;'",
+                                  precision_names[this->type->
+                                     qualifier.precision],
+                                  type_name);
+            }
+         } else if (this->type->specifier->structure == NULL) {
+            _mesa_glsl_warning(&loc, state, "empty declaration");
+         }
       }
    }
 
@@ -6254,13 +6267,24 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
 
       decl_list->type->specifier->hir(instructions, state);
 
-      /* Section 10.9 of the GLSL ES 1.00 specification states that
-       * embedded structure definitions have been removed from the language.
+      /* Section 4.1.8 (Structures) of the GLSL 1.10 spec says:
+       *
+       *    "Anonymous structures are not supported; so embedded structures
+       *    must have a declarator. A name given to an embedded struct is
+       *    scoped at the same level as the struct it is embedded in."
+       *
+       * The same section of the  GLSL 1.20 spec says:
+       *
+       *    "Anonymous structures are not supported. Embedded structures are
+       *    not supported."
+       *
+       * The GLSL ES 1.00 and 3.00 specs have similar langauge. So, we allow
+       * embedded structures in 1.10 only.
        */
-      if (state->es_shader && decl_list->type->specifier->structure != NULL) {
-         _mesa_glsl_error(&loc, state, "embedded structure definitions are "
-                          "not allowed in GLSL ES 1.00");
-      }
+      if (state->language_version != 110 &&
+          decl_list->type->specifier->structure != NULL)
+         _mesa_glsl_error(&loc, state,
+                          "embedded structure declarations are not allowed");
 
       const glsl_type *decl_type =
          decl_list->type->glsl_type(& type_name, state);
@@ -6279,30 +6303,28 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
        */
       assert(decl_type);
 
-      if (is_interface && decl_type->contains_opaque()) {
-         _mesa_glsl_error(&loc, state,
-                          "uniform/buffer in non-default interface block contains "
-                          "opaque variable");
-      }
+      if (is_interface) {
+         if (decl_type->contains_opaque()) {
+            _mesa_glsl_error(&loc, state, "uniform/buffer in non-default "
+                             "interface block contains opaque variable");
+         }
+      } else {
+         if (decl_type->contains_atomic()) {
+            /* From section 4.1.7.3 of the GLSL 4.40 spec:
+             *
+             *    "Members of structures cannot be declared as atomic counter
+             *     types."
+             */
+            _mesa_glsl_error(&loc, state, "atomic counter in structure");
+         }
 
-      if (decl_type->contains_atomic()) {
-         /* From section 4.1.7.3 of the GLSL 4.40 spec:
-          *
-          *    "Members of structures cannot be declared as atomic counter
-          *     types."
-          */
-         _mesa_glsl_error(&loc, state, "atomic counter in structure, "
-                          "shader storage block or uniform block");
-      }
-
-      if (decl_type->contains_image()) {
-         /* FINISHME: Same problem as with atomic counters.
-          * FINISHME: Request clarification from Khronos and add
-          * FINISHME: spec quotation here.
-          */
-         _mesa_glsl_error(&loc, state,
-                          "image in structure, shader storage block or "
-                          "uniform block");
+         if (decl_type->contains_image()) {
+            /* FINISHME: Same problem as with atomic counters.
+             * FINISHME: Request clarification from Khronos and add
+             * FINISHME: spec quotation here.
+             */
+            _mesa_glsl_error(&loc, state, "image in structure");
+         }
       }
 
       if (qual->flags.q.explicit_binding) {
@@ -6501,33 +6523,6 @@ ast_struct_specifier::hir(exec_list *instructions,
 {
    YYLTYPE loc = this->get_location();
 
-   /* Section 4.1.8 (Structures) of the GLSL 1.10 spec says:
-    *
-    *     "Anonymous structures are not supported; so embedded structures must
-    *     have a declarator. A name given to an embedded struct is scoped at
-    *     the same level as the struct it is embedded in."
-    *
-    * The same section of the  GLSL 1.20 spec says:
-    *
-    *     "Anonymous structures are not supported. Embedded structures are not
-    *     supported.
-    *
-    *         struct S { float f; };
-    *         struct T {
-    *             S;              // Error: anonymous structures disallowed
-    *             struct { ... }; // Error: embedded structures disallowed
-    *             S s;            // Okay: nested structures with name are allowed
-    *         };"
-    *
-    * The GLSL ES 1.00 and 3.00 specs have similar langauge and examples.  So,
-    * we allow embedded structures in 1.10 only.
-    */
-   if (state->language_version != 110 && state->struct_specifier_depth != 0)
-      _mesa_glsl_error(&loc, state,
-		       "embedded structure declarations are not allowed");
-
-   state->struct_specifier_depth++;
-
    unsigned expl_location = 0;
    if (layout && layout->flags.q.explicit_location) {
       if (!process_qualifier_constant(state, &loc, "location",
@@ -6569,8 +6564,6 @@ ast_struct_specifier::hir(exec_list *instructions,
          state->num_user_structures++;
       }
    }
-
-   state->struct_specifier_depth--;
 
    /* Structure type definitions do not have r-values.
     */
@@ -6691,11 +6684,6 @@ ast_interface_block::hir(exec_list *instructions,
    exec_list declared_variables;
    glsl_struct_field *fields;
 
-   /* Treat an interface block as one level of nesting, so that embedded struct
-    * specifiers will be disallowed.
-    */
-   state->struct_specifier_depth++;
-
    /* For blocks that accept memory qualifiers (i.e. shader storage), verify
     * that we don't have incompatible qualifiers
     */
@@ -6737,8 +6725,6 @@ ast_interface_block::hir(exec_list *instructions,
                                                 &this->layout,
                                                 qual_stream,
                                                 expl_location);
-
-   state->struct_specifier_depth--;
 
    if (!redeclaring_per_vertex) {
       validate_identifier(this->block_name, loc, state);

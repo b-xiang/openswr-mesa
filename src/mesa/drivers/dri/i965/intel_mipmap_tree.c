@@ -609,22 +609,21 @@ intel_get_yf_ys_bo_size(struct intel_mipmap_tree *mt, unsigned *alignment,
    return size;
 }
 
-struct intel_mipmap_tree *
-intel_miptree_create(struct brw_context *brw,
-                     GLenum target,
-                     mesa_format format,
-                     GLuint first_level,
-                     GLuint last_level,
-                     GLuint width0,
-                     GLuint height0,
-                     GLuint depth0,
-                     GLuint num_samples,
-                     uint32_t layout_flags)
+static struct intel_mipmap_tree *
+miptree_create(struct brw_context *brw,
+               GLenum target,
+               mesa_format format,
+               GLuint first_level,
+               GLuint last_level,
+               GLuint width0,
+               GLuint height0,
+               GLuint depth0,
+               GLuint num_samples,
+               uint32_t layout_flags)
 {
    struct intel_mipmap_tree *mt;
    mesa_format tex_format = format;
    mesa_format etc_format = MESA_FORMAT_NONE;
-   GLuint total_width, total_height;
    uint32_t alloc_flags = 0;
 
    format = intel_lower_compressed_format(brw, format);
@@ -645,21 +644,8 @@ intel_miptree_create(struct brw_context *brw,
       return NULL;
    }
 
-   total_width = mt->total_width;
-   total_height = mt->total_height;
-
-   if (format == MESA_FORMAT_S_UINT8) {
-      /* Align to size of W tile, 64x64. */
-      total_width = ALIGN(total_width, 64);
-      total_height = ALIGN(total_height, 64);
-   }
-
-   bool y_or_x = false;
-
-   if (mt->tiling == (I915_TILING_Y | I915_TILING_X)) {
-      y_or_x = true;
+   if (mt->tiling == (I915_TILING_Y | I915_TILING_X))
       mt->tiling = I915_TILING_Y;
-   }
 
    if (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD)
       alloc_flags |= BO_ALLOC_FOR_RENDER;
@@ -675,26 +661,61 @@ intel_miptree_create(struct brw_context *brw,
       mt->bo = drm_intel_bo_alloc_for_render(brw->bufmgr, "miptree",
                                              size, alignment);
    } else {
-      mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                        total_width, total_height, mt->cpp,
-                                        &mt->tiling, &pitch,
-                                        alloc_flags);
+      if (format == MESA_FORMAT_S_UINT8) {
+         /* Align to size of W tile, 64x64. */
+         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                           ALIGN(mt->total_width, 64),
+                                           ALIGN(mt->total_height, 64),
+                                           mt->cpp, &mt->tiling, &pitch,
+                                           alloc_flags);
+      } else {
+         mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
+                                           mt->total_width, mt->total_height,
+                                           mt->cpp, &mt->tiling, &pitch,
+                                           alloc_flags);
+      }
    }
 
    mt->pitch = pitch;
+
+   return mt;
+}
+
+struct intel_mipmap_tree *
+intel_miptree_create(struct brw_context *brw,
+                     GLenum target,
+                     mesa_format format,
+                     GLuint first_level,
+                     GLuint last_level,
+                     GLuint width0,
+                     GLuint height0,
+                     GLuint depth0,
+                     GLuint num_samples,
+                     uint32_t layout_flags)
+{
+   struct intel_mipmap_tree *mt = miptree_create(
+                                     brw, target, format,
+                                     first_level, last_level,
+                                     width0, height0, depth0, num_samples,
+                                     layout_flags);
 
    /* If the BO is too large to fit in the aperture, we need to use the
     * BLT engine to support it.  Prior to Sandybridge, the BLT paths can't
     * handle Y-tiling, so we need to fall back to X.
     */
-   if (brw->gen < 6 && y_or_x && mt->bo->size >= brw->max_gtt_map_object_size) {
+   if (brw->gen < 6 && mt->bo->size >= brw->max_gtt_map_object_size &&
+       mt->tiling == I915_TILING_Y) {
+      unsigned long pitch = mt->pitch;
+      const uint32_t alloc_flags =
+         (layout_flags & MIPTREE_LAYOUT_ACCELERATED_UPLOAD) ?
+         BO_ALLOC_FOR_RENDER : 0;
       perf_debug("%dx%d miptree larger than aperture; falling back to X-tiled\n",
                  mt->total_width, mt->total_height);
 
       mt->tiling = I915_TILING_X;
       drm_intel_bo_unreference(mt->bo);
       mt->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "miptree",
-                                  total_width, total_height, mt->cpp,
+                                  mt->total_width, mt->total_height, mt->cpp,
                                   &mt->tiling, &pitch, alloc_flags);
       mt->pitch = pitch;
    }
@@ -1447,16 +1468,16 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     */
    const uint32_t mcs_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
                               MIPTREE_LAYOUT_TILING_Y;
-   mt->mcs_mt = intel_miptree_create(brw,
-                                     mt->target,
-                                     format,
-                                     mt->first_level,
-                                     mt->last_level,
-                                     mt->logical_width0,
-                                     mt->logical_height0,
-                                     mt->logical_depth0,
-                                     0 /* num_samples */,
-                                     mcs_flags);
+   mt->mcs_mt = miptree_create(brw,
+                               mt->target,
+                               format,
+                               mt->first_level,
+                               mt->last_level,
+                               mt->logical_width0,
+                               mt->logical_height0,
+                               mt->logical_depth0,
+                               0 /* num_samples */,
+                               mcs_flags);
 
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *

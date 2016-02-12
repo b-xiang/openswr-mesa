@@ -556,6 +556,10 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 	}
 }
 
+/* NOTE: this creates the "TGSI" style fragface (ie. input slot
+ * VARYING_SLOT_FACE).  For NIR style nir_intrinsic_load_front_face
+ * we can just use the value from hw directly (since it is boolean)
+ */
 static struct ir3_instruction *
 create_frag_face(struct ir3_compile *ctx, unsigned comp)
 {
@@ -1000,7 +1004,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 	nir_const_value *const_offset;
 	/* UBO addresses are the first driver params: */
 	unsigned ubo = regid(ctx->so->first_driver_param + IR3_UBOS_OFF, 0);
-	int off = intr->const_index[0];
+	int off = 0;
 
 	/* First src is ubo index, which could either be an immed or not: */
 	src0 = get_src(ctx, &intr->src[0])[0];
@@ -1088,7 +1092,7 @@ emit_intrinsic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
 	struct ir3_array *arr = get_var(ctx, dvar->var);
 	struct ir3_instruction *addr, **src;
-	unsigned wrmask = intr->const_index[0];
+	unsigned wrmask = nir_intrinsic_write_mask(intr);
 
 	compile_assert(ctx, dvar->deref.child &&
 		(dvar->deref.child->deref_type == nir_deref_type_array));
@@ -1141,8 +1145,8 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	const nir_intrinsic_info *info = &nir_intrinsic_infos[intr->intrinsic];
 	struct ir3_instruction **dst, **src;
 	struct ir3_block *b = ctx->block;
-	int idx = intr->const_index[0];
 	nir_const_value *const_offset;
+	int idx;
 
 	if (info->has_dest) {
 		dst = get_dst(ctx, &intr->dest, intr->num_components);
@@ -1152,6 +1156,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 	switch (intr->intrinsic) {
 	case nir_intrinsic_load_uniform:
+		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[0]);
 		if (const_offset) {
 			idx += const_offset->u[0];
@@ -1178,6 +1183,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		emit_intrinsic_load_ubo(ctx, intr, dst);
 		break;
 	case nir_intrinsic_load_input:
+		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[0]);
 		if (const_offset) {
 			idx += const_offset->u[0];
@@ -1204,6 +1210,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		emit_intrinsic_store_var(ctx, intr);
 		break;
 	case nir_intrinsic_store_output:
+		idx = nir_intrinsic_base(intr);
 		const_offset = nir_src_as_const_value(intr->src[1]);
 		compile_assert(ctx, const_offset != NULL);
 		idx += const_offset->u[0];
@@ -1224,7 +1231,7 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
-			ctx->vertex_id = create_input(ctx->block, 0);
+			ctx->vertex_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
 					ctx->vertex_id);
 		}
@@ -1232,17 +1239,26 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(ctx->block, 0);
+			ctx->instance_id = create_input(b, 0);
 			add_sysval_input(ctx, SYSTEM_VALUE_INSTANCE_ID,
 					ctx->instance_id);
 		}
 		dst[0] = ctx->instance_id;
 		break;
 	case nir_intrinsic_load_user_clip_plane:
+		idx = nir_intrinsic_ucp_id(intr);
 		for (int i = 0; i < intr->num_components; i++) {
 			unsigned n = idx * 4 + i;
 			dst[i] = create_driver_param(ctx, IR3_DP_UCP0_X + n);
 		}
+		break;
+	case nir_intrinsic_load_front_face:
+		if (!ctx->frag_face) {
+			ctx->so->frag_face = true;
+			ctx->frag_face = create_input(b, 0);
+			ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
+		}
+		dst[0] = ir3_ADD_S(b, ctx->frag_face, 0, create_immed(b, 1), 0);
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
@@ -1349,6 +1365,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction **dst, *sam, *src0[12], *src1[4];
 	struct ir3_instruction **coord, *lod, *compare, *proj, **off, **ddx, **ddy;
+	struct ir3_instruction *const_off[4];
 	bool has_bias = false, has_lod = false, has_proj = false, has_off = false;
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
@@ -1392,7 +1409,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			ddy = get_src(ctx, &tex->src[i].src);
 			break;
 		default:
-			compile_error(ctx, "Unhandled NIR tex serc type: %d\n",
+			compile_error(ctx, "Unhandled NIR tex src type: %d\n",
 					tex->src[i].src_type);
 			return;
 		}
@@ -1516,7 +1533,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 		type = TYPE_U32;
 
 	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
-			flags, tex->sampler_index, tex->sampler_index,
+			flags, tex->texture_index, tex->texture_index,
 			create_collect(b, src0, nsrc0),
 			create_collect(b, src1, nsrc1));
 
@@ -1543,7 +1560,7 @@ emit_tex_query_levels(struct ir3_compile *ctx, nir_tex_instr *tex)
 	dst = get_dst(ctx, &tex->dest, 1);
 
 	sam = ir3_SAM(b, OPC_GETINFO, TYPE_U32, TGSI_WRITEMASK_Z, 0,
-			tex->sampler_index, tex->sampler_index, NULL, NULL);
+			tex->texture_index, tex->texture_index, NULL, NULL);
 
 	/* even though there is only one component, since it ends
 	 * up in .z rather than .x, we need a split_dest()
@@ -1580,7 +1597,7 @@ emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 	lod = get_src(ctx, &tex->src[0].src)[0];
 
 	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
-			tex->sampler_index, tex->sampler_index, lod, NULL);
+			tex->texture_index, tex->texture_index, lod, NULL);
 
 	split_dest(b, dst, sam, 4);
 
@@ -2053,6 +2070,9 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 		case VARYING_SLOT_CLIP_DIST0:
 		case VARYING_SLOT_CLIP_DIST1:
 			break;
+		case VARYING_SLOT_CLIP_VERTEX:
+			/* handled entirely in nir_lower_clip: */
+			return;
 		default:
 			if (slot >= VARYING_SLOT_VAR0)
 				break;
@@ -2135,8 +2155,14 @@ emit_instructions(struct ir3_compile *ctx)
 		setup_output(ctx, var);
 	}
 
-	/* Setup variables (which should only be arrays): */
+	/* Setup global variables (which should only be arrays): */
 	nir_foreach_variable(var, &ctx->s->globals) {
+		declare_var(ctx, var);
+	}
+
+	/* Setup local variables (which should only be arrays): */
+	/* NOTE: need to do something more clever when we support >1 fxn */
+	nir_foreach_variable(var, &fxn->locals) {
 		declare_var(ctx, var);
 	}
 
