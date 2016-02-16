@@ -18,8 +18,10 @@ SConscript([
     'drivers/softpipe/SConscript',
     'drivers/svga/SConscript',
     'drivers/trace/SConscript',
-    'drivers/swr/SConscript',
 ])
+
+if env['platform'] != 'windows':
+   SConscript('drivers/swr/SConscript')
 
 #
 # Winsys
