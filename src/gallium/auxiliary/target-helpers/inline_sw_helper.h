@@ -66,12 +66,12 @@ sw_screen_create(struct sw_winsys *winsys)
    const char *default_driver;
    const char *driver;
 
-#if defined(GALLIUM_SWR)
-   default_driver = "swr";
-#elif defined(GALLIUM_LLVMPIPE)
+#if defined(GALLIUM_LLVMPIPE)
    default_driver = "llvmpipe";
 #elif defined(GALLIUM_SOFTPIPE)
    default_driver = "softpipe";
+#elif defined(GALLIUM_SWR)
+   default_driver = "swr";
 #else
    default_driver = "";
 #endif
