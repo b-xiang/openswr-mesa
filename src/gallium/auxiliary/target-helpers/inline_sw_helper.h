@@ -10,7 +10,6 @@
 #include "swr/swr_public.h"
 #endif
 
-
 /* Helper function to choose and instantiate one of the software rasterizers:
  * llvmpipe, softpipe.
  */
@@ -46,14 +45,14 @@ sw_screen_create_named(struct sw_winsys *winsys, const char *driver)
    }
 #endif
 
+#if defined(GALLIUM_SOFTPIPE)
+   if (screen == NULL && strcmp(driver, "softpipe") == 0)
+      screen = softpipe_create_screen(winsys);
+#endif
+
 #if defined(GALLIUM_SWR)
    if (screen == NULL && strcmp(driver, "swr") == 0)
       screen = swr_create_screen(winsys);
-#endif
-
-#if defined(GALLIUM_SOFTPIPE)
-   if (screen == NULL)
-      screen = softpipe_create_screen(winsys);
 #endif
 
    return screen;
