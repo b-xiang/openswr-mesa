@@ -81,12 +81,12 @@ AM_CPPFLAGS += -DGALLIUM_LLVMPIPE
 lib@GL_LIB@_la_LDFLAGS += $(LLVM_LDFLAGS)
 endif
 
-EXTRA_lib@GL_LIB@_la_DEPENDENCIES = libgl-xlib.sym
-EXTRA_DIST = SConscript libgl-xlib.sym
-
 if HAVE_GALLIUM_SWR
 lib@GL_LIB@_la_LIBADD += $(top_builddir)/src/gallium/drivers/swr/libmesaswr.la $(LLVM_LIBS)
 AM_CPPFLAGS += -DGALLIUM_SWR
 endif
+
+EXTRA_lib@GL_LIB@_la_DEPENDENCIES = libgl-xlib.sym
+EXTRA_DIST = SConscript libgl-xlib.sym
 
 include $(top_srcdir)/install-gallium-links.mk
