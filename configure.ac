@@ -2276,6 +2276,25 @@ if test -n "$with_gallium_drivers"; then
         xswr)
             AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
             swr_llvm_check "swr"
+
+            AC_MSG_CHECKING([whether $CXX supports AVX/AVX2])
+            AVX_CXXFLAGS="-march=core-avx-i"
+            AVX2_CXXFLAGS="-march=core-avx2"
+
+            AC_LANG_PUSH([C++])
+            save_CXXFLAGS="$CXXFLAGS"
+            CXXFLAGS="$AVX_CXXFLAGS $CXXFLAGS"
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
+                              [AC_MSG_ERROR([AVX compiler support not detected])])
+            CXXFLAGS="$save_CXXFLAGS"
+
+            save_CFLAGS="$CXXFLAGS"
+            CXXFLAGS="$AVX2_CXXFLAGS $CXXFLAGS"
+            AC_COMPILE_IFELSE([AC_LANG_PROGRAM()],[],
+                              [AC_MSG_ERROR([AVX2 compiler support not detected])])
+            CXXFLAGS="$save_CXXFLAGS"
+            AC_LANG_POP([C++])
+
             HAVE_GALLIUM_SWR=yes
             ;;
         xvc4)
