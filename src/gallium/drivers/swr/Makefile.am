@@ -19,19 +19,13 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
-AM_CXXFLAGS = \
-	$(GALLIUM_DRIVER_CFLAGS) \
-	-std=c++11 -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS
+AM_CXXFLAGS = $(GALLIUM_DRIVER_CFLAGS)
 
 noinst_LTLIBRARIES = libmesaswr.la
 
-libmesaswr_la_SOURCES = $(CXX_SOURCES)
-
-libmesaswr_la_LDFLAGS =
+libmesaswr_la_SOURCES = $(LOADER_SOURCES)
 
 EXTRA_DIST = SConscript SConscript-arch Makefile.sources-arch

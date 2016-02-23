@@ -19,24 +19,23 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 include ../Makefile.sources-arch
 include $(top_srcdir)/src/gallium/Automake.inc
 
 VPATH = $(srcdir) $(srcdir)/..
 
 AM_CXXFLAGS = \
+	-march=core-avx2 \
+	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
 	$(GALLIUM_DRIVER_CFLAGS) \
-	-std=c++11 -D__STDC_CONSTANT_MACROS -D__STDC_LIMIT_MACROS \
-	-march=core-avx2 -DKNOB_ARCH=KNOB_ARCH_AVX2 \
-	$(LLVM_CFLAGS)
+	$(LLVM_CFLAGS) \
+	-I$(srcdir)/../rasterizer \
+	-I$(srcdir)/../rasterizer/core \
+	-I$(srcdir)/../rasterizer/jitter \
+	-I$(builddir)/rasterizer/scripts \
+	-I$(builddir)/rasterizer/jitter
 
 lib_LTLIBRARIES = libswrAVX2.la
-
-libswrAVX2_la_SOURCES = $(CXX_SOURCES)
-
-libswrAVX2_la_LDFLAGS =
 
 BUILT_SOURCES = \
 	rasterizer/scripts/gen_knobs.cpp \
@@ -46,6 +45,14 @@ BUILT_SOURCES = \
 	rasterizer/jitter/builder_gen.cpp \
 	rasterizer/jitter/builder_x86.h \
 	rasterizer/jitter/builder_x86.cpp
+
+libswrAVX2_la_SOURCES = \
+	$(CXX_SOURCES) \
+	$(COMMON_CXX_SOURCES) \
+	$(CORE_CXX_SOURCES) \
+	$(JITTER_CXX_SOURCES) \
+	$(MEMORY_CXX_SOURCES) \
+	$(BUILT_SOURCES)
 
 rasterizer/scripts/gen_knobs.cpp rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
 	$(PYTHON2) $(PYTHON_FLAGS) \
@@ -84,29 +91,9 @@ rasterizer/jitter/builder_x86.cpp: rasterizer/jitter/scripts/gen_llvm_ir_macros.
 		--output rasterizer/jitter/builder_x86.cpp \
 		--gen_x86_cpp
 
-libswrAVX2_la_SOURCES += \
-	$(COMMON_CXX_SOURCES) \
-	$(CORE_CXX_SOURCES) \
-	$(JITTER_CXX_SOURCES) \
-	$(MEMORY_CXX_SOURCES) \
-	rasterizer/scripts/gen_knobs.cpp \
-	rasterizer/scripts/gen_knobs.h \
-	rasterizer/jitter/builder_gen.cpp \
-	rasterizer/jitter/builder_gen.h \
-	rasterizer/jitter/builder_x86.cpp \
-	rasterizer/jitter/builder_x86.h
-
-AM_CXXFLAGS += \
-	-I$(srcdir)/../rasterizer \
-	-I$(srcdir)/../rasterizer/core \
-	-I$(srcdir)/../rasterizer/jitter \
-	-I$(builddir)/rasterizer/scripts \
-	-I$(builddir)/rasterizer/jitter
 
 libswrAVX2_la_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/mesa/libmesagallium.la
 
 include $(top_srcdir)/install-gallium-links.mk
-
-EXTRA_DIST = SConscript

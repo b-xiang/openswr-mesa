@@ -2274,6 +2274,7 @@ if test -n "$with_gallium_drivers"; then
             fi
             ;;
         xswr)
+            AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
             swr_llvm_check "swr"
             HAVE_GALLIUM_SWR=yes
             ;;
