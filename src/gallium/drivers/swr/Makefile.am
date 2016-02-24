@@ -28,4 +28,4 @@ noinst_LTLIBRARIES = libmesaswr.la
 
 libmesaswr_la_SOURCES = $(LOADER_SOURCES)
 
-EXTRA_DIST = SConscript SConscript-arch Makefile.sources-arch
+EXTRA_DIST = Makefile.sources-arch

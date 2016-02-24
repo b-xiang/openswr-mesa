@@ -51,12 +51,8 @@
 #include "llvmpipe/lp_public.h"
 #endif
 
-#ifdef HAVE_SWR
-#include "swr/swr_public.h"
-#endif
 
 static boolean use_llvmpipe = FALSE;
-static boolean use_swr = FALSE;
 
 
 static struct pipe_screen *
@@ -73,8 +69,6 @@ gdi_screen_create(void)
 
 #ifdef HAVE_LLVMPIPE
    default_driver = "llvmpipe";
-#elif HAVE_SWR
-   default_driver = "swr";
 #else
    default_driver = "softpipe";
 #endif
@@ -84,21 +78,16 @@ gdi_screen_create(void)
 #ifdef HAVE_LLVMPIPE
    if (strcmp(driver, "llvmpipe") == 0) {
       screen = llvmpipe_create_screen( winsys );
-      if (screen) 
-         use_llvmpipe = TRUE;
    }
-#elif HAVE_SWR
-   if (strcmp(driver, "swr") == 0) {
-      screen = swr_create_screen( winsys );
-      if (screen) 
-         use_swr = TRUE;
-   }
+#else
    (void) driver;
 #endif
 
    if (screen == NULL) {
       screen = softpipe_create_screen( winsys );
-   } 
+   } else {
+      use_llvmpipe = TRUE;
+   }
 
    if(!screen)
       goto no_screen;
@@ -134,15 +123,6 @@ gdi_present(struct pipe_screen *screen,
    if (use_llvmpipe) {
       winsys = llvmpipe_screen(screen)->winsys;
       dt = llvmpipe_resource(res)->dt;
-      gdi_sw_display(winsys, dt, hDC);
-      return;
-   }
-#endif
-
-#ifdef HAVE_SWR
-   if (use_swr) {
-      winsys = swr_get_winsys(screen);
-      dt = swr_get_displaytarget(res);
       gdi_sw_display(winsys, dt, hDC);
       return;
    }

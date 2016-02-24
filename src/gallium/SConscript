@@ -20,9 +20,6 @@ SConscript([
     'drivers/trace/SConscript',
 ])
 
-if env['platform'] != 'windows':
-   SConscript('drivers/swr/SConscript')
-
 #
 # Winsys
 #

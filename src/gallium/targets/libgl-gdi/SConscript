@@ -27,12 +27,8 @@ if True:
     drivers += [softpipe]
 
 if env['llvm']:
-    if 'swr' in COMMAND_LINE_TARGETS :
-        env.Append(CPPDEFINES = 'HAVE_SWR')
-        drivers += [swr]
-    else:
-        env.Append(CPPDEFINES = 'HAVE_LLVMPIPE')
-        drivers += [llvmpipe]
+    env.Append(CPPDEFINES = 'HAVE_LLVMPIPE')
+    drivers += [llvmpipe]
 
 if env['gcc'] and env['machine'] != 'x86_64':
     # DEF parser in certain versions of MinGW is busted, as does not behave as

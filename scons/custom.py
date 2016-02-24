@@ -132,7 +132,7 @@ def code_generate(env, script, target, source, command):
     script_src = env.File(script).srcnode()
 
     # This command creates generated code *in the build directory*.
-    command = command.replace('$SCRIPT', script_src.rstr())
+    command = command.replace('$SCRIPT', script_src.path)
     action = SCons.Action.Action(command, "$CODEGENCOMSTR")
     code = env.Command(target, source, action)
 
