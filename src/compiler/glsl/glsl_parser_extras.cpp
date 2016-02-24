@@ -118,6 +118,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxTessEvaluationAtomicCounters = ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxAtomicCounters;
    this->Const.MaxGeometryAtomicCounters = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters;
    this->Const.MaxFragmentAtomicCounters = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicCounters;
+   this->Const.MaxComputeAtomicCounters = ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicCounters;
    this->Const.MaxCombinedAtomicCounters = ctx->Const.MaxCombinedAtomicCounters;
    this->Const.MaxAtomicBufferBindings = ctx->Const.MaxAtomicBufferBindings;
    this->Const.MaxVertexAtomicCounterBuffers =
@@ -130,6 +131,8 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers;
    this->Const.MaxFragmentAtomicCounterBuffers =
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxAtomicBuffers;
+   this->Const.MaxComputeAtomicCounterBuffers =
+      ctx->Const.Program[MESA_SHADER_COMPUTE].MaxAtomicBuffers;
    this->Const.MaxCombinedAtomicCounterBuffers =
       ctx->Const.MaxCombinedAtomicBuffers;
    this->Const.MaxAtomicCounterBufferSize =
@@ -141,6 +144,9 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    for (unsigned i = 0; i < ARRAY_SIZE(this->Const.MaxComputeWorkGroupSize); i++)
       this->Const.MaxComputeWorkGroupSize[i] = ctx->Const.MaxComputeWorkGroupSize[i];
 
+   this->Const.MaxComputeTextureImageUnits = ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
+   this->Const.MaxComputeUniformComponents = ctx->Const.Program[MESA_SHADER_COMPUTE].MaxUniformComponents;
+
    this->Const.MaxImageUnits = ctx->Const.MaxImageUnits;
    this->Const.MaxCombinedShaderOutputResources = ctx->Const.MaxCombinedShaderOutputResources;
    this->Const.MaxImageSamples = ctx->Const.MaxImageSamples;
@@ -149,6 +155,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->Const.MaxTessEvaluationImageUniforms = ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxImageUniforms;
    this->Const.MaxGeometryImageUniforms = ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms;
    this->Const.MaxFragmentImageUniforms = ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms;
+   this->Const.MaxComputeImageUniforms = ctx->Const.Program[MESA_SHADER_COMPUTE].MaxImageUniforms;
    this->Const.MaxCombinedImageUniforms = ctx->Const.MaxCombinedImageUniforms;
 
    /* ARB_viewport_array */
@@ -599,6 +606,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(OES_EGL_image_external,         false, true,      OES_EGL_image_external),
    EXT(OES_geometry_point_size,        false, true,      OES_geometry_shader),
    EXT(OES_geometry_shader,            false, true,      OES_geometry_shader),
+   EXT(OES_shader_image_atomic,        false, true,      ARB_shader_image_load_store),
    EXT(OES_standard_derivatives,       false, true,      OES_standard_derivatives),
    EXT(OES_texture_3D,                 false, true,      dummy_true),
    EXT(OES_texture_storage_multisample_2d_array, false, true, ARB_texture_multisample),

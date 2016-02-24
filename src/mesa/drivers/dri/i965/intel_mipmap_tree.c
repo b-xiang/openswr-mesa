@@ -161,8 +161,9 @@ intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
    }
 }
 
-static bool
-intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
+bool
+intel_tiling_supports_non_msrt_mcs(const struct brw_context *brw,
+                                   unsigned tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
     * Target(s)", beneath the "Fast Color Clear" bullet (p326):
@@ -200,9 +201,9 @@ intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
  *     - MCS and Lossless compression is supported for TiledY/TileYs/TileYf
  *     non-MSRTs only.
  */
-static bool
+bool
 intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
-                                           struct intel_mipmap_tree *mt)
+                                           const struct intel_mipmap_tree *mt)
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
@@ -266,6 +267,32 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
       return true;
 }
 
+/* On Gen9 support for color buffer compression was extended to single
+ * sampled surfaces. This is a helper considering both auxiliary buffer
+ * type and number of samples telling if the given miptree represents
+ * the new single sampled case - also called lossless compression.
+ */
+bool
+intel_miptree_is_lossless_compressed(const struct brw_context *brw,
+                                     const struct intel_mipmap_tree *mt)
+{
+   /* Only available from Gen9 onwards. */
+   if (brw->gen < 9)
+      return false;
+
+   /* Compression always requires auxiliary buffer. */
+   if (!mt->mcs_mt)
+      return false;
+
+   /* Single sample compression is represented re-using msaa compression
+    * layout type: "Compressed Multisampled Surfaces".
+    */
+   if (mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS)
+      return false;
+
+   /* And finally distinguish between msaa and single sample case. */
+   return mt->num_samples <= 1;
+}
 
 /**
  * Determine depth format corresponding to a depth+stencil format,
@@ -1423,6 +1450,27 @@ intel_miptree_copy_teximage(struct brw_context *brw,
    intel_obj->needs_validate = true;
 }
 
+static void
+intel_miptree_init_mcs(struct brw_context *brw,
+                       struct intel_mipmap_tree *mt,
+                       int init_value)
+{
+   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
+    *
+    *     When MCS buffer is enabled and bound to MSRT, it is required that it
+    *     is cleared prior to any rendering.
+    *
+    * Since we don't use the MCS buffer for any purpose other than rendering,
+    * it makes sense to just clear it immediately upon allocation.
+    *
+    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
+    */
+   void *data = intel_miptree_map_raw(brw, mt->mcs_mt);
+   memset(data, init_value, mt->mcs_mt->total_height * mt->mcs_mt->pitch);
+   intel_miptree_unmap_raw(mt->mcs_mt);
+   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+}
+
 static bool
 intel_miptree_alloc_mcs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
@@ -1479,20 +1527,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                                0 /* num_samples */,
                                mcs_flags);
 
-   /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
-    *
-    *     When MCS buffer is enabled and bound to MSRT, it is required that it
-    *     is cleared prior to any rendering.
-    *
-    * Since we don't use the MCS buffer for any purpose other than rendering,
-    * it makes sense to just clear it immediately upon allocation.
-    *
-    * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
-    */
-   void *data = intel_miptree_map_raw(brw, mt->mcs_mt);
-   memset(data, 0xff, mt->mcs_mt->total_height * mt->mcs_mt->pitch);
-   intel_miptree_unmap_raw(mt->mcs_mt);
-   mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+   intel_miptree_init_mcs(brw, mt, 0xFF);
 
    return mt->mcs_mt;
 }
@@ -1541,16 +1576,16 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    if (brw->gen >= 8) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    }
-   mt->mcs_mt = intel_miptree_create(brw,
-                                     mt->target,
-                                     format,
-                                     mt->first_level,
-                                     mt->last_level,
-                                     mcs_width,
-                                     mcs_height,
-                                     mt->logical_depth0,
-                                     0 /* num_samples */,
-                                     layout_flags);
+   mt->mcs_mt = miptree_create(brw,
+                               mt->target,
+                               format,
+                               mt->first_level,
+                               mt->last_level,
+                               mcs_width,
+                               mcs_height,
+                               mt->logical_depth0,
+                               0 /* num_samples */,
+                               layout_flags);
 
    return mt->mcs_mt;
 }
@@ -2012,8 +2047,17 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 
 void
 intel_miptree_resolve_color(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt)
+                            struct intel_mipmap_tree *mt,
+                            int flags)
 {
+   /* From gen9 onwards there is new compression scheme for single sampled
+    * surfaces called "lossless compressed". These don't need to be always
+    * resolved.
+    */
+   if ((flags & INTEL_MIPTREE_IGNORE_CCS_E) &&
+       intel_miptree_is_lossless_compressed(brw, mt))
+      return;
+
    switch (mt->fast_clear_state) {
    case INTEL_FAST_CLEAR_STATE_NO_MCS:
    case INTEL_FAST_CLEAR_STATE_RESOLVED:
@@ -2022,8 +2066,10 @@ intel_miptree_resolve_color(struct brw_context *brw,
    case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
    case INTEL_FAST_CLEAR_STATE_CLEAR:
       /* Fast color clear resolves only make sense for non-MSAA buffers. */
-      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE)
+      if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
+          intel_miptree_is_lossless_compressed(brw, mt)) {
          brw_meta_resolve_color(brw, mt);
+      }
       break;
    }
 }
@@ -2050,7 +2096,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
    assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE);
 
    if (mt->mcs_mt) {
-      intel_miptree_resolve_color(brw, mt);
+      intel_miptree_resolve_color(brw, mt, 0);
       intel_miptree_release(&mt->mcs_mt);
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    }
@@ -2158,7 +2204,7 @@ intel_miptree_map_raw(struct brw_context *brw, struct intel_mipmap_tree *mt)
    /* CPU accesses to color buffers don't understand fast color clears, so
     * resolve any pending fast color clears before we map.
     */
-   intel_miptree_resolve_color(brw, mt);
+   intel_miptree_resolve_color(brw, mt, 0);
 
    drm_intel_bo *bo = mt->bo;
 
