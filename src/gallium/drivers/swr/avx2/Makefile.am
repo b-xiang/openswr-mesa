@@ -29,11 +29,11 @@ AM_CXXFLAGS = \
 	-DKNOB_ARCH=KNOB_ARCH_AVX2 \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(LLVM_CFLAGS) \
+	-I$(builddir)/rasterizer/scripts \
+	-I$(builddir)/rasterizer/jitter \
 	-I$(srcdir)/../rasterizer \
 	-I$(srcdir)/../rasterizer/core \
-	-I$(srcdir)/../rasterizer/jitter \
-	-I$(builddir)/rasterizer/scripts \
-	-I$(builddir)/rasterizer/jitter
+	-I$(srcdir)/../rasterizer/jitter
 
 lib_LTLIBRARIES = libswrAVX2.la
 
