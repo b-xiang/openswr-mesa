@@ -15,10 +15,6 @@ configure time, for example: ::
 
   configure --with-gallium-drivers=swrast,swr
 
-Alternatively to build everything on Linux invoke scons as: ::
-
-  scons
-
 Using
 ^^^^^
 
