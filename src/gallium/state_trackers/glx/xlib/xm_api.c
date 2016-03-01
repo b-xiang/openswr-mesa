@@ -240,6 +240,7 @@ xmesa_init_display( Display *display )
       xmdpy->display = display;
       xmdpy->screen = driver.create_pipe_screen(display);
       xmdpy->smapi = CALLOC_STRUCT(st_manager);
+      xmdpy->pipe = NULL;
       if (xmdpy->smapi) {
          xmdpy->smapi->screen = xmdpy->screen;
          xmdpy->smapi->get_param = xmesa_get_param;
