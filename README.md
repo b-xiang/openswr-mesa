@@ -1,6 +1,9 @@
 OpenSWR-Mesa
 ============
 
+Note: All development has moved into the Mesa repo.  This source is for reference only.
+--------
+
 Overview
 --------
 
